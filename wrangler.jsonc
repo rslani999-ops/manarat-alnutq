@@ -3,6 +3,6 @@
   "name":"manarat-alnutq",
   "main":"index.js",
   "compatibility_date":"2026-08-12",
-  "assets":{"directory":"./","binding":"ASSETS","run_worker_first":["/api/*"]},
+  "assets":{"directory":"./","binding"}
   "ai":{"binding":"AI"}
 }
