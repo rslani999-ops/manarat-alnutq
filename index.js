@@ -1,9 +1,7 @@
-import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+// اسم مشروع الفايربيس الخاص بك
+const PROJECT_ID = "manarat-alnutq";
 
-// تهيئة خدمة الفايرستور (مرة واحدة)
-const db = getFirestore();
-
-// دالة مساعدة لتنسيق استجابة JSON (مرة واحدة)
+// دالة مساعدة لتنسيق استجابة JSON
 const json = (d, s = 200) => new Response(JSON.stringify(d), { 
   status: s, 
   headers: { "content-type": "application/json; charset=utf-8" } 
@@ -21,22 +19,45 @@ export default {
 
       // 2. مسار جلب قائمة الطلاب
       if (u.pathname === "/api/students" && r.method === "GET") {
-        const querySnapshot = await getDocs(collection(db, "students"));
-        const students = [];
-        querySnapshot.forEach((doc) => {
-          students.push({ id: doc.id, ...doc.data() });
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/students`;
+        const res = await fetch(firestoreUrl);
+        const data = await res.json();
+        
+        const students = (data.documents || []).map(doc => {
+          const fields = doc.fields || {};
+          const id = doc.name.split("/").pop();
+          return {
+            id,
+            name: fields.name?.stringValue || "",
+            createdAt: fields.createdAt?.stringValue || ""
+          };
         });
+
         return json({ success: true, students });
       }
 
       // 3. مسار إضافة طالب جديد أو تقييم
       if (u.pathname === "/api/students" && r.method === "POST") {
         const body = await r.json();
-        const docRef = await addDoc(collection(db, "students"), {
-          name: body.name,
-          createdAt: new Date().toISOString()
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/students`;
+        
+        const payload = {
+          fields: {
+            name: { stringValue: body.name || "" },
+            createdAt: { stringValue: new Date().toISOString() }
+          }
+        };
+
+        const res = await fetch(firestoreUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
         });
-        return json({ success: true, id: docRef.id });
+
+        const data = await res.json();
+        const docId = data.name ? data.name.split("/").pop() : null;
+
+        return json({ success: true, id: docId });
       }
 
       // 4. مسار الذكاء الاصطناعي
