@@ -1,5 +1,37 @@
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
+// تهيئة خدمة الفايرستور
+const db = getFirestore();
+
+// دالة مساعدة لتنسيق استجابة JSON
+const json = (d, s = 200) => new Response(JSON.stringify(d), { 
+  status: s, 
+  headers: { "content-type": "application/json; charset=utf-8" } 
+});
+
+export default {
+  async fetch(r, e) {
+    const u = new URL(r.url);
+
+    try {
+      // مسار استرجاع قائمة الطلاب
+      if (u.pathname === "/api/students" && r.method === "GET") {
+        // سيتم إضافة كود جلب الطلاب هنا
+        return json({ success: true, message: "جاهز لجلب بيانات الطلاب" });
+      }
+
+      // مسار إضافة تقييم أو طالب جديد
+      if (u.pathname === "/api/students" && r.method === "POST") {
+        // سيتم إضافة كود حفظ التقييم هنا
+        return json({ success: true, message: "جاهز لحفظ البيانات" });
+      }
+
+      return json({ status: "منارة النطق - الخدمة تعمل بنجاح" });
+    } catch (error) {
+      return json({ error: error.message }, 500);
+    }
+  }
+};
 const json=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json;charset=utf-8"}});
 export default{async fetch(r,e){
  const u=new URL(r.url);
