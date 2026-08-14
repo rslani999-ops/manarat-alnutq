@@ -38,7 +38,6 @@ export default {
 };
 
 // تهيئة خدمة الفايرستور
-const db = getFirestore();
 
 // دالة مساعدة لتنسيق استجابة JSON
 const json = (d, s = 200) => new Response(JSON.stringify(d), { 
