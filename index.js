@@ -69,7 +69,7 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), {
   }
 };
 const json=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json;charset=utf-8"}});
-{async fetch(r,e){
+async fetch(r,e){
  const u=new URL(r.url);
  if(u.pathname==="/api/health")return json({ok:true,app:"منارة النطق",version:"1.1"});
  if(u.pathname==="/api/ai"){
