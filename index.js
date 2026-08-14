@@ -46,7 +46,6 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), {
   headers: { "content-type": "application/json; charset=utf-8" } 
 });
 
-export default {
   async fetch(r, e) {
     const u = new URL(r.url);
 
@@ -70,7 +69,7 @@ export default {
   }
 };
 const json=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json;charset=utf-8"}});
-export default{async fetch(r,e){
+{async fetch(r,e){
  const u=new URL(r.url);
  if(u.pathname==="/api/health")return json({ok:true,app:"منارة النطق",version:"1.1"});
  if(u.pathname==="/api/ai"){
