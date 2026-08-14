@@ -1,4 +1,41 @@
-import { getFirestore } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+const db = getFirestore();
+
+const json = (d, s = 200) => new Response(JSON.stringify(d), { 
+  status: s, 
+  headers: { "content-type": "application/json; charset=utf-8" } 
+});
+
+export default {
+  async fetch(r, e) {
+    const u = new URL(r.url);
+
+    try {
+      if (u.pathname === "/api/students" && r.method === "GET") {
+        const querySnapshot = await getDocs(collection(db, "students"));
+        const students = [];
+        querySnapshot.forEach((doc) => {
+          students.push({ id: doc.id, ...doc.data() });
+        });
+        return json({ success: true, students });
+      }
+
+      if (u.pathname === "/api/students" && r.method === "POST") {
+        const body = await r.json();
+        const docRef = await addDoc(collection(db, "students"), {
+          name: body.name,
+          createdAt: new Date().toISOString()
+        });
+        return json({ success: true, id: docRef.id });
+      }
+
+      return json({ status: "منارة النطق - الخدمة تعمل بنجاح" });
+    } catch (error) {
+      return json({ error: error.message }, 500);
+    }
+  }
+};
 
 // تهيئة خدمة الفايرستور
 const db = getFirestore();
