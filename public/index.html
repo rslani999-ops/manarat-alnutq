@@ -29,7 +29,7 @@
       radial-gradient(circle at 8% 12%, rgba(79,182,168,0.10) 0, transparent 40%),
       radial-gradient(circle at 92% 85%, rgba(239,111,91,0.08) 0, transparent 40%);
   }
-  h1,h2,h3,.display{font-family:'Baloo Bhaijaan 2', sans-serif;}
+  h1,h2,h3, .display{font-family:'Baloo Bhaijaan 2', sans-serif;}
   .num, .data{font-family:'IBM Plex Sans Arabic', sans-serif;}
   #app{max-width:960px;margin:0 auto;padding:20px 16px 60px;}
 
@@ -87,11 +87,11 @@
   .btn-block{width:100%;}
   .btn-sm{padding:8px 14px;font-size:13px;border-radius:9px;}
 
-  input[type=text], input[type=password], input[type=email]{
+  input[type=text], input[type=password], input[type=email], select{
     width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);
     font-family:'Tajawal';font-size:15px;background:#FBFDFE;margin-bottom:12px;
   }
-  input[type=text]:focus, input[type=password]:focus, input[type=email]:focus{outline:none;border-color:var(--mint);}
+  input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, select:focus{outline:none;border-color:var(--mint);}
 
   .toast{
     position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
@@ -113,7 +113,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-analytics.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { getFirestore, setDoc, doc, getDoc, updateDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
@@ -140,13 +140,9 @@ const ARABIC_LETTERS = [
   {ch:'ن', word:'نَحْلَة'}, {ch:'هـ', word:'هِلَال'}, {ch:'و', word:'وَرْدَة'}, {ch:'ي', word:'يَد'}
 ];
 
-const AVATAR_COLORS = ['#4FB6A8','#F4B740','#EF6F5B','#9C82C4','#5B8DEF'];
+const FOOD_ITEMS = ['تفاحة', 'موزة', 'برتقالة', 'عنب', 'تمر', 'خبز', 'جبن', 'حليب', 'ماء', 'عصير'];
 
-function initials(name){ return name.trim().split(' ')[0][0] || '؟'; }
-function colorFor(id){ return AVATAR_COLORS[Math.abs(hashCode(id)) % AVATAR_COLORS.length]; }
-function hashCode(str){ let h=0; for(let i=0;i<str.length;i++){h=((h<<5)-h)+str.charCodeAt(i); h|=0;} return h; }
-
-let state = { view:'auth', user:null, role:null, students:[] };
+let state = { view:'auth', user:null, role:null, students:[], allTeachers:[] };
 let toastTimer=null;
 
 function showToast(msg){
@@ -154,7 +150,7 @@ function showToast(msg){
   t.className='toast'; t.textContent=msg;
   document.body.appendChild(t);
   clearTimeout(toastTimer);
-  setTimeout(()=>t.remove(), 2200);
+  toastTimer = setTimeout(()=>t.remove(), 2200);
 }
 
 function topbar(app, title, sub, onBack){
@@ -180,8 +176,11 @@ function render(){
   const app = document.getElementById('app');
   app.innerHTML = '';
   if(state.view==='auth') return renderAuth(app);
+  if(state.view==='register') return renderRegister(app);
   if(state.view==='teacher-dashboard') return renderTeacherDashboard(app);
   if(state.view==='student-menu') return renderStudentMenu(app);
+  if(state.view==='diagnostics') return renderDiagnostics(app);
+  if(state.view==='food-menu') return renderFoodMenu(app);
 }
 
 function renderAuth(app){
@@ -192,6 +191,7 @@ function renderAuth(app){
     <input type="email" id="email" placeholder="البريد الإلكتروني">
     <input type="password" id="password" placeholder="كلمة المرور">
     <button class="btn btn-primary btn-block" id="loginBtn">دخول</button>
+    <div class="auth-toggle">ليس لديك حساب؟ <span id="toRegister">إنشاء حساب</span></div>
   `;
   
   card.querySelector('#loginBtn').onclick = async () => {
@@ -205,6 +205,52 @@ function renderAuth(app){
       showToast('خطأ في البريد الإلكتروني أو كلمة المرور');
     }
   };
+
+  card.querySelector('#toRegister').onclick = () => {
+    state.view = 'register';
+    render();
+  };
+
+  app.appendChild(card);
+}
+
+function renderRegister(app){
+  const card = document.createElement('div');
+  card.className = 'auth-form';
+  card.innerHTML = `
+    <h2>إنشاء حساب</h2>
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <select id="role">
+      <option value="student">طالب</option>
+      <option value="teacher">معلم</option>
+    </select>
+    <button class="btn btn-primary btn-block" id="registerBtn">تسجيل</button>
+    <div class="auth-toggle">لديك حساب بالفعل؟ <span id="toLogin">تسجيل الدخول</span></div>
+  `;
+
+  card.querySelector('#registerBtn').onclick = async () => {
+    const email = card.querySelector('#email').value;
+    const password = card.querySelector('#password').value;
+    const role = card.querySelector('#role').value;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      await setDoc(doc(db, "users", user.uid), { role: role });
+      state.user = user;
+      state.role = role;
+      state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
+      render();
+    } catch (error) {
+      showToast('خطأ في إنشاء الحساب');
+    }
+  };
+
+  card.querySelector('#toLogin').onclick = () => {
+    state.view = 'auth';
+    render();
+  };
+
   app.appendChild(card);
 }
 
@@ -214,6 +260,7 @@ async function checkUserRole(uid) {
     if (userDoc.exists()) {
       state.role = userDoc.data().role;
       state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
+      if (state.role === 'teacher') fetchStudents();
     } else {
       showToast('لم يتم العثور على بيانات المستخدم');
     }
@@ -223,29 +270,171 @@ async function checkUserRole(uid) {
   render();
 }
 
+async function fetchStudents() {
+  try {
+    const q = query(collection(db, "users"), where("role", "==", "student"));
+    const querySnapshot = await getDocs(q);
+    state.students = [];
+    querySnapshot.forEach((docSnap) => {
+      state.students.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    fetchTeachers();
+  } catch (error) {
+    showToast('خطأ في جلب بيانات الطلاب');
+  }
+}
+
+async function fetchTeachers() {
+  try {
+    const q = query(collection(db, "users"), where("role", "==", "teacher"));
+    const querySnapshot = await getDocs(q);
+    state.allTeachers = [];
+    querySnapshot.forEach((docSnap) => {
+      state.allTeachers.push({ id: docSnap.id, email: docSnap.data().email });
+    });
+    renderTeacherDashboard(document.getElementById('app'));
+  } catch (error) {
+    showToast('خطأ في جلب بيانات المعلمين');
+  }
+}
+
+async function assignTeacher(studentId, teacherId) {
+  try {
+    const studentRef = doc(db, "users", studentId);
+    await updateDoc(studentRef, { teacherId: teacherId });
+    showToast('تم ربط الطالب بالمعلم بنجاح');
+    fetchStudents();
+  } catch (error) {
+    showToast('خطأ في ربط الطالب بالمعلم');
+  }
+}
+
 function renderTeacherDashboard(app){
+  app.innerHTML = '';
   topbar(app, 'لوحة المعلم', 'إدارة الطلاب', async () => {
     await signOut(auth);
     state.view = 'auth';
     state.user = null;
     render();
   });
+
   const card = document.createElement('div');
   card.className = 'card';
-  card.innerHTML = '<h3>مرحباً بك أستاذي الفاضل</h3>';
+  let html = '<h3>قائمة الطلاب</h3>';
+  
+  if (state.students.length === 0) {
+    html += '<p class="muted">لا يوجد طلاب مسجلون حالياً.</p>';
+  } else {
+    html += '<div style="margin-top:10px;">';
+    state.students.forEach(student => {
+      html += `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span>${student.id}</span>
+          <br>
+          <span class="muted">المعلم الحالي: ${student.teacherId || 'غير محدد'}</span>
+        </div>
+        <div>
+          <select id="select-${student.id}">
+            <option value="">اختر معلماً</option>
+            ${state.allTeachers.map(t => `<option value="${t.id}" ${student.teacherId === t.id ? 'selected' : ''}>${t.email || t.id}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="window.assignTeacher('${student.id}', document.getElementById('select-${student.id}').value)">ربط</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  
+  card.innerHTML = html;
   app.appendChild(card);
 }
 
+window.assignTeacher = assignTeacher;
+
 function renderStudentMenu(app){
-  topbar(app, 'قائمة الطالب', 'تمارين النطق', async () => {
+  topbar(app, 'صفحة الطالب', 'اختر النشاط', async () => {
     await signOut(auth);
     state.view = 'auth';
     state.user = null;
     render();
   });
+
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = '<h3>أهلاً بك يا بطل</h3>';
+  app.appendChild(card);
+
+  const diagBtn = document.createElement('button');
+  diagBtn.className = 'btn btn-primary btn-block';
+  diagBtn.textContent = 'تشخيص النطق';
+  diagBtn.onclick = () => {
+    state.view = 'diagnostics';
+    render();
+  };
+  card.appendChild(diagBtn);
+
+  const foodBtn = document.createElement('button');
+  foodBtn.className = 'btn btn-soft btn-block';
+  foodBtn.style.marginTop = '10px';
+  foodBtn.textContent = 'أصناف الطعام';
+  foodBtn.onclick = () => {
+    state.view = 'food-menu';
+    render();
+  };
+  card.appendChild(foodBtn);
+}
+
+function renderDiagnostics(app) {
+  topbar(app, 'تشخيص النطق', 'قراءة الحروف', () => {
+    state.view = 'student-menu';
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>اختر حرفاً للتشخيص:</h3>';
+  
+  const grid = document.createElement('div');
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+  grid.style.gap = '10px';
+  grid.style.marginTop = '15px';
+
+  ARABIC_LETTERS.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-soft';
+    btn.textContent = `${item.ch} - ${item.word}`;
+    btn.onclick = () => showToast(`قم بنطق الكلمة: ${item.word}`);
+    grid.appendChild(btn);
+  });
+
+  card.appendChild(grid);
+  app.appendChild(card);
+}
+
+function renderFoodMenu(app) {
+  topbar(app, 'أصناف الطعام', 'اختر طعاماً للتدريب', () => {
+    state.view = 'student-menu';
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>أصناف الطعام المتاحة:</h3>';
+
+  const list = document.createElement('div');
+  list.style.marginTop = '15px';
+
+  FOOD_ITEMS.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-soft btn-block';
+    btn.textContent = item;
+    btn.style.marginBottom = '8px';
+    btn.onclick = () => showToast(`قم بنطق: ${item}`);
+    list.appendChild(btn);
+  });
+
+  card.appendChild(list);
   app.appendChild(card);
 }
 
