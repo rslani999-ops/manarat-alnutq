@@ -50,27 +50,6 @@
   }
   .back-btn:hover{background:#F5F8FC;}
 
-  .hero{text-align:center;margin:10px 0 34px;}
-  .hero h2{font-size:28px;margin:0 0 8px;}
-  .hero p{color:#5B6A88;font-size:15px;margin:0;}
-  .roles{display:grid;grid-template-columns:1fr;gap:14px;}
-  @media(min-width:640px){.roles{grid-template-columns:repeat(3,1fr);}}
-  .role-card{
-    background:white;border-radius:20px;padding:26px 20px;text-align:center;
-    border:1px solid var(--line);cursor:pointer;transition:transform .15s, box-shadow .15s;
-    position:relative;overflow:hidden;
-  }
-  .role-card:hover{transform:translateY(-3px);box-shadow:0 12px 24px rgba(30,42,71,0.10);}
-  .role-card .icon{
-    width:64px;height:64px;border-radius:18px;margin:0 auto 14px;
-    display:flex;align-items:center;justify-content:center;font-size:30px;
-  }
-  .role-teacher .icon{background:#EAF6F4;}
-  .role-student .icon{background:#FDF2E3;}
-  .role-parent .icon{background:#F3EEFA;}
-  .role-card h3{margin:0 0 6px;font-size:18px;}
-  .role-card p{margin:0;font-size:13px;color:#6B7A99;}
-
   .card{background:white;border-radius:18px;border:1px solid var(--line);padding:20px;margin-bottom:16px;}
   .card h3{margin:0 0 4px;font-size:17px;}
   .muted{color:#6B7A99;font-size:13px;}
@@ -84,14 +63,16 @@
   .btn-primary:hover{filter:brightness(1.08);}
   .btn-soft{background:#EAF6F4;color:var(--mint-deep);}
   .btn-soft:hover{background:#DDF0ED;}
+  .btn-success{background:#10B981;color:white;}
+  .btn-success:hover{filter:brightness(1.08);}
   .btn-block{width:100%;}
   .btn-sm{padding:8px 14px;font-size:13px;border-radius:9px;}
 
-  input[type=text], input[type=password], input[type=email], select{
+  input[type=text], input[type=password], input[type=email], input[type=number], select{
     width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);
     font-family:'Tajawal';font-size:15px;background:#FBFDFE;margin-bottom:12px;
   }
-  input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, select:focus{outline:none;border-color:var(--mint);}
+  input:focus, select:focus{outline:none;border-color:var(--mint);}
 
   .toast{
     position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
@@ -181,6 +162,7 @@ function render(){
   if(state.view==='student-menu') return renderStudentMenu(app);
   if(state.view==='diagnostics') return renderDiagnostics(app);
   if(state.view==='food-menu') return renderFoodMenu(app);
+  if(state.view==='iep-session') return renderIEPSession(app);
 }
 
 function renderAuth(app){
@@ -236,7 +218,7 @@ function renderRegister(app){
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      await setDoc(doc(db, "users", user.uid), { role: role });
+      await setDoc(doc(db, "users", user.uid), { role: role, email: email });
       state.user = user;
       state.role = role;
       state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
@@ -311,16 +293,26 @@ async function assignTeacher(studentId, teacherId) {
 
 function renderTeacherDashboard(app){
   app.innerHTML = '';
-  topbar(app, 'لوحة المعلم', 'إدارة الطلاب', async () => {
+  topbar(app, 'لوحة المعلم', 'إدارة الطلاب والخطط', async () => {
     await signOut(auth);
     state.view = 'auth';
     state.user = null;
     render();
   });
 
+  // زر الانتقال لواجهة الخطة الفردية وسجل الجلسات
+  const planNavCard = document.createElement('div');
+  planNavCard.className = 'card';
+  planNavCard.innerHTML = `
+    <h3>الخطط التدريبية وسجل الجلسات (IEP)</h3>
+    <p class="muted" style="margin-bottom:12px;">إدارة أهداف الجلسة الحالية وتسجيل نسب إتقان المحاولات.</p>
+    <button class="btn btn-primary" onclick="state.view='iep-session'; render();">فتح لوحة إدارة الجلسات الفردية</button>
+  `;
+  app.appendChild(planNavCard);
+
   const card = document.createElement('div');
   card.className = 'card';
-  let html = '<h3>قائمة الطلاب</h3>';
+  let html = '<h3>قائمة الطلاب المسجلين</h3>';
   
   if (state.students.length === 0) {
     html += '<p class="muted">لا يوجد طلاب مسجلون حالياً.</p>';
@@ -329,7 +321,7 @@ function renderTeacherDashboard(app){
     state.students.forEach(student => {
       html += `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <span>${student.id}</span>
+          <span><strong>${student.email || student.id}</strong></span>
           <br>
           <span class="muted">المعلم الحالي: ${student.teacherId || 'غير محدد'}</span>
         </div>
@@ -350,6 +342,92 @@ function renderTeacherDashboard(app){
 }
 
 window.assignTeacher = assignTeacher;
+
+// واجهة الخطة التدريبية وسجل الجلسات الفردية للمعلم
+function renderIEPSession(app){
+  topbar(app, 'الخطة التدريبية (IEP) وسجل الجلسات', 'إدارة الجلسة الحالية', () => {
+    state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <h3>تحديد الهدف والنشاط التدريبي</h3>
+    <div style="margin-top:12px;">
+      <label class="block text-sm font-medium text-slate-600 mb-1">الهدف الرئيسي للخطة:</label>
+      <input type="text" id="mainGoal" placeholder="مثلاً: إتقان نطق صوت /ر/ في جميع مواقع الكلمة">
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1">الهدف الفرعي:</label>
+          <select id="subGoalSelect">
+            <option value="isolated">نطق الصوت منفرداً</option>
+            <option value="syllables">المقاطع الصوتية</option>
+            <option value="words">الكلمات</option>
+            <option value="sentences">الجمل البسيطة</option>
+            <option value="conversation">المحادثة والتلقائي</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1">النشاط المستخدم:</label>
+          <select id="activitySelect">
+            <option value="repetition">تكرار (Repetition)</option>
+            <option value="naming">تسمية الصور (Picture Naming)</option>
+            <option value="matching">مطابقة (Matching)</option>
+            <option value="reading">قراءة جهرية (Reading)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="background:#FBFDFE; padding:15px; border-radius:12px; border:1px solid var(--line); margin-top:15px;">
+        <h4 style="margin-top:0; font-size:15px;">تسجيل نتائج الجلسة اليومية</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label class="muted" style="display:block; margin-bottom:5px;">إجمالي المحاولات:</label>
+            <input type="number" id="totalTrials" value="20" oninput="window.calcScore()">
+          </div>
+          <div>
+            <label class="muted" style="display:block; margin-bottom:5px;">الإجابات الصحيحة:</label>
+            <input type="number" id="correctTrials" value="0" oninput="window.calcScore()">
+          </div>
+        </div>
+        <div style="text-align:left; font-weight:bold; color:var(--mint-deep); margin-top:10px;">
+          نسبة إتقان الجلسة: <span id="sessionScoreDisplay">0%</span>
+        </div>
+      </div>
+
+      <button class="btn btn-success btn-block" style="margin-top:15px;" onclick="window.saveSessionLog()">
+        حفظ جلسة التدريب وتحديث التقدم
+      </button>
+    </div>
+  `;
+  app.appendChild(card);
+}
+
+window.calcScore = function() {
+  let total = document.getElementById('totalTrials').value;
+  let correct = document.getElementById('correctTrials').value;
+  if(total > 0 && correct >= 0) {
+    let percentage = Math.round((correct / total) * 100);
+    document.getElementById('sessionScoreDisplay').innerText = percentage + '%';
+  }
+}
+
+window.saveSessionLog = function() {
+  let score = document.getElementById('sessionScoreDisplay').innerText;
+  let subGoal = document.getElementById('subGoalSelect').value;
+  let activity = document.getElementById('activitySelect').value;
+  let mainGoal = document.getElementById('mainGoal').value;
+  
+  let sessionData = { mainGoal, subGoal, activity, score, date: new Date().toLocaleDateString('ar-SA') };
+  
+  let sessions = JSON.parse(localStorage.getItem('minarat_sessions') || '[]');
+  sessions.push(sessionData);
+  localStorage.setItem('minarat_sessions', JSON.stringify(sessions));
+  
+  showToast('تم حفظ جلسة التدريب بنجاح!');
+}
 
 function renderStudentMenu(app){
   topbar(app, 'صفحة الطالب', 'اختر النشاط', async () => {
@@ -452,4 +530,3 @@ render();
 </script>
 </body>
 </html>
-
