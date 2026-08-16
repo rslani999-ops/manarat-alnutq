@@ -1,1 +1,59 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة تحكم المشرف</title>
+</head>
+<body>
+    <h1>لوحة تحكم المشرف</h1>
+    <div id="pending-teachers">
+        <h2>المعلمون المعلقون</h2>
+        <!-- سيتم عرض المعلمين هنا -->
+    </div>
+
+    <!-- استدعاء مكتبات Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            // ضع إعدادات Firebase الخاصة بك هنا
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function approveTeacher(teacherId) {
+            const teacherRef = doc(db, "users", teacherId);
+            await updateDoc(teacherRef, { status: "approved" });
+            alert("تم اعتماد المعلم بنجاح!");
+            getPendingTeachers(); // تحديث القائمة
+        }
+
+        async function getPendingTeachers() {
+            const container = document.getElementById("pending-teachers");
+            container.innerHTML = "<h2>المعلمون المعلقون</h2>";
+
+            const q = query(collection(db, "users"), where("role", "==", "teacher"), where("status", "==", "pending"));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                container.innerHTML += "<p>لا يوجد معلمون بانتظار الاعتماد.</p>";
+                return;
+            }
+
+            querySnapshot.forEach((doc) => {
+                const teacher = doc.data();
+                const div = document.createElement("div");
+                div.innerHTML = `<p>البريد: ${teacher.email} <button id="btn-${doc.id}">اعتماد</button></p>`;
+                container.appendChild(div);
+
+                document.getElementById(`btn-${doc.id}`).onclick = () => approveTeacher(doc.id);
+            });
+        }
+
+        getPendingTeachers();
+    </script>
+</body>
+</html>
 
