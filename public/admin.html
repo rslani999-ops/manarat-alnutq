@@ -1,23 +1,32 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>لوحة تحكم المشرف</title>
+    <meta charset="UTF-8">
+    <title>لوحة تحكم المشرف</title>
+    <style>
+        .user-item { border-bottom: 1px solid #ccc; padding: 10px; }
+    </style>
 </head>
 <body>
-<h1>لوحة تحكم المشرف</h1>
-<div id="pending-teachers">
-<h2>المعلمون المعلقون</h2>
-</div>
-<div>
-<h2>إدارة المستخدمين</h2>
-<button onclick="deleteAll('teacher')">حذف جميع المعلمين</button>
-<button onclick="deleteAll('student')">حذف جميع الطلاب</button>
-</div>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
-const firebaseConfig = {
+    <h1>لوحة تحكم المشرف</h1>
+    
+    <div id="teachers-section">
+        <h2>إدارة المعلمين</h2>
+        <div id="teachers-list"></div>
+        <button onclick="deleteAll('teacher')">حذف جميع المعلمين</button>
+    </div>
+
+    <div id="students-section">
+        <h2>إدارة الطلاب</h2>
+        <div id="students-list"></div>
+        <button onclick="deleteAll('student')">حذف جميع الطلاب</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
+        import { getFirestore, collection, query, getDocs, deleteDoc, doc, writeBatch } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
+
+        const firebaseConfig = {
   apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
   authDomain: "manarat-alnutq.firebaseapp.com",
   databaseURL: "https://manarat-alnutq-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -27,55 +36,56 @@ const firebaseConfig = {
   appId: "1:543101731444:web:35a8daf145603c66978721",
   measurementId: "G-ZFKWLDT384"
 };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-async function approveTeacher(teacherId) {
-const teacherRef = doc(db, "users", teacherId);
-await updateDoc(teacherRef, { status: "approved" });
-alert("تم اعتماد المعلم بنجاح!");
-getPendingTeachers();
-}
-async function deleteDocument(collectionName, docId) {
-if (confirm("هل أنت متأكد؟")) {
-await deleteDoc(doc(db, collectionName, docId));
-alert("تم الحذف بنجاح!");
-getPendingTeachers();
-}
-}
-async function deleteAll(role) {
-if (confirm(هل أنت متأكد من حذف جميع مستخدمي دور ${role}؟)) {
-const q = query(collection(db, "users"), where("role", "==", role));
-const querySnapshot = await getDocs(q);
-const batch = writeBatch(db);
-querySnapshot.forEach((doc) => {
-batch.delete(doc.ref);
-});
-await batch.commit();
-alert("تم الحذف بنجاح!");
-getPendingTeachers();
-}
-}
-window.approveTeacher = approveTeacher;
-window.deleteDocument = deleteDocument;
-window.deleteAll = deleteAll;
-async function getPendingTeachers() {
-const container = document.getElementById("pending-teachers");
-container.innerHTML = "<h2>المعلمون المعلقون</h2>";
-const q = query(collection(db, "users"), where("role", "==", "teacher"), where("status", "==", "pending"));
-const querySnapshot = await getDocs(q);
-if (querySnapshot.empty) {
-container.innerHTML += "<p>لا يوجد معلمون بانتظار الاعتماد.</p>";
-return;
-}
-querySnapshot.forEach((doc) => {
-const teacher = doc.data();
-const div = document.createElement("div");
-div.innerHTML = <p>البريد: ${teacher.email}  <button id="btn-${doc.id}">اعتماد</button> <button onclick="deleteDocument('users', '${doc.id}')">حذف المعلم</button></p>;
-container.appendChild(div);
-document.getElementById(btn-${doc.id}).onclick = () => approveTeacher(doc.id);
-});
-}
-getPendingTeachers();
-</script>
+        const firebaseConfig = { /* ... */ };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function loadUsers(role, listId) {
+            const list = document.getElementById(listId);
+            list.innerHTML = "";
+            const q = query(collection(db, "users")); // قد تحتاج لتعديل الاستعلام حسب هيكلة بياناتك
+            const querySnapshot = await getDocs(q);
+
+            querySnapshot.forEach((doc) => {
+                const user = doc.data();
+                if (user.role === role) {
+                    const div = document.createElement("div");
+                    div.className = "user-item";
+                    div.innerHTML = `
+                        <span>${user.name || user.email}</span>
+                        <button onclick="deleteSingle('${doc.id}')">حذف</button>
+                    `;
+                    list.appendChild(div);
+                }
+            });
+        }
+
+        window.deleteSingle = async (docId) => {
+            if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
+                await deleteDoc(doc(db, "users", docId));
+                alert("تم الحذف!");
+                location.reload();
+            }
+        };
+
+        window.deleteAll = async (role) => {
+            if (confirm(`هل أنت متأكد من حذف جميع مستخدمي دور ${role}؟`)) {
+                const q = query(collection(db, "users"));
+                const querySnapshot = await getDocs(q);
+                const batch = writeBatch(db);
+                querySnapshot.forEach((doc) => {
+                    if (doc.data().role === role) batch.delete(doc.ref);
+                });
+                await batch.commit();
+                alert("تم الحذف الجماعي!");
+                location.reload();
+            }
+        };
+
+        loadUsers('teacher', 'teachers-list');
+        loadUsers('student', 'students-list');
+    </script>
 </body>
 </html>
+
+يُرجى ملء بيانات firebaseConfig الخاصة بمشروعك في المكان المخصص داخل الكود قبل استخدامه.
