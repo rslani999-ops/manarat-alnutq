@@ -239,12 +239,12 @@ function renderHome(app){
   grid.style.gap = '15px';
 
   grid.innerHTML = `
-    <div class="card" style="cursor:pointer;" id="goDiag">
+    <div class="card" id="goDiag" style="cursor:pointer;">
       <h3>🗣️ دليل تشخيص النطق</h3>
       <p class="muted">تصفح مخارج الحروف العربية والكلمات التوضيحية دون الحاجة لتسجيل.</p>
       <button class="btn btn-soft btn-sm">استكشف الأنشطة العامة</button>
     </div>
-    <div class="card" style="cursor:pointer;" id="goFood">
+    <div class="card" id="goFood" style="cursor:pointer;">
       <h3>🍎 التدريب على الأطعمة</h3>
       <p class="muted">قوائم المسميات التفاعلية المناسبة لجلسات التسمية والتعزيز.</p>
       <button class="btn btn-soft btn-sm">استكشف القائمة العامة</button>
@@ -380,46 +380,64 @@ function renderTeacherDashboard(app){
 
   const myCard = document.createElement('div');
   myCard.className = 'card';
-  let myHtml = '<h3>الطلاب المضافون لقائمتك الخاصة</h3>';
+  let myTitle = document.createElement('h3');
+  myTitle.textContent = 'الطلاب المضافون لقائمتك الخاصة';
+  myCard.appendChild(myTitle);
 
   if(state.myStudents.length === 0){
-    myHtml += '<p class="muted">لم تقم بإضافة أي طالب لقائمتك الخاصة بعد.</p>';
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = 'لم تقم بإضافة أي طالب لقائمتك الخاصة بعد.';
+    myCard.appendChild(p);
   } else {
     state.myStudents.forEach(st => {
-      myHtml += `
-        <div class="student-row">
-          <div>
-            <strong>${st.email}</strong>
-            <br><span class="badge badge-assigned">طالبك الخصيص</span>
-          </div>
-          <button class="btn btn-danger btn-sm" onclick="window.removeStudent('${st.id}')">إزالة من قائمتي</button>
+      const row = document.createElement('div');
+      row.className = 'student-row';
+      row.innerHTML = `
+        <div>
+          <strong>${st.email}</strong>
+          <br><span class="badge badge-assigned">طالبك الخصيص</span>
         </div>
       `;
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-danger btn-sm';
+      btn.textContent = 'إزالة من قائمتي';
+      btn.onclick = () => window.removeStudent(st.id);
+      row.appendChild(btn);
+      myCard.appendChild(row);
     });
   }
-  myCard.innerHTML = myHtml;
   app.appendChild(myCard);
 
   const freeCard = document.createElement('div');
   freeCard.className = 'card';
-  let freeHtml = '<h3>الطلاب المتاحون للإضافة (بدون معلم)</h3>';
+  let freeTitle = document.createElement('h3');
+  freeTitle.textContent = 'الطلاب المتاحون للإضافة (بدون معلم)';
+  freeCard.appendChild(freeTitle);
 
   if(state.freeStudents.length === 0){
-    freeHtml += '<p class="muted">لا يوجد طلاب مستجدون في الانتظار حالياً.</p>';
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = 'لا يوجد طلاب مستجدون في الانتظار حالياً.';
+    freeCard.appendChild(p);
   } else {
     state.freeStudents.forEach(st => {
-      freeHtml += `
-        <div class="student-row">
-          <div>
-            <strong>${st.email}</strong>
-            <br><span class="badge badge-free">متاح للإضافة</span>
-          </div>
-          <button class="btn btn-success btn-sm" onclick="window.claimStudent('${st.id}')">إضافة لقائمتي</button>
+      const row = document.createElement('div');
+      row.className = 'student-row';
+      row.innerHTML = `
+        <div>
+          <strong>${st.email}</strong>
+          <br><span class="badge badge-free">متاح للإضافة</span>
         </div>
       `;
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-success btn-sm';
+      btn.textContent = 'إضافة لقائمتي';
+      btn.onclick = () => window.claimStudent(st.id);
+      row.appendChild(btn);
+      freeCard.appendChild(row);
     });
   }
-  freeCard.innerHTML = freeHtml;
   app.appendChild(freeCard);
 }
 
@@ -585,28 +603,34 @@ function renderIEPSession(app){
       <div style="background:#FBFDFE; padding:15px; border-radius:12px; border:1px solid var(--line); margin-top:15px;">
         <h4 style="margin-top:0;">احتساب الدقة والإتقان</h4>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <div><label class="muted">المحاولات:</label><input type="number" id="trials" value="10" oninput="window.calc()"></div>
-          <div><label class="muted">الصحيحة:</label><input type="number" id="correct" value="0" oninput="window.calc()"></div>
+          <div><label class="muted">المحاولات:</label><input type="number" id="trials" value="10" id="trInp"></div>
+          <div><label class="muted">الصحيحة:</label><input type="number" id="correct" value="0" id="coInp"></div>
         </div>
         <div style="margin-top:10px; font-weight:bold; color:var(--mint-deep);">
           نسبة الإتقان: <span id="scoreText">0%</span>
         </div>
       </div>
 
-      <button class="btn btn-success btn-block" style="margin-top:15px;" onclick="showToast('تم حفظ تقدم الخطة بالنجاح!')">حفظ التقدم</button>
+      <button class="btn btn-success btn-block" id="saveIepBtn" style="margin-top:15px;">حفظ التقدم</button>
     </div>
   `;
   app.appendChild(card);
-}
 
-window.calc = function(){
-  let t = document.getElementById('trials').value;
-  let c = document.getElementById('correct').value;
-  if(t > 0 && c >= 0){
-    let p = Math.round((c / t) * 100);
-    document.getElementById('scoreText').innerText = p + '%';
-  }
-};
+  const tr = card.querySelector('#trials');
+  const co = card.querySelector('#correct');
+  const calcScore = () => {
+    let t = tr.value;
+    let c = co.value;
+    if(t > 0 && c >= 0){
+      let p = Math.round((c / t) * 100);
+      document.getElementById('scoreText').innerText = p + '%';
+    }
+  };
+  tr.oninput = calcScore;
+  co.oninput = calcScore;
+
+  card.querySelector('#saveIepBtn').onclick = () => showToast('تم حفظ تقدم الخطة بنجاح!');
+}
 
 function renderStudentMenu(app){
   renderTopbar(app, 'صفحة الطالب', 'مرحباً بك في أنشطتك');
@@ -616,11 +640,15 @@ function renderStudentMenu(app){
   card.innerHTML = `
     <h3>مرحباً بك يا بطل!</h3>
     <p class="muted">اختر الأنشطة أو تصفح جلسات التقييم المحفوظة لك من قبَل معلمك.</p>
-    <button class="btn btn-primary btn-block" style="margin-bottom:10px;" onclick="state.view='diagnostics'; render();">تشخيص النطق</button>
-    <button class="btn btn-soft btn-block" style="margin-bottom:10px;" onclick="state.view='food-menu'; render();">أنشطة الأطعمة</button>
-    <button class="btn btn-success btn-block" onclick="state.view='speech-sessions'; render();">مراجعة تقييماتي المباشرة</button>
+    <button class="btn btn-primary btn-block" id="btnStDiag" style="margin-bottom:10px;">تشخيص النطق</button>
+    <button class="btn btn-soft btn-block" id="btnStFood" style="margin-bottom:10px;">أنشطة الأطعمة</button>
+    <button class="btn btn-success btn-block" id="btnStSess">مراجعة تقييماتي المباشرة</button>
   `;
   app.appendChild(card);
+
+  card.querySelector('#btnStDiag').onclick = () => { state.view = 'diagnostics'; render(); };
+  card.querySelector('#btnStFood').onclick = () => { state.view = 'food-menu'; render(); };
+  card.querySelector('#btnStSess').onclick = () => { state.view = 'speech-sessions'; render(); };
 }
 
 function renderDiagnostics(app){
