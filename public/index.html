@@ -317,7 +317,7 @@ function renderRegister(app){
       state.role = role;
       state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
       showToast('تم إنشاء الحساب بنجاح');
-      if(role === 'teacher') fetchTeacherStudents();
+      if(role === 'teacher') await fetchTeacherStudents();
       else render();
     } catch (e) {
       showToast('فشل التسجيل: تأكد من كلمة المرور والشروط');
@@ -429,12 +429,12 @@ window.claimStudent = async function(studentId){
     const snap = await getDoc(ref);
     if(snap.exists() && snap.data().teacherId !== null){
       showToast('عذراً! هذا الطالب مرتبط بمعلم آخر بالفعل');
-      fetchTeacherStudents();
+      await fetchTeacherStudents();
       return;
     }
     await updateDoc(ref, { teacherId: state.user.uid });
     showToast('تمت إضافة الطالب لقائمتك بنجاح');
-    fetchTeacherStudents();
+    await fetchTeacherStudents();
   } catch(e) {
     showToast('فشل في إضافة الطالب');
   }
@@ -445,7 +445,7 @@ window.removeStudent = async function(studentId){
     const ref = doc(db, "users", studentId);
     await updateDoc(ref, { teacherId: null });
     showToast('تم إزالة الطالب من قائمتك');
-    fetchTeacherStudents();
+    await fetchTeacherStudents();
   } catch(e) {
     showToast('فشل العملية');
   }
@@ -486,7 +486,7 @@ function renderSpeechSessions(app){
       const sessionDate = document.getElementById('sDate').value;
       const notes = document.getElementById('sNotes').value;
 
-      if(!sessionDate || !notes){ showToast('الرجاء تعبئة الحقوق المطلوبة'); return;}
+      if(!sessionDate || !notes){ showToast('الرجاء تعبئة الحقول المطلوبة'); return;}
 
       try {
         await addDoc(collection(db, "speech_sessions"), {
@@ -593,7 +593,7 @@ function renderIEPSession(app){
         </div>
       </div>
 
-      <button class="btn btn-success btn-block" style="margin-top:15px;" onclick="showToast('تم حفظ تقدم الخطة بالنجاح!')">حفظ التقدم</button>
+      <button class="btn btn-success btn-block" style="margin-top:15px;" onclick="showToast('تم حفظ تقدم الخطة بنجاح!')">حفظ التقدم</button>
     </div>
   `;
   app.appendChild(card);
