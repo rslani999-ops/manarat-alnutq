@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة تقييم النطق</title>
+    <!-- استدعاء مكتبات Firebase (الإصدار الأساسي للويب) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #4a6fa5;
@@ -88,7 +91,7 @@
 
     <header>
         <h1>منصة تقييم النطق</h1>
-        <p>متابعة الجلسات التدريبية والتقييمات</p>
+        <p>متابعة الجلسات التدريبية والتقييمات السحابية</p>
     </header>
 
     <div class="container">
@@ -107,60 +110,88 @@
                     <label for="notes">ملاحظات التقييم:</label>
                     <textarea id="notes" rows="4" required placeholder="أدخل تقييم وملاحظات الجلسة"></textarea>
                 </div>
-                <button type="submit">حفظ الجلسة</button>
+                <button type="submit">حفظ الجلسة في السحابة</button>
             </form>
         </section>
 
         <section class="sessions-list">
-            <h2>سجلات الجلسات السابقة</h2>
+            <h2>سجلات الجلسات السحابية</h2>
             <div id="sessionsContainer">
-                <!-- سيتم إدراج الجلسات المحفوظة هنا ديناميكياً -->
+                <p>جاري تحميل البيانات...</p>
             </div>
         </section>
     </div>
 
     <script>
+        // إعدادات مشروع Firebase الخاص بك
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
+            authDomain: "manarat-alnutq.firebaseapp.com",
+            databaseURL: "https://manarat-alnutq-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "manarat-alnutq",
+            storageBucket: "manarat-alnutq.firebasestorage.app",
+            messagingSenderId: "543101731444",
+            appId: "1:543101731444:web:35a8daf145603c66978721",
+            measurementId: "G-ZFKWLDT384"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         document.addEventListener('DOMContentLoaded', () => {
             const sessionForm = document.getElementById('sessionForm');
             const sessionsContainer = document.getElementById('sessionsContainer');
 
-            // دالة لعرض الجلسات المخزنة محلياً
+            // جلب وعرض الجلسات من Firestore السحابي مباشرة
             function loadSessions() {
-                const sessions = JSON.parse(localStorage.getItem('speechSessions')) || [];
-                sessionsContainer.innerHTML = '';
+                db.collection("sessions").orderBy("sessionDate", "desc").get()
+                    .then((querySnapshot) => {
+                        sessionsContainer.innerHTML = '';
+                        if (querySnapshot.empty) {
+                            sessionsContainer.innerHTML = '<p>لا توجد جلسات مسجلة حتى الآن.</p>';
+                            return;
+                        }
 
-                if (sessions.length === 0) {
-                    sessionsContainer.innerHTML = '<p>لا توجد جلسات مسجلة حتى الآن.</p>';
-                    return;
-                }
-
-                sessions.forEach((session, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'session-item';
-                    div.innerHTML = `
-                        <strong>الطالب:</strong> ${session.studentName} <br>
-                        <strong>التاريخ:</strong> ${session.sessionDate} <br>
-                        <strong>الملاحظات:</strong> ${session.notes}
-                    `;
-                    sessionsContainer.appendChild(div);
-                });
+                        querySnapshot.forEach((doc) => {
+                            const session = doc.data();
+                            const div = document.createElement('div');
+                            div.className = 'session-item';
+                            div.innerHTML = `
+                                <strong>الطالب:</strong> ${session.studentName} <br>
+                                <strong>التاريخ:</strong> ${session.sessionDate} <br>
+                                <strong>الملاحظات:</strong> ${session.notes}
+                            `;
+                            sessionsContainer.appendChild(div);
+                        });
+                    })
+                    .catch((error) => {
+                        console.error("خطأ في جلب البيانات: ", error);
+                        sessionsContainer.innerHTML = '<p>حدث خطأ أثناء تحميل البيانات من السحابة.</p>';
+                    });
             }
 
-            // حفظ جلسة جديدة في التخزين المحلي
+            // حفظ جلسة جديدة مباشرة إلى قاعدة بيانات Firebase Firestore السحابية
             sessionForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const studentName = document.getElementById('studentName').value;
                 const sessionDate = document.getElementById('sessionDate').value;
                 const notes = document.getElementById('notes').value;
 
-                const newSession = { studentName, sessionDate, notes };
-                const sessions = JSON.parse(localStorage.getItem('speechSessions')) || [];
-                
-                sessions.push(newSession);
-                localStorage.setItem('speechSessions', JSON.stringify(sessions));
-
-                sessionForm.reset();
-                loadSessions();
+                db.collection("sessions").add({
+                    studentName: studentName,
+                    sessionDate: sessionDate,
+                    notes: notes,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .then(() => {
+                    sessionForm.reset();
+                    loadSessions();
+                })
+                .catch((error) => {
+                    console.error("خطأ في حفظ البيانات: ", error);
+                    alert("فشل حفظ الجلسة، تحقق من الاتصال أو إعدادات القواعد.");
+                });
             });
 
             // تحميل الجلسات عند فتح الصفحة
