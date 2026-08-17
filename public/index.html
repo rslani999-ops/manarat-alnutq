@@ -246,7 +246,7 @@ function renderHome(app){
     </div>
     <div class="card" id="goFood" style="cursor:pointer;">
       <h3>🍎 التدريب على الأطعمة</h3>
-      <p class="muted">قوائم المسميات التفاعلية المناسبة لجلسات التسمية والتعزيز.</p>
+      <p class="muted">قوائم المسميات التفاعلية المناسبة للجلسات.</p>
       <button class="btn btn-soft btn-sm">استكشف القائمة العامة</button>
     </div>
   `;
@@ -317,7 +317,7 @@ function renderRegister(app){
       state.role = role;
       state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
       showToast('تم إنشاء الحساب بنجاح');
-      if(role === 'teacher') fetchTeacherStudents();
+      if(role === 'teacher') await fetchTeacherStudents();
       else render();
     } catch (e) {
       showToast('فشل التسجيل: تأكد من كلمة المرور والشروط');
@@ -341,18 +341,25 @@ async function fetchUserData(uid){
   }
 }
 
+// تعديل الجلب ليشمل كافة الحسابات السابقة التي لا تحتوي على teacherId
 async function fetchTeacherStudents(){
   if(!state.user) return;
   try {
-    const qMy = query(collection(db, "users"), where("role", "==", "student"), where("teacherId", "==", state.user.uid));
-    const snapMy = await getDocs(qMy);
+    const qStudents = query(collection(db, "users"), where("role", "==", "student"));
+    const snap = await getDocs(qStudents);
+    
     state.myStudents = [];
-    snapMy.forEach(d => state.myStudents.push({id: d.id, ...d.data()}));
-
-    const qFree = query(collection(db, "users"), where("role", "==", "student"), where("teacherId", "==", null));
-    const snapFree = await getDocs(qFree);
     state.freeStudents = [];
-    snapFree.forEach(d => state.freeStudents.push({id: d.id, ...d.data()}));
+
+    snap.forEach(d => {
+      const data = d.data();
+      const studentObj = { id: d.id, ...data };
+      if (data.teacherId === state.user.uid) {
+        state.myStudents.push(studentObj);
+      } else if (!data.teacherId) {
+        state.freeStudents.push(studentObj);
+      }
+    });
 
     render();
   } catch(e) {
@@ -445,14 +452,14 @@ window.claimStudent = async function(studentId){
   try {
     const ref = doc(db, "users", studentId);
     const snap = await getDoc(ref);
-    if(snap.exists() && snap.data().teacherId !== null){
+    if(snap.exists() && snap.data().teacherId){
       showToast('عذراً! هذا الطالب مرتبط بمعلم آخر بالفعل');
-      fetchTeacherStudents();
+      await fetchTeacherStudents();
       return;
     }
     await updateDoc(ref, { teacherId: state.user.uid });
     showToast('تمت إضافة الطالب لقائمتك بنجاح');
-    fetchTeacherStudents();
+    await fetchTeacherStudents();
   } catch(e) {
     showToast('فشل في إضافة الطالب');
   }
@@ -463,7 +470,7 @@ window.removeStudent = async function(studentId){
     const ref = doc(db, "users", studentId);
     await updateDoc(ref, { teacherId: null });
     showToast('تم إزالة الطالب من قائمتك');
-    fetchTeacherStudents();
+    await fetchTeacherStudents();
   } catch(e) {
     showToast('فشل العملية');
   }
@@ -500,11 +507,12 @@ function renderSpeechSessions(app){
     app.appendChild(card);
 
     card.querySelector('#saveSBtn').onclick = async () => {
-      const studentName = document.getElementById('stSelect').value;
+      const studentSelect = document.getElementById('stSelect');
+      const studentName = studentSelect ? studentSelect.value : '';
       const sessionDate = document.getElementById('sDate').value;
       const notes = document.getElementById('sNotes').value;
 
-      if(!sessionDate || !notes){ showToast('الرجاء تعبئة الحقوق المطلوبة'); return;}
+      if(!sessionDate || !notes || !studentName){ showToast('الرجاء تعبئة الحقول المطلوبة'); return;}
 
       try {
         await addDoc(collection(db, "speech_sessions"), {
@@ -565,7 +573,7 @@ async function loadMySessions(){
       box.appendChild(item);
     });
   } catch(e) {
-    box.innerHTML = '<p class="muted">خطأ في تحميل سجلات الجلسات.</p>';
+    box.innerHTML = '<p class="muted">لا توجد جلسات سابقة أو يلزم إعداد الفهرس السحابي (Index).</p>';
   }
 }
 
@@ -603,8 +611,8 @@ function renderIEPSession(app){
       <div style="background:#FBFDFE; padding:15px; border-radius:12px; border:1px solid var(--line); margin-top:15px;">
         <h4 style="margin-top:0;">احتساب الدقة والإتقان</h4>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <div><label class="muted">المحاولات:</label><input type="number" id="trials" value="10" id="trInp"></div>
-          <div><label class="muted">الصحيحة:</label><input type="number" id="correct" value="0" id="coInp"></div>
+          <div><label class="muted">المحاولات:</label><input type="number" id="trials" value="10"></div>
+          <div><label class="muted">الصحيحة:</label><input type="number" id="correct" value="0"></div>
         </div>
         <div style="margin-top:10px; font-weight:bold; color:var(--mint-deep);">
           نسبة الإتقان: <span id="scoreText">0%</span>
@@ -619,8 +627,8 @@ function renderIEPSession(app){
   const tr = card.querySelector('#trials');
   const co = card.querySelector('#correct');
   const calcScore = () => {
-    let t = tr.value;
-    let c = co.value;
+    let t = Number(tr.value);
+    let c = Number(co.value);
     if(t > 0 && c >= 0){
       let p = Math.round((c / t) * 100);
       document.getElementById('scoreText').innerText = p + '%';
