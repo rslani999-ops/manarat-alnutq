@@ -4,7 +4,16 @@
     <meta charset="UTF-8">
     <title>لوحة تحكم المشرف</title>
     <style>
-        .user-item { border-bottom: 1px solid #ccc; padding: 10px; }
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .user-item { 
+            border-bottom: 1px solid #ccc; 
+            padding: 10px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        button { padding: 5px 10px; cursor: pointer; }
+        .delete-all-btn { margin-top: 10px; background-color: #ff4d4d; color: white; border: none; padding: 10px; }
     </style>
 </head>
 <body>
@@ -12,20 +21,25 @@
     
     <div id="teachers-section">
         <h2>إدارة المعلمين</h2>
-        <div id="teachers-list"></div>
-        <button onclick="deleteAll('teacher')">حذف جميع المعلمين</button>
+        <div id="teachers-list">
+            <!-- سيتم تحميل المعلمين هنا -->
+        </div>
+        <button class="delete-all-btn" onclick="deleteAll('teacher')">حذف جميع المعلمين</button>
     </div>
 
     <div id="students-section">
         <h2>إدارة الطلاب</h2>
-        <div id="students-list"></div>
-        <button onclick="deleteAll('student')">حذف جميع الطلاب</button>
+        <div id="students-list">
+            <!-- سيتم تحميل الطلاب هنا -->
+        </div>
+        <button class="delete-all-btn" onclick="deleteAll('student')">حذف جميع الطلاب</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, deleteDoc, doc, writeBatch } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, writeBatch } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
 
+        // إعدادات Firebase الخاصة بك
         const firebaseConfig = {
           apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
           authDomain: "manarat-alnutq.firebaseapp.com",
@@ -40,48 +54,84 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // دالة جلب المستخدمين محسنة
         async function loadUsers(role, listId) {
             const list = document.getElementById(listId);
-            list.innerHTML = "";
-            const q = query(collection(db, "users")); 
-            const querySnapshot = await getDocs(q);
+            list.innerHTML = "<p>⏳ جاري التحميل...</p>"; // رسالة أثناء التحميل
 
-            querySnapshot.forEach((doc) => {
-                const user = doc.data();
-                if (user.role === role) {
+            try {
+                // جلب المستخدمين المطلوبين فقط من الخادم باستخدام where
+                const q = query(collection(db, "users"), where("role", "==", role)); 
+                const querySnapshot = await getDocs(q);
+                
+                list.innerHTML = ""; // مسح رسالة التحميل
+
+                // التحقق مما إذا كانت القائمة فارغة
+                if (querySnapshot.empty) {
+                    list.innerHTML = "<p>لا يوجد مستخدمين حالياً في هذا القسم.</p>";
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const user = doc.data();
                     const div = document.createElement("div");
                     div.className = "user-item";
                     div.innerHTML = `
-                        <span>${user.name || user.email}</span>
+                        <span>${user.name || user.email || 'مستخدم بدون اسم'}</span>
                         <button onclick="deleteSingle('${doc.id}')">حذف</button>
                     `;
                     list.appendChild(div);
-                }
-            });
+                });
+            } catch (error) {
+                console.error("خطأ في جلب البيانات:", error);
+                list.innerHTML = "<p>❌ حدث خطأ أثناء جلب البيانات. تأكد من اتصالك بالإنترنت والصلاحيات.</p>";
+            }
         }
 
+        // دالة الحذف الفردي
         window.deleteSingle = async (docId) => {
-            if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
-                await deleteDoc(doc(db, "users", docId));
-                alert("تم الحذف!");
-                location.reload();
+            if (confirm("هل أنت متأكد من حذف هذا المستخدم نهائياً؟")) {
+                try {
+                    await deleteDoc(doc(db, "users", docId));
+                    alert("تم الحذف بنجاح!");
+                    location.reload(); // إعادة تحميل الصفحة لتحديث البيانات
+                } catch (error) {
+                    console.error("خطأ في الحذف:", error);
+                    alert("حدث خطأ أثناء الحذف. راجع وحدة التحكم (Console).");
+                }
             }
         };
 
+        // دالة الحذف الجماعي محسنة
         window.deleteAll = async (role) => {
-            if (confirm(`هل أنت متأكد من حذف جميع مستخدمي دور ${role}؟`)) {
-                const q = query(collection(db, "users"));
-                const querySnapshot = await getDocs(q);
-                const batch = writeBatch(db);
-                querySnapshot.forEach((doc) => {
-                    if (doc.data().role === role) batch.delete(doc.ref);
-                });
-                await batch.commit();
-                alert("تم الحذف الجماعي!");
-                location.reload();
+            const roleName = role === 'teacher' ? 'المعلمين' : 'الطلاب';
+            if (confirm(`⚠️ تحذير: هل أنت متأكد من حذف جـمـيـع ${roleName}؟ هذا الإجراء لا يمكن التراجع عنه!`)) {
+                try {
+                    // استخدام where حتى نجلب فقط من نريد حذفه (وليس كل قاعدة البيانات)
+                    const q = query(collection(db, "users"), where("role", "==", role));
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (querySnapshot.empty) {
+                        alert("لا يوجد مستخدمين لحذفهم.");
+                        return;
+                    }
+
+                    const batch = writeBatch(db);
+                    querySnapshot.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    
+                    await batch.commit();
+                    alert(`تم حذف جميع ${roleName} بنجاح!`);
+                    location.reload();
+                } catch (error) {
+                    console.error("خطأ في الحذف الجماعي:", error);
+                    alert("حدث خطأ أثناء الحذف الجماعي.");
+                }
             }
         };
 
+        // تشغيل الدوال عند فتح الصفحة
         loadUsers('teacher', 'teachers-list');
         loadUsers('student', 'students-list');
     </script>
