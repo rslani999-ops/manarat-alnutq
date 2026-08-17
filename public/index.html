@@ -1,202 +1,691 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة تقييم النطق</title>
-    <!-- استدعاء مكتبات Firebase (الإصدار الأساسي للويب) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <style>
-        :root {
-            --primary-color: #4a6fa5;
-            --secondary-color: #169bca;
-            --text-color: #333;
-            --bg-color: #f4f6f8;
-            --white: #ffffff;
-            --border-color: #ddd;
-        }
-        body {
-            font-family: 'Cairo', sans-serif, Tahoma, Arial;
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            direction: rtl;
-            text-align: right;
-        }
-        header {
-            background-color: var(--primary-color);
-            color: var(--white);
-            padding: 1.5rem;
-            text-align: center;
-        }
-        .container {
-            max-width: 800px;
-            margin: 2rem auto;
-            background: var(--white);
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        h2 {
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-        }
-        input, textarea, select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-family: inherit;
-        }
-        button {
-            background-color: var(--secondary-color);
-            color: var(--white);
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-family: inherit;
-            margin-top: 1rem;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        .sessions-list {
-            margin-top: 2rem;
-        }
-        .session-item {
-            background: #fafafa;
-            border: 1px solid var(--border-color);
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منارة النطق لتدريبات النطق</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E2A47;
+    --paper:#EFF5FB;
+    --mint:#4FB6A8;
+    --mint-deep:#357E74;
+    --sun:#F4B740;
+    --coral:#EF6F5B;
+    --lilac:#9C82C4;
+    --white:#FFFFFF;
+    --line: rgba(30,42,71,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Tajawal', sans-serif;
+    min-height:100vh;
+    background-image:
+      radial-gradient(circle at 8% 12%, rgba(79,182,168,0.10) 0, transparent 40%),
+      radial-gradient(circle at 92% 85%, rgba(239,111,91,0.08) 0, transparent 40%);
+  }
+  h1,h2,h3, .display{font-family:'Baloo Bhaijaan 2', sans-serif;}
+  .num, .data{font-family:'IBM Plex Sans Arabic', sans-serif;}
+  #app{max-width:960px;margin:0 auto;padding:20px 16px 60px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 4px 24px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mark{
+    width:40px;height:40px;border-radius:12px;
+    background:linear-gradient(135deg,var(--mint),var(--mint-deep));
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;color:white;box-shadow:0 4px 10px rgba(79,182,168,0.35);
+  }
+  .brand h1{font-size:20px;margin:0;font-weight:700;}
+  .brand span{display:block;font-size:11px;color:#6B7A99;font-family:'Tajawal';margin-top:-2px;}
+  .back-btn{
+    border:none;background:white;color:var(--ink);padding:8px 14px;border-radius:10px;
+    font-family:'Tajawal';font-weight:700;cursor:pointer;border:1px solid var(--line);
+    display:flex;align-items:center;gap:6px;font-size:14px;
+  }
+  .back-btn:hover{background:#F5F8FC;}
+
+  .card{background:white;border-radius:18px;border:1px solid var(--line);padding:20px;margin-bottom:16px;}
+  .card h3{margin:0 0 4px;font-size:17px;}
+  .muted{color:#6B7A99;font-size:13px;}
+
+  .btn{
+    border:none;border-radius:12px;padding:12px 20px;font-family:'Tajawal';font-weight:700;
+    cursor:pointer;font-size:15px;transition:filter .15s, transform .15s;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--mint-deep);color:white;}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-soft{background:#EAF6F4;color:var(--mint-deep);}
+  .btn-soft:hover{background:#DDF0ED;}
+  .btn-success{background:#10B981;color:white;}
+  .btn-success:hover{filter:brightness(1.08);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:8px 14px;font-size:13px;border-radius:9px;}
+
+  input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], textarea, select{
+    width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);
+    font-family:'Tajawal';font-size:15px;background:#FBFDFE;margin-bottom:12px;
+  }
+  input:focus, textarea:focus, select:focus{outline:none;border-color:var(--mint);}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:white;padding:12px 22px;border-radius:12px;
+    font-family:'Tajawal';font-weight:700;font-size:14px;z-index:50;
+    box-shadow:0 10px 24px rgba(0,0,0,0.2);
+  }
+
+  .auth-form{max-width:400px;margin:0 auto;background:white;padding:30px;border-radius:20px;border:1px solid var(--line);}
+  .auth-form h2{text-align:center;margin-bottom:20px;}
+  .auth-toggle{text-align:center;margin-top:15px;font-size:14px;color:#5B6A88;}
+  .auth-toggle span{color:var(--mint-deep);cursor:pointer;font-weight:700;}
+
+  .articulation-box {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background: #F4F9F8;
+    border: 1px dashed var(--mint);
+    padding: 14px;
+    border-radius: 14px;
+    margin-bottom: 15px;
+  }
+  .articulation-img {
+    width: 80px;
+    height: 80px;
+    background: var(--white);
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+  }
+
+  .session-item {
+    background: #FAFDFC;
+    border: 1px solid var(--line);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+</style>
 </head>
 <body>
+<div id="app"></div>
 
-    <header>
-        <h1>منصة تقييم النطق</h1>
-        <p>متابعة الجلسات التدريبية والتقييمات السحابية</p>
-    </header>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-analytics.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getFirestore, setDoc, doc, getDoc, updateDoc, collection, addDoc, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
-    <div class="container">
-        <section id="new-session">
-            <h2>تسجيل جلسة تدريبية جديدة</h2>
-            <form id="sessionForm">
-                <div class="form-group">
-                    <label for="studentName">اسم الطالب:</label>
-                    <input type="text" id="studentName" required placeholder="أدخل اسم الطالب">
-                </div>
-                <div class="form-group">
-                    <label for="sessionDate">تاريخ الجلسة:</label>
-                    <input type="date" id="sessionDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="notes">ملاحظات التقييم:</label>
-                    <textarea id="notes" rows="4" required placeholder="أدخل تقييم وملاحظات الجلسة"></textarea>
-                </div>
-                <button type="submit">حفظ الجلسة في السحابة</button>
-            </form>
-        </section>
+const firebaseConfig = {
+  apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
+  authDomain: "manarat-alnutq.firebaseapp.com",
+  databaseURL: "https://manarat-alnutq-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "manarat-alnutq",
+  storageBucket: "manarat-alnutq.firebasestorage.app",
+  messagingSenderId: "543101731444",
+  appId: "1:543101731444:web:35a8daf145603c66978721",
+  measurementId: "G-ZFKWLDT384"
+};
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-        <section class="sessions-list">
-            <h2>سجلات الجلسات السحابية</h2>
-            <div id="sessionsContainer">
-                <p>جاري تحميل البيانات...</p>
-            </div>
-        </section>
+const ARABIC_LETTERS = [
+  {ch:'ا', word:'أَسَد', place:'الجوف / الحلق'}, {ch:'ب', word:'بَطَّة', place:'الشفتان'}, {ch:'ت', word:'تُفَّاح', place:'طراف اللسان مع أصول الثنايا العليا'}, {ch:'ث', word:'ثَعْلَب', place:'طراف اللسان مع أطراف الثنايا العليا'},
+  {ch:'ج', word:'جَمَل', place:'وسط اللسان'}, {ch:'ح', word:'حِصَان', place:'وسط الحلق'}, {ch:'خ', word:'خُبْز', place:'أدنى الحلق'}, {ch:'د', word:'دُبّ', place:'طراف اللسان مع أصول الثنايا العليا'},
+  {ch:'ذ', word:'ذِئْب', place:'طراف اللسان مع أطراف الثنايا العليا'}, {ch:'ر', word:'رُمَّان', place:'ظهر اللسان مع ما يقابله من اللثة العليا'}, {ch:'ز', word:'زَرَافَة', place:'طراف اللسان مع ما بين الثنايا العليا والسفلى'}, {ch:'س', word:'سَمَك', place:'طراف اللسان مع ما بين الثنايا العليا والسفلى'},
+  {ch:'ش', word:'شَمْس', place:'وسط اللسان مع ما يقابله من الحنك الأعلى'}, {ch:'ص', word:'صَقْر', place:'طراف اللسان مع ما بين الثنايا العليا والسفلى'}, {ch:'ض', word:'ضِفْدَع', place:'حافة اللسان مع الأضراس العليا'}, {ch:'ط', word:'طَائِرَة', place:'طراف اللسان مع أصول الثنايا العليا'},
+  {ch:'ظ', word:'ظَبْي', place:'طراف اللسان مع أطراف الثنايا العليا'}, {ch:'ع', word:'عَصْفُور', place:'وسط الحلق'}, {ch:'غ', word:'غَزَال', place:'أدنى الحلق'}, {ch:'ف', word:'فِيل', place:'باطن الشفة السفلى مع أطراف الثنايا العليا'},
+  {ch:'ق', word:'قِطَّة', place:'اقصى اللسان مع ما يقابله من الحنك اللحمي'}, {ch:'ك', word:'كَلْب', place:'اقصى اللسان مع الحنك اللحمي والعظمي'}, {ch:'ل', word:'لَيْمُون', place:'ادنى حافتي اللسان إلى منتهاها مع ما يقابلها من اللثة'}, {ch:'م', word:'مَوْز', place:'الشفتان معاً'},
+  {ch:'ن', word:'نَحْلَة', place:'طراف اللسان مع ما يقابله من لثة الثنايا العليا'}, {ch:'هـ', word:'هِلَال', place:'اقصى الحلق'}, {ch:'و', word:'وَرْدَة', place:'الشفتان بانضمامهما'}, {ch:'ي', word:'يَد', place:'وسط اللسان مع ما يقابله من الحنك الأعلى'}
+];
+
+const FOOD_ITEMS = ['تفاحة', 'موزة', 'برتقالة', 'عنب', 'تمر', 'خبز', 'جبن', 'حليب', 'ماء', 'عصير'];
+
+let state = { view:'auth', user:null, role:null, students:[], allTeachers:[], sessions:[] };
+let toastTimer=null;
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.remove(), 2200);
+}
+
+function topbar(app, title, sub, onBack){
+  const bar = document.createElement('div');
+  bar.className='topbar';
+  bar.innerHTML = `
+    <div class="brand">
+      <div class="mark">🎙️</div>
+      <div><h1>${title}</h1><span>${sub||''}</span></div>
     </div>
+  `;
+  if(onBack){
+    const btn=document.createElement('button');
+    btn.className='back-btn';
+    btn.innerHTML='رجوع ←';
+    btn.onclick=onBack;
+    bar.appendChild(btn);
+  }
+  app.appendChild(bar);
+}
 
-    <script>
-        // إعدادات مشروع Firebase الخاص بك
-        const firebaseConfig = {
-            apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
-            authDomain: "manarat-alnutq.firebaseapp.com",
-            databaseURL: "https://manarat-alnutq-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "manarat-alnutq",
-            storageBucket: "manarat-alnutq.firebasestorage.app",
-            messagingSenderId: "543101731444",
-            appId: "1:543101731444:web:35a8daf145603c66978721",
-            measurementId: "G-ZFKWLDT384"
-        };
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  if(state.view==='auth') return renderAuth(app);
+  if(state.view==='register') return renderRegister(app);
+  if(state.view==='teacher-dashboard') return renderTeacherDashboard(app);
+  if(state.view==='student-menu') return renderStudentMenu(app);
+  if(state.view==='diagnostics') return renderDiagnostics(app);
+  if(state.view==='food-menu') return renderFoodMenu(app);
+  if(state.view==='iep-session') return renderIEPSession(app);
+  if(state.view==='speech-sessions') return renderSpeechSessions(app);
+}
 
-        // تهيئة Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+function renderAuth(app){
+  const card = document.createElement('div');
+  card.className = 'auth-form';
+  card.innerHTML = `
+    <h2>تسجيل الدخول</h2>
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <button class="btn btn-primary btn-block" id="loginBtn">دخول</button>
+    <div class="auth-toggle">ليس لديك حساب؟ <span id="toRegister">إنشاء حساب</span></div>
+  `;
+  
+  card.querySelector('#loginBtn').onclick = async () => {
+    const email = card.querySelector('#email').value;
+    const password = card.querySelector('#password').value;
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      state.user = userCredential.user;
+      checkUserRole(state.user.uid);
+    } catch (error) {
+      showToast('خطأ في البريد الإلكتروني أو كلمة المرور');
+    }
+  };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const sessionForm = document.getElementById('sessionForm');
-            const sessionsContainer = document.getElementById('sessionsContainer');
+  card.querySelector('#toRegister').onclick = () => {
+    state.view = 'register';
+    render();
+  };
 
-            // جلب وعرض الجلسات من Firestore السحابي مباشرة
-            function loadSessions() {
-                db.collection("sessions").orderBy("sessionDate", "desc").get()
-                    .then((querySnapshot) => {
-                        sessionsContainer.innerHTML = '';
-                        if (querySnapshot.empty) {
-                            sessionsContainer.innerHTML = '<p>لا توجد جلسات مسجلة حتى الآن.</p>';
-                            return;
-                        }
+  app.appendChild(card);
+}
 
-                        querySnapshot.forEach((doc) => {
-                            const session = doc.data();
-                            const div = document.createElement('div');
-                            div.className = 'session-item';
-                            div.innerHTML = `
-                                <strong>الطالب:</strong> ${session.studentName} <br>
-                                <strong>التاريخ:</strong> ${session.sessionDate} <br>
-                                <strong>الملاحظات:</strong> ${session.notes}
-                            `;
-                            sessionsContainer.appendChild(div);
-                        });
-                    })
-                    .catch((error) => {
-                        console.error("خطأ في جلب البيانات: ", error);
-                        sessionsContainer.innerHTML = '<p>حدث خطأ أثناء تحميل البيانات من السحابة.</p>';
-                    });
-            }
+function renderRegister(app){
+  const card = document.createElement('div');
+  card.className = 'auth-form';
+  card.innerHTML = `
+    <h2>إنشاء حساب</h2>
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <select id="role">
+      <option value="student">طالب</option>
+      <option value="teacher">معلم</option>
+    </select>
+    <button class="btn btn-primary btn-block" id="registerBtn">تسجيل</button>
+    <div class="auth-toggle">لديك حساب بالفعل؟ <span id="toLogin">تسجيل الدخول</span></div>
+  `;
 
-            // حفظ جلسة جديدة مباشرة إلى قاعدة بيانات Firebase Firestore السحابية
-            sessionForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const studentName = document.getElementById('studentName').value;
-                const sessionDate = document.getElementById('sessionDate').value;
-                const notes = document.getElementById('notes').value;
+  card.querySelector('#registerBtn').onclick = async () => {
+    const email = card.querySelector('#email').value;
+    const password = card.querySelector('#password').value;
+    const role = card.querySelector('#role').value;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      await setDoc(doc(db, "users", user.uid), { role: role, email: email });
+      state.user = user;
+      state.role = role;
+      state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
+      render();
+    } catch (error) {
+      showToast('خطأ في إنشاء الحساب');
+    }
+  };
 
-                db.collection("sessions").add({
-                    studentName: studentName,
-                    sessionDate: sessionDate,
-                    notes: notes,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                })
-                .then(() => {
-                    sessionForm.reset();
-                    loadSessions();
-                })
-                .catch((error) => {
-                    console.error("خطأ في حفظ البيانات: ", error);
-                    alert("فشل حفظ الجلسة، تحقق من الاتصال أو إعدادات القواعد.");
-                });
-            });
+  card.querySelector('#toLogin').onclick = () => {
+    state.view = 'auth';
+    render();
+  };
 
-            // تحميل الجلسات عند فتح الصفحة
-            loadSessions();
-        });
-    </script>
+  app.appendChild(card);
+}
+
+async function checkUserRole(uid) {
+  try {
+    const userDoc = await getDoc(doc(db, "users", uid));
+    if (userDoc.exists()) {
+      state.role = userDoc.data().role;
+      state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
+      if (state.role === 'teacher') fetchStudents();
+    } else {
+      showToast('لم يتم العثور على بيانات المستخدم');
+    }
+  } catch (error) {
+    showToast('خطأ في جلب بيانات الدور');
+  }
+  render();
+}
+
+async function fetchStudents() {
+  try {
+    const q = query(collection(db, "users"), where("role", "==", "student"));
+    const querySnapshot = await getDocs(q);
+    state.students = [];
+    querySnapshot.forEach((docSnap) => {
+      state.students.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    fetchTeachers();
+  } catch (error) {
+    showToast('خطأ في جلب بيانات الطلاب');
+  }
+}
+
+async function fetchTeachers() {
+  try {
+    const q = query(collection(db, "users"), where("role", "==", "teacher"));
+    const querySnapshot = await getDocs(q);
+    state.allTeachers = [];
+    querySnapshot.forEach((docSnap) => {
+      state.allTeachers.push({ id: docSnap.id, email: docSnap.data().email });
+    });
+    renderTeacherDashboard(document.getElementById('app'));
+  } catch (error) {
+    showToast('خطأ في جلب بيانات المعلمين');
+  }
+}
+
+async function assignTeacher(studentId, teacherId) {
+  try {
+    const studentRef = doc(db, "users", studentId);
+    await updateDoc(studentRef, { teacherId: teacherId });
+    showToast('تم ربط الطالب بالمعلم بنجاح');
+    fetchStudents();
+  } catch (error) {
+    showToast('خطأ في ربط الطالب بالمعلم');
+  }
+}
+
+function renderTeacherDashboard(app){
+  app.innerHTML = '';
+  topbar(app, 'لوحة المعلم', 'إدارة الطلاب والخطط', async () => {
+    await signOut(auth);
+    state.view = 'auth';
+    state.user = null;
+    render();
+  });
+
+  const sessionCard = document.createElement('div');
+  sessionCard.className = 'card';
+  sessionCard.innerHTML = `
+    <h3>منصة تقييم النطق وتسجيل الجلسات السحابية</h3>
+    <p class="muted" style="margin-bottom:12px;">تسجيل تقييمات الجلسات التشخيصية ومتابعتها عبر السحابة.</p>
+    <button class="btn btn-primary" onclick="state.view='speech-sessions'; render();">فتح سجل الجلسات التشخيصية</button>
+  `;
+  app.appendChild(sessionCard);
+
+  const planNavCard = document.createElement('div');
+  planNavCard.className = 'card';
+  planNavCard.innerHTML = `
+    <h3>الخطط التدريبية وسجل الجلسات (IEP)</h3>
+    <p class="muted" style="margin-bottom:12px;">إدارة أهداف الجلسة الحالية وتسجيل نسب إتقان المحاولات.</p>
+    <button class="btn btn-soft" onclick="state.view='iep-session'; render();">فتح لوحة إدارة الجلسات الفردية</button>
+  `;
+  app.appendChild(planNavCard);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  let html = '<h3>قائمة الطلاب المسجلين</h3>';
+  
+  if (state.students.length === 0) {
+    html += '<p class="muted">لا يوجد طلاب مسجلون حالياً.</p>';
+  } else {
+    html += '<div style="margin-top:10px;">';
+    state.students.forEach(student => {
+      html += `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span><strong>${student.email || student.id}</strong></span>
+          <br>
+          <span class="muted">المعلم الحالي: ${student.teacherId || 'غير محدد'}</span>
+        </div>
+        <div>
+          <select id="select-${student.id}">
+            <option value="">اختر معلماً</option>
+            ${state.allTeachers.map(t => `<option value="${t.id}" ${student.teacherId === t.id ? 'selected' : ''}>${t.email || t.id}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="window.assignTeacher('${student.id}', document.getElementById('select-${student.id}').value)">ربط</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  
+  card.innerHTML = html;
+  app.appendChild(card);
+}
+
+window.assignTeacher = assignTeacher;
+
+/* قسم جلسات تقييم النطق المدمجة من الكود السابق مع Firebase */
+function renderSpeechSessions(app){
+  topbar(app, 'تقييم النطق والجلسات', 'سجلات التقييم السحابية', () => {
+    state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <h3>تسجيل جلسة تدريبية جديدة</h3>
+    <div style="margin-top:12px;">
+      <label class="muted">اسم الطالب:</label>
+      <input type="text" id="speechStudentName" placeholder="أدخل اسم الطالب">
+
+      <label class="muted">تاريخ الجلسة:</label>
+      <input type="date" id="speechSessionDate">
+
+      <label class="muted">ملاحظات التقييم:</label>
+      <textarea id="speechNotes" rows="3" placeholder="أدخل تقييم وملاحظات الجلسة"></textarea>
+
+      <button class="btn btn-success btn-block" id="saveSpeechBtn">حفظ الجلسة في السحابة</button>
+    </div>
+  `;
+  app.appendChild(card);
+
+  const listCard = document.createElement('div');
+  listCard.className = 'card';
+  listCard.innerHTML = `
+    <h3>سجلات الجلسات السحابية</h3>
+    <div id="sessionsContainer" style="margin-top:10px;"><p class="muted">جاري تحميل البيانات...</p></div>
+  `;
+  app.appendChild(listCard);
+
+  card.querySelector('#saveSpeechBtn').onclick = async () => {
+    const studentName = document.getElementById('speechStudentName').value;
+    const sessionDate = document.getElementById('speechSessionDate').value;
+    const notes = document.getElementById('speechNotes').value;
+
+    if(!studentName || !sessionDate || !notes) {
+      showToast('الرجاء تعبئة جميع الحقول');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "speech_sessions"), {
+        studentName,
+        sessionDate,
+        notes,
+        createdAt: new Date()
+      });
+      showToast('تم حفظ الجلسة بنجاح!');
+      document.getElementById('speechStudentName').value = '';
+      document.getElementById('speechSessionDate').value = '';
+      document.getElementById('speechNotes').value = '';
+      loadSpeechSessions();
+    } catch (e) {
+      showToast('حدث خطأ أثناء حفظ الجلسة');
+    }
+  };
+
+  loadSpeechSessions();
+}
+
+async function loadSpeechSessions(){
+  const container = document.getElementById('sessionsContainer');
+  if(!container) return;
+  try {
+    const q = query(collection(db, "speech_sessions"), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    container.innerHTML = '';
+
+    if(querySnapshot.empty){
+      container.innerHTML = '<p class="muted">لا توجد جلسات مسجلة حتى الآن.</p>';
+      return;
+    }
+
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const div = document.createElement('div');
+      div.className = 'session-item';
+      div.innerHTML = `
+        <div><strong>الطالب:</strong> ${data.studentName}</div>
+        <div><strong>التاريخ:</strong> ${data.sessionDate}</div>
+        <div><strong>الملاحظات:</strong> ${data.notes}</div>
+      `;
+      container.appendChild(div);
+    });
+  } catch(e) {
+    container.innerHTML = '<p class="muted">خطأ في تحميل الجلسات من السحابة.</p>';
+  }
+}
+
+function renderIEPSession(app){
+  topbar(app, 'الخطة التدريبية (IEP) وسجل الجلسات', 'إدارة الجلسة الحالية', () => {
+    state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <h3>تحديد الهدف والنشاط التدريبي</h3>
+    <div style="margin-top:12px;">
+      <label class="muted">الهدف الرئيسي للخطة:</label>
+      <input type="text" id="mainGoal" placeholder="مثلاً: إتقان نطق صوت /ر/ في جميع مواقع الكلمة">
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label class="muted">الهدف الفرعي:</label>
+          <select id="subGoalSelect">
+            <option value="isolated">نطق الصوت منفرداً</option>
+            <option value="syllables">المقاطع الصوتية</option>
+            <option value="words">الكلمات</option>
+            <option value="sentences">الجمل البسيطة</option>
+            <option value="conversation">المحادثة والتلقائي</option>
+          </select>
+        </div>
+        <div>
+          <label class="muted">النشاط المستخدم:</label>
+          <select id="activitySelect">
+            <option value="repetition">تكرار (Repetition)</option>
+            <option value="naming">تسمية الصور (Picture Naming)</option>
+            <option value="matching">مطابقة (Matching)</option>
+            <option value="reading">قراءة جهرية (Reading)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="articulation-box" style="margin-top:15px;">
+        <div class="articulation-img">🗣️</div>
+        <div>
+          <h4 style="margin:0 0 4px; font-size:14px; color:var(--mint-deep);">دليل مخرج الحرف (الذكاء الاصطناعي)</h4>
+          <p class="muted" style="margin:0;">تظهر هنا الرسمة التوضيحية لموضع اللسان والشفتين والحلق لإرشاد الطالب والولي أثناء التمرين المنزلي.</p>
+        </div>
+      </div>
+
+      <div style="background:#FBFDFE; padding:15px; border-radius:12px; border:1px solid var(--line); margin-top:15px;">
+        <h4 style="margin-top:0; font-size:15px;">تسجيل نتائج الجلسة اليومية</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label class="muted" style="display:block; margin-bottom:5px;">إجمالي المحاولات:</label>
+            <input type="number" id="totalTrials" value="20" oninput="window.calcScore()">
+          </div>
+          <div>
+            <label class="muted" style="display:block; margin-bottom:5px;">الإجابات الصحيحة:</label>
+            <input type="number" id="correctTrials" value="0" oninput="window.calcScore()">
+          </div>
+        </div>
+        <div style="text-align:left; font-weight:bold; color:var(--mint-deep); margin-top:10px;">
+          نسبة إتقان الجلسة: <span id="sessionScoreDisplay">0%</span>
+        </div>
+      </div>
+
+      <button class="btn btn-success btn-block" style="margin-top:15px;" onclick="window.saveSessionLog()">
+        حفظ جلسة التدريب وتحديث التقدم
+      </button>
+    </div>
+  `;
+  app.appendChild(card);
+}
+
+window.calcScore = function() {
+  let total = document.getElementById('totalTrials').value;
+  let correct = document.getElementById('correctTrials').value;
+  if(total > 0 && correct >= 0) {
+    let percentage = Math.round((correct / total) * 100);
+    document.getElementById('sessionScoreDisplay').innerText = percentage + '%';
+  }
+}
+
+window.saveSessionLog = function() {
+  let score = document.getElementById('sessionScoreDisplay').innerText;
+  let subGoal = document.getElementById('subGoalSelect').value;
+  let activity = document.getElementById('activitySelect').value;
+  let mainGoal = document.getElementById('mainGoal').value;
+  
+  let sessionData = { mainGoal, subGoal, activity, score, date: new Date().toLocaleDateString('ar-SA') };
+  
+  let sessions = JSON.parse(localStorage.getItem('minarat_sessions') || '[]');
+  sessions.push(sessionData);
+  localStorage.setItem('minarat_sessions', JSON.stringify(sessions));
+  
+  showToast('تم حفظ جلسة التدريب بنجاح!');
+}
+
+function renderStudentMenu(app){
+  topbar(app, 'صفحة الطالب', 'اختر النشاط', async () => {
+    await signOut(auth);
+    state.view = 'auth';
+    state.user = null;
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>أهلاً بك يا بطل</h3>';
+  app.appendChild(card);
+
+  const diagBtn = document.createElement('button');
+  diagBtn.className = 'btn btn-primary btn-block';
+  diagBtn.textContent = 'تشخيص النطق';
+  diagBtn.onclick = () => {
+    state.view = 'diagnostics';
+    render();
+  };
+  card.appendChild(diagBtn);
+
+  const foodBtn = document.createElement('button');
+  foodBtn.className = 'btn btn-soft btn-block';
+  foodBtn.style.marginTop = '10px';
+  foodBtn.textContent = 'أصناف الطعام';
+  foodBtn.onclick = () => {
+    state.view = 'food-menu';
+    render();
+  };
+  card.appendChild(foodBtn);
+}
+
+function renderDiagnostics(app) {
+  topbar(app, 'تشخيص النطق', 'قراءة الحروف', () => {
+    state.view = 'student-menu';
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>اختر حرفاً للتشخيص:</h3>';
+  
+  const demoBox = document.createElement('div');
+  demoBox.id = 'diagnosticDemo';
+  demoBox.innerHTML = `
+    <div class="articulation-box" style="margin-top:10px; margin-bottom:15px;">
+      <div class="articulation-img" id="demoIcon">🗣️</div>
+      <div>
+        <h4 style="margin:0 0 2px; font-size:14px; color:var(--mint-deep);" id="demoTitle">اختر حرفاً لعرض المخرج</h4>
+        <p class="muted" style="margin:0;" id="demoDesc">توضح هذه الرسمة مكان خروج الصوت من الفم أو الحلق.</p>
+      </div>
+    </div>
+  `;
+  card.appendChild(demoBox);
+
+  const grid = document.createElement('div');
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+  grid.style.gap = '10px';
+  grid.style.marginTop = '15px';
+
+  ARABIC_LETTERS.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-soft';
+    btn.textContent = `${item.ch} - ${item.word}`;
+    btn.onclick = () => {
+      document.getElementById('demoTitle').innerText = `مخرج حرف (${item.ch}): كلمة ${item.word}`;
+      document.getElementById('demoDesc').innerText = `مكان المخرج: ${item.place}`;
+      document.getElementById('demoIcon').innerText = item.ch;
+      showToast(`قم بنطق الكلمة: ${item.word}`);
+    };
+    grid.appendChild(btn);
+  });
+
+  card.appendChild(grid);
+  app.appendChild(card);
+}
+
+function renderFoodMenu(app) {
+  topbar(app, 'أصناف الطعام', 'اختر طعاماً للتدريب', () => {
+    state.view = 'student-menu';
+    render();
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>أصناف الطعام المتاحة:</h3>';
+
+  const list = document.createElement('div');
+  list.style.marginTop = '15px';
+
+  FOOD_ITEMS.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-soft btn-block';
+    btn.textContent = item;
+    btn.style.marginBottom = '8px';
+    btn.onclick = () => showToast(`قم بنطق: ${item}`);
+    list.appendChild(btn);
+  });
+
+  card.appendChild(list);
+  app.appendChild(card);
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    state.user = user;
+    checkUserRole(user.uid);
+  } else {
+    state.view = 'auth';
+    render();
+  }
+});
+
+render();
+</script>
 </body>
 </html>
+
