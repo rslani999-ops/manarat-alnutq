@@ -466,16 +466,20 @@ window.claimStudent = async function(studentId){
   try {
     const ref = doc(db, "users", studentId);
     const snap = await getDoc(ref);
-    if(snap.exists() && snap.data().teacherId !== null){
+    const data = snap.data();
+    
+    if(snap.exists() && data.teacherId && data.teacherId !== state.user.uid){
       showToast('عذراً! هذا الطالب مرتبط بمعلم آخر بالفعل');
       await fetchTeacherStudents();
       return;
     }
+    
     await updateDoc(ref, { teacherId: state.user.uid });
     showToast('تمت إضافة الطالب بنجاح');
     await fetchTeacherStudents();
   } catch(e) {
-    showToast('فشل في إضافة الطالب');
+    console.error(e);
+    showToast('فشل في إضافة الطالب: تحقق من قواعد الأمان (Firestore Rules)');
   }
 };
 
@@ -884,3 +888,4 @@ render();
 </script>
 </body>
 </html>
+
