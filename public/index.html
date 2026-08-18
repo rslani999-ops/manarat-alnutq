@@ -194,6 +194,9 @@ const db = getFirestore(app);
 const ALL_LETTERS = ['أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','هـ','و','ي'];
 const FOOD_ITEMS = ['تفاحة', 'موزة', 'برتقالة', 'عنب', 'تمر', 'خبز', 'حليب', 'ماء'];
 
+// === تعديل: متغير عام لعنصر الطباعة ===
+let iepPrintArea = null;
+
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -250,10 +253,11 @@ onAuthStateChanged(auth, async (u) => {
   }
 });
 
+// === تعديل: دعم دور admin في أعلى الصفحة ===
 function renderTopbar(appContainer, title, sub, onBack){
   const bar = document.createElement('div');
   bar.className='topbar';
-  let userStatus = state.user ? `<span style="font-size:12px; color:var(--mint-deep);">(${state.role === 'teacher' ? 'معلم' : 'طالب'})</span>` : '';
+  let userStatus = state.user ? `<span style="font-size:12px; color:var(--mint-deep);">(${state.role === 'teacher' ? 'معلم' : state.role === 'admin' ? 'مدير' : 'طالب'})</span>` : '';
 
   bar.innerHTML = `
     <div class="brand" id="brandHome">
@@ -277,9 +281,18 @@ function renderTopbar(appContainer, title, sub, onBack){
   if(state.user){
     const btnDashboard = document.createElement('button');
     btnDashboard.className = 'btn-nav';
-    btnDashboard.textContent = state.role === 'teacher' ? 'لوحتي' : 'صفحتي الجلسات';
-    btnDashboard.onclick = () => { state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu'; render(); };
+    btnDashboard.textContent = state.role === 'teacher' || state.role === 'admin' ? 'لوحتي' : 'صفحتي الجلسات';
+    btnDashboard.onclick = () => { state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu'; render(); };
     actions.appendChild(btnDashboard);
+
+    // === تعديل: إضافة زر لوحة المدير إذا كان admin ===
+    if (state.role === 'admin') {
+      const btnAdmin = document.createElement('button');
+      btnAdmin.className = 'btn-nav';
+      btnAdmin.textContent = 'لوحة المدير';
+      btnAdmin.onclick = () => { window.location.href = 'admin.html'; };
+      actions.appendChild(btnAdmin);
+    }
 
     const btnLogout = document.createElement('button');
     btnLogout.className = 'btn-nav';
@@ -287,6 +300,11 @@ function renderTopbar(appContainer, title, sub, onBack){
     btnLogout.textContent = 'خروج';
     btnLogout.onclick = async () => {
       try {
+        // === تعديل: تنظيف عنصر الطباعة عند الخروج ===
+        if (iepPrintArea) {
+          iepPrintArea.remove();
+          iepPrintArea = null;
+        }
         await signOut(auth);
         // إعادة تعيين الحالة بالكامل
         state.user = null;
@@ -477,7 +495,8 @@ async function fetchUserData(uid){
     if(uDoc.exists()){
       const uData = uDoc.data();
       state.role = uData.role;
-      if (state.role === 'teacher') {
+      // === تعديل: معاملة admin كمعلم مع صلاحيات إضافية ===
+      if (state.role === 'teacher' || state.role === 'admin') {
         state.view = 'teacher-dashboard';
         await fetchTeacherStudents();
       } else {
@@ -513,6 +532,18 @@ async function fetchTeacherStudents(){
 function renderTeacherDashboard(app){
   renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
+  // === تعديل: بطاقة خاصة بالمدير ===
+  if (state.role === 'admin') {
+    const adminCard = document.createElement('div');
+    adminCard.className = 'card';
+    adminCard.innerHTML = `
+      <h3>⚙️ صلاحيات المدير</h3>
+      <p class="muted">يمكنك الوصول الكامل لإدارة المستخدمين والجلسات.</p>
+      <button class="btn btn-primary btn-sm" onclick="window.location.href='admin.html'">فتح لوحة المدير</button>
+    `;
+    app.appendChild(adminCard);
+  }
+
   const actCard = document.createElement('div');
   actCard.className = 'card';
   actCard.innerHTML = `
@@ -524,6 +555,19 @@ function renderTeacherDashboard(app){
     </div>
   `;
   app.appendChild(actCard);
+
+  // === تعديل: تعطيل الأزرار إذا لم يكن هناك طلاب ===
+  const hasStudents = state.myStudents.length > 0;
+  const btnSessions = actCard.querySelector('#btnSessions');
+  const btnIEP = actCard.querySelector('#btnIEP');
+  if (!hasStudents) {
+    btnSessions.disabled = true;
+    btnIEP.disabled = true;
+    btnSessions.style.opacity = '0.5';
+    btnIEP.style.opacity = '0.5';
+    btnSessions.title = 'لا يوجد طلاب مضافون';
+    btnIEP.title = 'لا يوجد طلاب مضافون';
+  }
 
   actCard.querySelector('#btnSessions').onclick = () => { 
     if(!state.currentStudent && state.myStudents.length > 0) {
@@ -789,7 +833,7 @@ async function renderSpeechSessions(app){
   }
 
   renderTopbar(app, `سجل جلسات: ${state.currentStudent.fullName || state.currentStudent.email}`, 'إضافة وتدريب ورصد التقييم', () => {
-    state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu'; render();
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu'; render();
   });
 
   const addCard = document.createElement('div');
@@ -813,7 +857,7 @@ async function renderSpeechSessions(app){
     const goal = document.getElementById('sessGoal').value || `نطق حرف (${letter}) بشكل صحيح`;
 
     try {
-      const docRef = await addDoc(collection(db, "sessions"), {
+      await addDoc(collection(db, "sessions"), {
         studentId: state.currentStudent.id,
         teacherId: state.user.uid,
         letter: letter,
@@ -887,7 +931,7 @@ function renderSingleSession(app){
   if(!sess) { state.view = 'student-menu'; return render(); }
 
   renderTopbar(app, `جلسة حرف (${sess.letter})`, `تاريخ: ${sess.date}`, () => {
-    state.view = state.role === 'teacher' ? 'speech-sessions' : 'student-menu'; render();
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'speech-sessions' : 'student-menu'; render();
   });
 
   const letterData = LETTER_DATABASE[sess.letter] || {
@@ -912,7 +956,7 @@ function renderSingleSession(app){
     </div>
   `;
 
-  if(state.role === 'teacher'){
+  if(state.role === 'teacher' || state.role === 'admin'){
     infoCard.innerHTML += `
       <hr style="border:0; border-top:1px solid var(--line); margin:12px 0;">
       <h4>رصد التقييم المباشر للجلسة:</h4>
@@ -932,20 +976,18 @@ function renderSingleSession(app){
   }
   app.appendChild(infoCard);
 
-  if(state.role === 'teacher'){
+  if(state.role === 'teacher' || state.role === 'admin'){
     const updateEval = async (val) => {
       try {
         await updateDoc(doc(db, "sessions", sess.id), { evaluation: val });
         
-        // تحديث حالة الحرف في تشخيص الطالب إذا اجتاز
-        if(val === 'trained' || val === 'passed'){
-          const studentDocRef = doc(db, "users", sess.studentId);
-          const stSnap = await getDoc(studentDocRef);
-          if(stSnap.exists()){
-            const diag = stSnap.data().diagnostic || {};
-            diag[sess.letter] = val;
-            await updateDoc(studentDocRef, { diagnostic: diag });
-          }
+        // === تعديل: تحديث تشخيص الطالب دائمًا ===
+        const studentDocRef = doc(db, "users", sess.studentId);
+        const stSnap = await getDoc(studentDocRef);
+        if(stSnap.exists()){
+          const diag = stSnap.data().diagnostic || {};
+          diag[sess.letter] = val;
+          await updateDoc(studentDocRef, { diagnostic: diag });
         }
 
         sess.evaluation = val;
@@ -1004,11 +1046,12 @@ function renderSingleSession(app){
 async function renderIEPSession(app){
   if(!state.currentStudent){
     showToast('اختر طالباً أولاً للوصول للخطة');
-    state.view = 'teacher-dashboard'; return render();
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu';
+    return render();
   }
 
   renderTopbar(app, `الخطة الفردية (IEP): ${state.currentStudent.fullName || state.currentStudent.email}`, 'تفاصيل الخطة وتصدير PDF', () => {
-    state.view = state.role === 'teacher' ? 'teacher-dashboard' : 'student-menu'; render();
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu'; render();
   });
 
   // جلب أو إنشاء الخطة
@@ -1059,41 +1102,52 @@ async function renderIEPSession(app){
     <label><b>توصيات لولي الأمر والمعلم:</b></label>
     <textarea id="iepNotes" rows="2">${iep.notes}</textarea>
 
-    ${state.role === 'teacher' ? '<button class="btn btn-success btn-sm" id="saveIEPBtn">حفظ الخطة الفردية</button>' : ''}
+    ${state.role === 'teacher' || state.role === 'admin' ? '<button class="btn btn-success btn-sm" id="saveIEPBtn">حفظ الخطة الفردية</button>' : ''}
   `;
   app.appendChild(formCard);
 
-  // منطقة التقرير المخفية للطباعة والتصدير
+  // === تعديل: إدارة عنصر الطباعة بشكل أفضل ===
+  if (iepPrintArea) {
+    iepPrintArea.remove();
+    iepPrintArea = null;
+  }
+
   const printArea = document.createElement('div');
+  iepPrintArea = printArea;
   printArea.id = 'iep-print-area';
-  printArea.style.cssText = 'position:fixed; top:0; right:0; width:100%; background:white; z-index:9999; padding:30px;';
-  printArea.innerHTML = `
-    <div style="text-align:center; margin-bottom:20px;">
-      <h1 style="margin:0;">منارة النطق - تقرير الخطة الفردية (IEP)</h1>
-      <p style="color:#555;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
-    </div>
-    <div style="border:2px solid #357E74; border-radius:12px; padding:20px;">
-      <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">معلومات الطالب</h2>
-      <p><strong>الاسم:</strong> ${state.currentStudent.fullName || state.currentStudent.email}</p>
-      <p><strong>البريد الإلكتروني:</strong> ${state.currentStudent.email}</p>
-      <hr style="border-top:1px dashed #ccc; margin:15px 0;">
-      <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">التشخيص والأهداف</h2>
-      <p><strong>التشخيص:</strong> ${iep.diagnosis}</p>
-      <p><strong>الهدف العام:</strong> ${iep.longGoal}</p>
-      <p><strong>الأهداف القصيرة:</strong><br>${iep.shortGoals.replace(/\n/g, '<br>')}</p>
-      <p><strong>التوصيات:</strong><br>${iep.notes.replace(/\n/g, '<br>')}</p>
-      <hr style="border-top:1px dashed #ccc; margin:15px 0;">
-      <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">ملخص الجلسات</h2>
-      ${studentSessions.length > 0 ? studentSessions.map(s => `
-        <div style="margin-bottom:8px; padding:8px; background:#f9f9f9; border-radius:6px;">
-          <strong>حرف ${s.letter}</strong> - تاريخ: ${s.date} - الهدف: ${s.goal} - التقييم: ${s.evaluation || 'غير مقيم'}
-        </div>
-      `).join('') : '<p>لا توجد جلسات مسجلة.</p>'}
-    </div>
-  `;
+  printArea.style.cssText = 'position:absolute; left:-9999px; top:0; width:100%; background:white; z-index:9999; padding:30px;';
+  
+  const updatePrintAreaContent = (iepData) => {
+    printArea.innerHTML = `
+      <div style="text-align:center; margin-bottom:20px;">
+        <h1 style="margin:0;">منارة النطق - تقرير الخطة الفردية (IEP)</h1>
+        <p style="color:#555;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
+      </div>
+      <div style="border:2px solid #357E74; border-radius:12px; padding:20px;">
+        <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">معلومات الطالب</h2>
+        <p><strong>الاسم:</strong> ${state.currentStudent.fullName || state.currentStudent.email}</p>
+        <p><strong>البريد الإلكتروني:</strong> ${state.currentStudent.email}</p>
+        <hr style="border-top:1px dashed #ccc; margin:15px 0;">
+        <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">التشخيص والأهداف</h2>
+        <p><strong>التشخيص:</strong> ${iepData.diagnosis}</p>
+        <p><strong>الهدف العام:</strong> ${iepData.longGoal}</p>
+        <p><strong>الأهداف القصيرة:</strong><br>${iepData.shortGoals.replace(/\n/g, '<br>')}</p>
+        <p><strong>التوصيات:</strong><br>${iepData.notes.replace(/\n/g, '<br>')}</p>
+        <hr style="border-top:1px dashed #ccc; margin:15px 0;">
+        <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">ملخص الجلسات</h2>
+        ${studentSessions.length > 0 ? studentSessions.map(s => `
+          <div style="margin-bottom:8px; padding:8px; background:#f9f9f9; border-radius:6px;">
+            <strong>حرف ${s.letter}</strong> - تاريخ: ${s.date} - الهدف: ${s.goal} - التقييم: ${s.evaluation || 'غير مقيم'}
+          </div>
+        `).join('') : '<p>لا توجد جلسات مسجلة.</p>'}
+      </div>
+    `;
+  };
+
+  updatePrintAreaContent(iep);
   document.body.appendChild(printArea);
 
-  if(state.role === 'teacher'){
+  if(state.role === 'teacher' || state.role === 'admin'){
     formCard.querySelector('#saveIEPBtn').onclick = async () => {
       const updated = {
         diagnosis: document.getElementById('iepDiagnosis').value,
@@ -1106,40 +1160,29 @@ async function renderIEPSession(app){
       try {
         await setDoc(doc(db, "iep", state.currentStudent.id), updated);
         showToast('تم حفظ الخطة الفردية بنجاح');
-        // تحديث منطقة الطباعة بالقيم الجديدة
-        printArea.innerHTML = `
-          <div style="text-align:center; margin-bottom:20px;">
-            <h1 style="margin:0;">منارة النطق - تقرير الخطة الفردية (IEP)</h1>
-            <p style="color:#555;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
-          </div>
-          <div style="border:2px solid #357E74; border-radius:12px; padding:20px;">
-            <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">معلومات الطالب</h2>
-            <p><strong>الاسم:</strong> ${state.currentStudent.fullName || state.currentStudent.email}</p>
-            <p><strong>البريد الإلكتروني:</strong> ${state.currentStudent.email}</p>
-            <hr style="border-top:1px dashed #ccc; margin:15px 0;">
-            <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">التشخيص والأهداف</h2>
-            <p><strong>التشخيص:</strong> ${updated.diagnosis}</p>
-            <p><strong>الهدف العام:</strong> ${updated.longGoal}</p>
-            <p><strong>الأهداف القصيرة:</strong><br>${updated.shortGoals.replace(/\n/g, '<br>')}</p>
-            <p><strong>التوصيات:</strong><br>${updated.notes.replace(/\n/g, '<br>')}</p>
-            <hr style="border-top:1px dashed #ccc; margin:15px 0;">
-            <h2 style="border-bottom:2px solid #357E74; padding-bottom:10px;">ملخص الجلسات</h2>
-            ${studentSessions.length > 0 ? studentSessions.map(s => `
-              <div style="margin-bottom:8px; padding:8px; background:#f9f9f9; border-radius:6px;">
-                <strong>حرف ${s.letter}</strong> - تاريخ: ${s.date} - الهدف: ${s.goal} - التقييم: ${s.evaluation || 'غير مقيم'}
-              </div>
-            `).join('') : '<p>لا توجد جلسات مسجلة.</p>'}
-          </div>
-        `;
+        updatePrintAreaContent(updated);
       } catch(e) {
         showToast('خطأ في حفظ الخطة');
       }
     };
   }
 
-  // زر تصدير PDF
+  // === تعديل: تصدير PDF مع إظهار العنصر مؤقتًا ===
   formCard.querySelector('#btnPrintPDF').onclick = () => {
     const element = printArea;
+    const originalPosition = element.style.position;
+    const originalLeft = element.style.left;
+    const originalTop = element.style.top;
+    const originalZIndex = element.style.zIndex;
+    const originalVisibility = element.style.visibility;
+    
+    element.style.position = 'fixed';
+    element.style.left = '0';
+    element.style.top = '0';
+    element.style.zIndex = '9999';
+    element.style.visibility = 'visible';
+    element.style.width = '100%';
+    
     const opt = {
       margin: 10,
       filename: `IEP_${state.currentStudent.id}.pdf`,
@@ -1147,7 +1190,20 @@ async function renderIEPSession(app){
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    html2pdf().set(opt).from(element).save();
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+      element.style.position = originalPosition;
+      element.style.left = originalLeft;
+      element.style.top = originalTop;
+      element.style.zIndex = originalZIndex;
+      element.style.visibility = originalVisibility;
+    }).catch(() => {
+      element.style.position = originalPosition;
+      element.style.left = originalLeft;
+      element.style.top = originalTop;
+      element.style.zIndex = originalZIndex;
+      element.style.visibility = originalVisibility;
+    });
   };
 
   // زر الطباعة
