@@ -343,6 +343,7 @@ function render(){
   if(state.view === 'diagnostic-session') return renderDiagnosticSession(app);
   if(state.view === 'student-profile') return renderStudentProfile(app);
   if(state.view === 'letter-training') return renderLetterTraining(app);
+  if (state.view === 'letterDisplay') { app.innerHTML = renderLetterDisplay(); return; }
   if(state.view === 'student-menu') return renderStudentMenu(app);
   if(state.view === 'speech-sessions') return renderSpeechSessions(app);
   if(state.view === 'single-session') return renderSingleSession(app);
@@ -1212,7 +1213,57 @@ async function renderIEPSession(app){
   };
 }
 
-// قائمة الأطعمة
+const const alphabetData = [
+  { letter: 'أ', image: '/images/letters/alif.png', title: 'أسد' },
+  { letter: 'ب', image: '/images/letters/baa.png', title: 'بطة' },
+  { letter: 'ت', image: '/images/letters/taa.png', title: 'تاج' },
+  { letter: 'ث', image: '/images/letters/thaa.png', title: 'ثوب' },
+  { letter: 'ج', image: '/images/letters/jeem.png', title: 'جمل' },
+  { letter: 'ح', image: '/images/letters/haa.png', title: 'حصان' },
+  { letter: 'خ', image: '/images/letters/khaa.png', title: 'خروف' },
+  { letter: 'د', image: '/images/letters/dal.png', title: 'دجاجة' },
+  { letter: 'ذ', image: '/images/letters/thal.png', title: 'ذيل' },
+  { letter: 'ر', image: '/images/letters/raa.png', title: 'رمان' },
+  { letter: 'ز', image: '/images/letters/zay.png', title: 'زرافة' },
+  { letter: 'س', image: '/images/letters/seen.png', title: 'سمكة' },
+  { letter: 'ش', image: '/images/letters/sheen.png', title: 'شمس' },
+  { letter: 'ص', image: '/images/letters/sad.png', title: 'صقر' },
+  { letter: 'ض', image: '/images/letters/dad.png', title: 'ضفدع' },
+  { letter: 'ط', image: '/images/letters/taa_2.png', title: 'طائرة' },
+  { letter: 'ظ', image: '/images/letters/thaa_2.png', title: 'ظرف' },
+  { letter: 'ع', image: '/images/letters/ain.png', title: 'عصفور' },
+  { letter: 'غ', image: '/images/letters/ghain.png', title: 'غزالة' },
+  { letter: 'ف', image: '/images/letters/faa.png', title: 'فيل' },
+  { letter: 'ق', image: '/images/letters/qaf.png', title: 'قطة' },
+  { letter: 'ك', image: '/images/letters/kaf.png', title: 'كتاب' },
+  { letter: 'ل', image: '/images/letters/lam.png', title: 'ليمون' },
+  { letter: 'م', image: '/images/letters/meem.png', title: 'موز' },
+  { letter: 'ن', image: '/images/letters/noon.png', title: 'نحلة' },
+  { letter: 'هـ', image: '/images/letters/haa_2.png', title: 'هاتف' },
+  { letter: 'و', image: '/images/letters/waw.png', title: 'وردة' },
+  { letter: 'ي', image: '/images/letters/yaa.png', title: 'يد' }
+];
+
+
+function renderLetterDisplay() {
+  const itemsHTML = alphabetData.map(item => `
+    <div class="flex flex-col items-center justify-center p-5 bg-white rounded-2xl shadow-md border-4 border-blue-100 hover:border-blue-400 transition-all duration-300">
+      <img src="${item.image}" alt="${item.title}" class="w-32 h-32 object-contain mb-4 filter drop-shadow-md">
+      <span class="text-6xl font-black text-blue-800 mb-1">${item.letter}</span>
+      <span class="text-xl font-semibold text-gray-600">${item.title}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="p-6 bg-gray-50 min-h-screen">
+      <h1 class="text-3xl font-bold text-center mb-8 text-blue-700">صفحة التشخيص والتدريب النطقي</h1>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+        ${itemsHTML}
+      </div>
+    </div>
+  `;
+}
+
 function renderFoodMenu(app){
   renderTopbar(app, 'قائمة الأطعمة والمسميات', 'تدريبات التسمية والتعزيز', () => {
     state.view = 'home'; render();
