@@ -59,7 +59,14 @@
   }
   .btn-nav:hover{background:#F5F8FC;}
 
-  .card{background:white;border-radius:18px;border:1px solid var(--line);padding:20px;margin-bottom:16px;}
+  .card{
+    background:white;
+    border-radius:18px;
+    border:1px solid var(--line);
+    padding:20px;
+    margin-bottom:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  }
   .card h3{margin:0 0 12px 0;font-size:17px;}
   .card h4{margin:8px 0 6px 0;font-size:15px;color:var(--mint-deep);}
   .muted{color:#6B7A99;font-size:13px;}
@@ -80,6 +87,25 @@
   .btn-info{background:#0288D1;color:white;}
   .btn-block{width:100%;}
   .btn-sm{padding:6px 12px;font-size:12px;border-radius:8px;}
+
+  /* --- حقول الإدخال المصممة بأناقة --- */
+  .input-soft, .iep-textarea, .iep-input {
+    width:100%;
+    padding:14px 16px;
+    border-radius:14px;
+    border:1.5px solid var(--line);
+    font-family:'Tajawal', sans-serif;
+    font-size:16px;
+    background:#FBFDFE;
+    margin-bottom:12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow:0 1px 3px rgba(0,0,0,0.02);
+  }
+  .input-soft:focus, .iep-textarea:focus, .iep-input:focus {
+    outline:none;
+    border-color:var(--mint);
+    box-shadow:0 0 0 4px rgba(79,182,168,0.15);
+  }
 
   /* --- بطاقات التشخيص الشامل (النقر) --- */
   .diag-option-group {
@@ -192,19 +218,93 @@
 
   #iep-print-area { display: none; }
 
-  /* توسيع حقول الـ IEP */
-  .iep-textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1.5px solid var(--line);
-    font-family: 'Tajawal', sans-serif;
-    font-size: 15px;
-    background: #FBFDFE;
-    margin-bottom: 12px;
-    resize: vertical;
+  /* --- صفحة IEP بتصميم A4 --- */
+  .iep-a4 {
+    background: white;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    padding: 40px 35px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    max-width: 100%;
   }
-  .iep-textarea:focus { outline: none; border-color: var(--mint); }
+  .iep-a4 h2 {
+    font-size: 22px;
+    color: var(--mint-deep);
+    border-bottom: 3px solid var(--mint);
+    padding-bottom: 12px;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  .iep-a4 label {
+    display: block;
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .iep-a4 .iep-textarea {
+    height: 200px;
+    min-height: 150px;
+    font-size: 16px;
+    line-height: 1.6;
+    resize: vertical;
+    padding: 16px;
+  }
+  .iep-a4 .iep-input {
+    font-size: 16px;
+    padding: 14px 16px;
+  }
+  .iep-a4 .iep-textarea.short { height: 120px; }
+  .iep-a4 .iep-textarea.tall { height: 280px; }
+
+  /* --- عرض الحروف مع الصور --- */
+  .letter-card-with-img {
+    background: white;
+    border-radius: 16px;
+    border: 2px solid #E0F2FE;
+    padding: 16px;
+    text-align: center;
+    transition: 0.2s;
+    cursor: pointer;
+  }
+  .letter-card-with-img:hover { transform: translateY(-4px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+  .letter-card-with-img .letter-emoji {
+    font-size: 52px;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .letter-card-with-img .letter-char {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--mint-deep);
+    margin: 4px 0;
+  }
+  .letter-card-with-img .letter-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* --- قائمة الأطعمة (كثيفة) --- */
+  .food-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .food-item {
+    background: #F8FAFC;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .food-item:hover { background: #EAF6F4; border-color: var(--mint); transform: scale(1.02); }
 
   @media print {
     body { background: white; color: black; }
@@ -259,7 +359,13 @@ const ALL_LETTERS = [
   'ج','ك','ق','ي',
   'أ','هـ','ع','ح','خ','غ'
 ];
-const FOOD_ITEMS = ['تفاحة','موزة','برتقالة','عنب','تمر','خبز','حليب','ماء'];
+
+// ========== قائمة الأطعمة (موسعة) ==========
+const FOOD_ITEMS = [
+  'تفاحة', 'موزة', 'برتقالة', 'عنب', 'فراولة', 'مانجو', 'أناناس', 'رمان',
+  'خبز', 'حليب', 'جبن', 'بيض', 'لحم', 'دجاج', 'سمك', 'أرز',
+  'ماء', 'عصير', 'شاي', 'قهوة', 'سكر', 'ملح', 'زيت', 'عسل'
+];
 
 let iepPrintArea = null;
 
@@ -417,7 +523,7 @@ function render(){
 }
 
 // ============================================================
-// ========== الصفحات الأساسية (الرئيسية، تسجيل الدخول، الخ) ==========
+// ========== الصفحات الأساسية ==========
 // ============================================================
 function renderHome(app){
   renderTopbar(app, 'منارة النطق', 'المنصة التدريبية المباشرة');
@@ -465,8 +571,8 @@ function renderAuth(app){
   card.className = 'auth-form';
   card.innerHTML = `
     <h2>تسجيل الدخول</h2>
-    <input type="email" id="email" placeholder="البريد الإلكتروني">
-    <input type="password" id="password" placeholder="كلمة المرور">
+    <input type="email" id="email" placeholder="البريد الإلكتروني" class="input-soft">
+    <input type="password" id="password" placeholder="كلمة المرور" class="input-soft">
     <button class="btn btn-primary btn-block" id="loginBtn">دخول</button>
     
     <div style="display:flex; justify-content:space-between; margin-top:15px;" class="auth-toggle">
@@ -501,7 +607,7 @@ function renderResetPassword(app){
   card.innerHTML = `
     <h2>نسيت كلمة المرور</h2>
     <p class="muted" style="text-align:center;">أدخل بريدك الإلكتروني لإرسال رابط إعادة تعيين كلمة المرور.</p>
-    <input type="email" id="resetEmail" placeholder="البريد الإلكتروني">
+    <input type="email" id="resetEmail" placeholder="البريد الإلكتروني" class="input-soft">
     <button class="btn btn-primary btn-block" id="resetBtn">إرسال رابط إعادة التعيين</button>
     <div class="auth-toggle" style="margin-top:15px;"><span id="backToLogin">العودة لتسجيل الدخول</span></div>
   `;
@@ -529,10 +635,10 @@ function renderRegister(app){
   card.className = 'auth-form';
   card.innerHTML = `
     <h2>حساب جديد</h2>
-    <input type="text" id="fullName" placeholder="الاسم الكامل">
-    <input type="email" id="email" placeholder="البريد الإلكتروني">
-    <input type="password" id="password" placeholder="كلمة المرور">
-    <select id="role">
+    <input type="text" id="fullName" placeholder="الاسم الكامل" class="input-soft">
+    <input type="email" id="email" placeholder="البريد الإلكتروني" class="input-soft">
+    <input type="password" id="password" placeholder="كلمة المرور" class="input-soft">
+    <select id="role" class="input-soft">
       <option value="student">طالب</option>
       <option value="teacher">معلم</option>
     </select>
@@ -755,7 +861,7 @@ window.removeStudent = async function(studentId){
 };
 
 // ============================================================
-// ========== صفحة التشخيص (مع التشخيص الشامل) ==========
+// ========== صفحة التشخيص ==========
 // ============================================================
 function renderDiagnosticSession(app){
   renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
@@ -838,7 +944,7 @@ function renderDiagnosticSession(app){
 }
 
 // ============================================================
-// ========== دالة التشخيص الشامل ==========
+// ========== التشخيص الشامل ==========
 // ============================================================
 function renderComprehensiveDiagnosis(app){
   const card = document.createElement('div');
@@ -1006,7 +1112,7 @@ function renderComprehensiveDiagnosis(app){
 }
 
 // ============================================================
-// ========== سجل الجلسات (مع فلتر الحروف) ==========
+// ========== سجل الجلسات (مع فلتر) ==========
 // ============================================================
 async function renderSpeechSessions(app){
   if(!state.currentStudent){
@@ -1021,7 +1127,6 @@ async function renderSpeechSessions(app){
   const addCard = document.createElement('div');
   addCard.className = 'card';
   
-  // ===== فلترة الحروف حسب احتياج الطالب =====
   const studentDiag = state.diagEval || {};
   let availableLetters = ALL_LETTERS.filter(l => studentDiag[l] === 'need' || studentDiag[l] === 'unclear');
   let filterMessage = '';
@@ -1033,11 +1138,11 @@ async function renderSpeechSessions(app){
   addCard.innerHTML = `
     <h3>إضافة جلسة تدريب جديدة ${filterMessage}</h3>
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-      <select id="sessLetter">
+      <select id="sessLetter" class="input-soft">
         ${availableLetters.map(l => `<option value="${l}">حرف ${l}</option>`).join('')}
       </select>
-      <input type="date" id="sessDate" value="${new Date().toISOString().split('T')[0]}">
-      <input type="text" id="sessGoal" placeholder="الهدف التعليمي (مثال: نطق الحرف بالفتحة)">
+      <input type="date" id="sessDate" class="input-soft" value="${new Date().toISOString().split('T')[0]}">
+      <input type="text" id="sessGoal" class="input-soft" placeholder="الهدف التعليمي (مثال: نطق الحرف بالفتحة)">
     </div>
     <button class="btn btn-primary btn-sm" id="createSessBtn" style="margin-top:8px;">إنشاء وتنسيق الجلسة</button>
   `;
@@ -1124,7 +1229,7 @@ async function renderSpeechSessions(app){
 }
 
 // ============================================================
-// ========== الخطة الفردية (IEP) مع حقول موسعة ==========
+// ========== الخطة الفردية (IEP) بحجم A4 ==========
 // ============================================================
 async function renderIEPSession(app){
   if(!state.currentStudent){
@@ -1159,34 +1264,35 @@ async function renderIEPSession(app){
     snap.forEach(d => studentSessions.push({ id: d.id, ...d.data() }));
   } catch(e){}
 
-  const formCard = document.createElement('div');
-  formCard.className = 'card';
-  formCard.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-      <h3>تفاصيل الخطة التربوية الفردية (IEP)</h3>
+  // ===== صفحة A4 =====
+  const a4Container = document.createElement('div');
+  a4Container.className = 'iep-a4';
+  a4Container.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+      <h2 style="margin:0;">📄 الخطة التربوية الفردية (IEP)</h2>
       <div>
-        <button class="btn btn-primary btn-sm" id="btnPrintPDF">🖨️ تصدير وتحميل التقرير PDF</button>
+        <button class="btn btn-primary btn-sm" id="btnPrintPDF">🖨️ تصدير PDF</button>
         <button class="btn btn-soft btn-sm" id="btnPrint">🖨️ طباعة</button>
       </div>
     </div>
-    <hr style="border:0; border-top:1px solid var(--line); margin:12px 0;">
 
-    <label><b>تشخيص حالة الطالب:</b></label>
-    <input type="text" id="iepDiagnosis" value="${iep.diagnosis}" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); margin-bottom:12px;">
+    <label>🔍 تشخيص حالة الطالب</label>
+    <input type="text" id="iepDiagnosis" class="iep-input" value="${iep.diagnosis}" placeholder="مثال: اضطراب نطق بالحروف (لدغة)">
 
-    <label><b>الهدف العام (صف الهدف الرئيسي):</b></label>
-    <textarea id="iepLongGoal" rows="4" class="iep-textarea">${iep.longGoal}</textarea>
+    <label>🎯 الهدف العام (صف الهدف الرئيسي)</label>
+    <textarea id="iepLongGoal" class="iep-textarea short" rows="4">${iep.longGoal}</textarea>
 
-    <label><b>الأهداف التعليمية القصيرة (ضع خطة تفصيلية):</b></label>
-    <textarea id="iepShortGoals" rows="8" class="iep-textarea">${iep.shortGoals}</textarea>
+    <label>📝 الأهداف التعليمية القصيرة (ضع خطة تفصيلية)</label>
+    <textarea id="iepShortGoals" class="iep-textarea tall" rows="8">${iep.shortGoals}</textarea>
 
-    <label><b>توصيات لولي الأمر والمعلم:</b></label>
-    <textarea id="iepNotes" rows="5" class="iep-textarea">${iep.notes}</textarea>
+    <label>💡 توصيات لولي الأمر والمعلم</label>
+    <textarea id="iepNotes" class="iep-textarea short" rows="5">${iep.notes}</textarea>
 
-    ${state.role === 'teacher' || state.role === 'admin' ? '<button class="btn btn-success btn-sm" id="saveIEPBtn">حفظ الخطة الفردية</button>' : ''}
+    ${state.role === 'teacher' || state.role === 'admin' ? '<button class="btn btn-success btn-sm" id="saveIEPBtn" style="margin-top:8px;">💾 حفظ الخطة الفردية</button>' : ''}
   `;
-  app.appendChild(formCard);
+  app.appendChild(a4Container);
 
+  // ===== منطقة الطباعة المخفية =====
   if (iepPrintArea) {
     iepPrintArea.remove();
     iepPrintArea = null;
@@ -1195,7 +1301,7 @@ async function renderIEPSession(app){
   const printArea = document.createElement('div');
   iepPrintArea = printArea;
   printArea.id = 'iep-print-area';
-  printArea.style.cssText = 'position:absolute; left:-9999px; top:0; width:100%; background:white; z-index:9999; padding:30px;';
+  printArea.style.cssText = 'position:absolute; left:-9999px; top:0; width:100%; background:white; z-index:9999; padding:40px;';
   
   const updatePrintAreaContent = (iepData) => {
     const comp = state.comprehensive || {};
@@ -1245,8 +1351,9 @@ async function renderIEPSession(app){
   updatePrintAreaContent(iep);
   document.body.appendChild(printArea);
 
+  // ===== حفظ الخطة =====
   if(state.role === 'teacher' || state.role === 'admin'){
-    formCard.querySelector('#saveIEPBtn').onclick = async () => {
+    a4Container.querySelector('#saveIEPBtn').onclick = async () => {
       const updated = {
         diagnosis: document.getElementById('iepDiagnosis').value,
         longGoal: document.getElementById('iepLongGoal').value,
@@ -1265,7 +1372,8 @@ async function renderIEPSession(app){
     };
   }
 
-  formCard.querySelector('#btnPrintPDF').onclick = () => {
+  // ===== تصدير PDF =====
+  a4Container.querySelector('#btnPrintPDF').onclick = () => {
     const element = printArea;
     const originalPosition = element.style.position;
     const originalLeft = element.style.left;
@@ -1303,13 +1411,13 @@ async function renderIEPSession(app){
     });
   };
 
-  formCard.querySelector('#btnPrint').onclick = () => {
+  a4Container.querySelector('#btnPrint').onclick = () => {
     window.print();
   };
 }
 
 // ============================================================
-// ========== باقي الدوال (طالب، جلسة فردية، عرض، إلخ) ==========
+// ========== باقي الدوال ==========
 // ============================================================
 async function renderStudentMenu(app){
   renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
@@ -1507,53 +1615,52 @@ function renderSingleSession(app){
 }
 
 // ============================================================
-// ========== صفحات العرض (الأحرف، الأطعمة) ==========
+// ========== صفحات العرض (الأحرف والأطعمة) ==========
 // ============================================================
 const alphabetData = [
-  { letter: 'أ', image: '/images/letters/alif.png', title: 'أسد' },
-  { letter: 'ب', image: '/images/letters/baa.png', title: 'بطة' },
-  { letter: 'ت', image: '/images/letters/taa.png', title: 'تاج' },
-  { letter: 'ث', image: '/images/letters/thaa.png', title: 'ثوب' },
-  { letter: 'ج', image: '/images/letters/jeem.png', title: 'جمل' },
-  { letter: 'ح', image: '/images/letters/haa.png', title: 'حصان' },
-  { letter: 'خ', image: '/images/letters/khaa.png', title: 'خروف' },
-  { letter: 'د', image: '/images/letters/dal.png', title: 'دجاجة' },
-  { letter: 'ذ', image: '/images/letters/thal.png', title: 'ذيل' },
-  { letter: 'ر', image: '/images/letters/raa.png', title: 'رمان' },
-  { letter: 'ز', image: '/images/letters/zay.png', title: 'زرافة' },
-  { letter: 'س', image: '/images/letters/seen.png', title: 'سمكة' },
-  { letter: 'ش', image: '/images/letters/sheen.png', title: 'شمس' },
-  { letter: 'ص', image: '/images/letters/sad.png', title: 'صقر' },
-  { letter: 'ض', image: '/images/letters/dad.png', title: 'ضفدع' },
-  { letter: 'ط', image: '/images/letters/taa_2.png', title: 'طائرة' },
-  { letter: 'ظ', image: '/images/letters/thaa_2.png', title: 'ظرف' },
-  { letter: 'ع', image: '/images/letters/ain.png', title: 'عصفور' },
-  { letter: 'غ', image: '/images/letters/ghain.png', title: 'غزالة' },
-  { letter: 'ف', image: '/images/letters/faa.png', title: 'فيل' },
-  { letter: 'ق', image: '/images/letters/qaf.png', title: 'قطة' },
-  { letter: 'ك', image: '/images/letters/kaf.png', title: 'كتاب' },
-  { letter: 'ل', image: '/images/letters/lam.png', title: 'ليمون' },
-  { letter: 'م', image: '/images/letters/meem.png', title: 'موز' },
-  { letter: 'ن', image: '/images/letters/noon.png', title: 'نحلة' },
-  { letter: 'هـ', image: '/images/letters/haa_2.png', title: 'هاتف' },
-  { letter: 'و', image: '/images/letters/waw.png', title: 'وردة' },
-  { letter: 'ي', image: '/images/letters/yaa.png', title: 'يد' }
+  { letter: 'أ', emoji: '🐫', title: 'أسد' },
+  { letter: 'ب', emoji: '🦆', title: 'بطة' },
+  { letter: 'ت', emoji: '👑', title: 'تاج' },
+  { letter: 'ث', emoji: '👕', title: 'ثوب' },
+  { letter: 'ج', emoji: '🐫', title: 'جمل' },
+  { letter: 'ح', emoji: '🐴', title: 'حصان' },
+  { letter: 'خ', emoji: '🐑', title: 'خروف' },
+  { letter: 'د', emoji: '🐔', title: 'دجاجة' },
+  { letter: 'ذ', emoji: '🦎', title: 'ذيل' },
+  { letter: 'ر', emoji: '🍎', title: 'رمان' },
+  { letter: 'ز', emoji: '🦒', title: 'زرافة' },
+  { letter: 'س', emoji: '🐟', title: 'سمكة' },
+  { letter: 'ش', emoji: '☀️', title: 'شمس' },
+  { letter: 'ص', emoji: '🦅', title: 'صقر' },
+  { letter: 'ض', emoji: '🐸', title: 'ضفدع' },
+  { letter: 'ط', emoji: '✈️', title: 'طائرة' },
+  { letter: 'ظ', emoji: '👜', title: 'ظرف' },
+  { letter: 'ع', emoji: '🐦', title: 'عصفور' },
+  { letter: 'غ', emoji: '🦌', title: 'غزالة' },
+  { letter: 'ف', emoji: '🐘', title: 'فيل' },
+  { letter: 'ق', emoji: '🐱', title: 'قطة' },
+  { letter: 'ك', emoji: '📖', title: 'كتاب' },
+  { letter: 'ل', emoji: '🍋', title: 'ليمون' },
+  { letter: 'م', emoji: '🍌', title: 'موز' },
+  { letter: 'ن', emoji: '🐝', title: 'نحلة' },
+  { letter: 'هـ', emoji: '📱', title: 'هاتف' },
+  { letter: 'و', emoji: '🌹', title: 'وردة' },
+  { letter: 'ي', emoji: '✋', title: 'يد' }
 ];
 
 function renderLetterDisplay(app) {
   const itemsHTML = alphabetData.map(item => `
-    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; background:white; border-radius:16px; border:4px solid #E0F2FE; transition:all 0.3s; cursor:pointer;" onclick="speakText('${item.letter}')">
-      <div style="width:80px; height:80px; background:linear-gradient(135deg, #4FB6A8, #357E74); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:50px; color:white; font-weight:bold; box-shadow:0 4px 10px rgba(79,182,168,0.4); margin-bottom:12px;">
-        ${item.letter}
-      </div>
-      <span style="font-size:22px; font-weight:bold; color:#1E2A47;">${item.title}</span>
+    <div class="letter-card-with-img" onclick="speakText('${item.letter}')">
+      <span class="letter-emoji">${item.emoji}</span>
+      <div class="letter-char">${item.letter}</div>
+      <div class="letter-title">${item.title}</div>
     </div>
   `).join('');
 
   app.innerHTML = `
     <div style="padding:16px; background:#F8FAFC; min-height:100vh;">
       <h1 style="font-size:28px; font-weight:bold; text-align:center; margin-bottom:20px; color:#1E2A47;">الأحرف الأبجدية</h1>
-      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:16px;">
         ${itemsHTML}
       </div>
     </div>
@@ -1570,10 +1677,10 @@ function renderFoodMenu(app){
   card.innerHTML = `
     <h3>🍎 كروت الأطعمة للتسمية والنطق</h3>
     <p class="muted">اضغط على أي عنصر لسماع النطق الصحيح وتدريب الطالب عليه.</p>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-top:15px;">
+    <div class="food-grid">
       ${FOOD_ITEMS.map(item => `
-        <div class="vowel-box" style="padding:20px 10px;" onclick="speakText('${item}')">
-          🍎<br>${item}
+        <div class="food-item" onclick="speakText('${item}')">
+          🍽️ ${item}
         </div>
       `).join('')}
     </div>
