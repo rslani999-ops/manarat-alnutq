@@ -343,7 +343,7 @@ function render(){
   if(state.view === 'diagnostic-session') return renderDiagnosticSession(app);
   if(state.view === 'student-profile') return renderStudentProfile(app);
   if(state.view === 'letter-training') return renderLetterTraining(app);
-  if (state.view === 'letterDisplay') { app.innerHTML = renderLetterDisplay(); return; }
+  if (state.view === 'letterDisplay') return renderLetterDisplay(app);
   if(state.view === 'student-menu') return renderStudentMenu(app);
   if(state.view === 'speech-sessions') return renderSpeechSessions(app);
   if(state.view === 'single-session') return renderSingleSession(app);
