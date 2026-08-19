@@ -97,7 +97,7 @@
   .badge-assigned{background:#E1F5FE; color:#0288D1;}
   .badge-free{background:#E8F5E9; color:#388E3C;}
   .badge-passed{background:#E8F5E9; color:#2E7D32;}
-  .badge-trained{background:#E0F2FE; color:#0288D1; border:1px solid #0288D1;} /* تمييز الحروف بعد التدريب باللون الأزرق */
+  .badge-trained{background:#E0F2FE; color:#0288D1; border:1px solid #0288D1;}
   .badge-need{background:#FFF8E1; color:#F57F17;}
   .badge-unclear{background:#FFEBEE; color:#C62828;}
 
@@ -118,7 +118,6 @@
   .session-card { background:#FAFDFC; border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
   .vowel-box { background:#F4F9F8; padding:10px; border-radius:8px; text-align:center; font-size:18px; font-weight:bold; cursor:pointer; border: 1px solid var(--line); }
 
-  /* تذييل محسّن */
   footer {
     background: white;
     border-top: 1px solid var(--line);
@@ -139,9 +138,8 @@
   }
   footer a:hover { text-decoration: underline; }
 
-  /* منطقة الطباعة والتصدير */
   #iep-print-area {
-    display: none; /* مخفي على الشاشة، يظهر عند الطباعة */
+    display: none;
   }
 
   @media print {
@@ -149,7 +147,6 @@
     .topbar, .btn, .nav-btns, footer, #iep-print-area { display: none !important; }
     #app { max-width: 100%; padding: 0; }
     .card { border: 1px solid #ccc; box-shadow: none; margin-bottom: 10px; }
-    /* إظهار منطقة التقرير فقط */
     #iep-print-area {
       display: block !important;
       position: absolute;
@@ -194,7 +191,6 @@ const db = getFirestore(app);
 const ALL_LETTERS = ['أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','هـ','و','ي'];
 const FOOD_ITEMS = ['تفاحة', 'موزة', 'برتقالة', 'عنب', 'تمر', 'خبز', 'حليب', 'ماء'];
 
-// === تعديل: متغير عام لعنصر الطباعة ===
 let iepPrintArea = null;
 
 function speakText(text) {
@@ -238,7 +234,6 @@ function showToast(msg){
   toastTimer = setTimeout(()=>t.remove(), 2500);
 }
 
-// مراقبة حالة التسجيل تلقائياً
 onAuthStateChanged(auth, async (u) => {
   if (u) {
     state.user = u;
@@ -253,7 +248,6 @@ onAuthStateChanged(auth, async (u) => {
   }
 });
 
-// === تعديل: دعم دور admin في أعلى الصفحة ===
 function renderTopbar(appContainer, title, sub, onBack){
   const bar = document.createElement('div');
   bar.className='topbar';
@@ -285,7 +279,6 @@ function renderTopbar(appContainer, title, sub, onBack){
     btnDashboard.onclick = () => { state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu'; render(); };
     actions.appendChild(btnDashboard);
 
-    // === تعديل: إضافة زر لوحة المدير إذا كان admin ===
     if (state.role === 'admin') {
       const btnAdmin = document.createElement('button');
       btnAdmin.className = 'btn-nav';
@@ -300,13 +293,11 @@ function renderTopbar(appContainer, title, sub, onBack){
     btnLogout.textContent = 'خروج';
     btnLogout.onclick = async () => {
       try {
-        // === تعديل: تنظيف عنصر الطباعة عند الخروج ===
         if (iepPrintArea) {
           iepPrintArea.remove();
           iepPrintArea = null;
         }
         await signOut(auth);
-        // إعادة تعيين الحالة بالكامل
         state.user = null;
         state.role = null;
         state.currentStudent = null;
@@ -496,7 +487,6 @@ async function fetchUserData(uid){
     if(uDoc.exists()){
       const uData = uDoc.data();
       state.role = uData.role;
-      // === تعديل: معاملة admin كمعلم مع صلاحيات إضافية ===
       if (state.role === 'teacher' || state.role === 'admin') {
         state.view = 'teacher-dashboard';
         await fetchTeacherStudents();
@@ -533,7 +523,6 @@ async function fetchTeacherStudents(){
 function renderTeacherDashboard(app){
   renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
-  // === تعديل: بطاقة خاصة بالمدير ===
   if (state.role === 'admin') {
     const adminCard = document.createElement('div');
     adminCard.className = 'card';
@@ -557,7 +546,6 @@ function renderTeacherDashboard(app){
   `;
   app.appendChild(actCard);
 
-  // === تعديل: تعطيل الأزرار إذا لم يكن هناك طلاب ===
   const hasStudents = state.myStudents.length > 0;
   const btnSessions = actCard.querySelector('#btnSessions');
   const btnIEP = actCard.querySelector('#btnIEP');
@@ -682,7 +670,6 @@ window.removeStudent = async function(studentId){
   }
 };
 
-// صفحة تشخيص 28 حرفاً
 function renderDiagnosticSession(app){
   renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم الحروف 28 وشكلياتها', () => {
     state.view = 'teacher-dashboard'; render();
@@ -739,16 +726,13 @@ function renderDiagnosticSession(app){
   app.appendChild(grid);
 }
 
-// صفحة جلسات الطالب المخصصة (واجهة الطالب وولي الأمر)
 async function renderStudentMenu(app){
   renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
 
-  // جلب بيانات الطالب المحدثة
   const uDoc = await getDoc(doc(db, "users", state.user.uid));
   const studentData = uDoc.data() || {};
   const diag = studentData.diagnostic || {};
   
-  // تصنيف الحروف
   const passedLetters = ALL_LETTERS.filter(l => diag[l] === 'passed');
   const trainedLetters = ALL_LETTERS.filter(l => diag[l] === 'trained');
   const needLetters = ALL_LETTERS.filter(l => diag[l] === 'need' || diag[l] === 'unclear');
@@ -772,7 +756,6 @@ async function renderStudentMenu(app){
   `;
   app.appendChild(diagSummaryCard);
 
-  // جلب الجلسات الخاصة بذا الطالب فقط
   const sessionsCard = document.createElement('div');
   sessionsCard.className = 'card';
   sessionsCard.innerHTML = '<h3>📂 سجل جلسات التدريب الخاصة بك</h3>';
@@ -826,7 +809,6 @@ async function renderStudentMenu(app){
   app.appendChild(sessionsCard);
 }
 
-// عرض الجلسات لدى المعلم
 async function renderSpeechSessions(app){
   if(!state.currentStudent){
     showToast('اختر طالباً أولاً للوصول للسجل');
@@ -926,7 +908,6 @@ async function renderSpeechSessions(app){
   app.appendChild(listCard);
 }
 
-// عرض جلسة واحدة مستقلة وتقييم المعلم / استعراض ولي الأمر
 function renderSingleSession(app){
   const sess = state.currentSession;
   if(!sess) { state.view = 'student-menu'; return render(); }
@@ -982,7 +963,6 @@ function renderSingleSession(app){
       try {
         await updateDoc(doc(db, "sessions", sess.id), { evaluation: val });
         
-        // === تعديل: تحديث تشخيص الطالب دائمًا ===
         const studentDocRef = doc(db, "users", sess.studentId);
         const stSnap = await getDoc(studentDocRef);
         if(stSnap.exists()){
@@ -1007,7 +987,6 @@ function renderSingleSession(app){
     }, 0);
   }
   
-  // بطاقات التشكيل والكلمات
   const trainCard = document.createElement('div');
   trainCard.className = 'card';
   trainCard.innerHTML = `
@@ -1043,7 +1022,6 @@ function renderSingleSession(app){
   app.appendChild(trainCard);
 }
 
-// الخطة الفردية IEP والتقرير وتصدير PDF
 async function renderIEPSession(app){
   if(!state.currentStudent){
     showToast('اختر طالباً أولاً للوصول للخطة');
@@ -1055,7 +1033,6 @@ async function renderIEPSession(app){
     state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu'; render();
   });
 
-  // جلب أو إنشاء الخطة
   let iep = {
     diagnosis: 'اضطراب نطق بالحروف (لدغة)',
     longGoal: 'أن ينطق الطالب الحروف المستهدفة بشكل صحيح في الكلمات والجمل.',
@@ -1071,7 +1048,6 @@ async function renderIEPSession(app){
     }
   } catch(e){}
 
-  // جلب الجلسات الخاصة بالطالب لعرضها في التقرير
   let studentSessions = [];
   try {
     const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id), orderBy("date", "desc"));
@@ -1107,7 +1083,6 @@ async function renderIEPSession(app){
   `;
   app.appendChild(formCard);
 
-  // === تعديل: إدارة عنصر الطباعة بشكل أفضل ===
   if (iepPrintArea) {
     iepPrintArea.remove();
     iepPrintArea = null;
@@ -1168,7 +1143,6 @@ async function renderIEPSession(app){
     };
   }
 
-  // === تعديل: تصدير PDF مع إظهار العنصر مؤقتًا ===
   formCard.querySelector('#btnPrintPDF').onclick = () => {
     const element = printArea;
     const originalPosition = element.style.position;
@@ -1207,7 +1181,6 @@ async function renderIEPSession(app){
     });
   };
 
-  // زر الطباعة
   formCard.querySelector('#btnPrint').onclick = () => {
     window.print();
   };
@@ -1244,26 +1217,30 @@ const alphabetData = [
   { letter: 'ي', image: '/images/letters/yaa.png', title: 'يد' }
 ];
 
-
+// ================== الإصلاح الأول ==================
+// تم تعديل هذه الدالة لإزالة الاعتماد على Tailwind والصور
 function renderLetterDisplay(app) {
   const itemsHTML = alphabetData.map(item => `
-    <div class="flex flex-col items-center justify-center p-5 bg-white rounded-2xl shadow-md border-4 border-blue-100 hover:border-blue-400 transition-all duration-300">
-      <img src="${item.image}" alt="${item.letter}" class="w-32 h-32 object-contain mb-4 filter drop-shadow-md">
-      <span class="text-6xl font-black text-blue-800 mb-1">${item.letter}</span>
-      <span class="text-xl font-semibold text-gray-600">${item.title}</span>
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; background:white; border-radius:16px; border:4px solid #E0F2FE; transition:all 0.3s; cursor:pointer;" onclick="speakText('${item.letter}')">
+      <div style="width:80px; height:80px; background:linear-gradient(135deg, #4FB6A8, #357E74); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:50px; color:white; font-weight:bold; box-shadow:0 4px 10px rgba(79,182,168,0.4); margin-bottom:12px;">
+        ${item.letter}
+      </div>
+      <span style="font-size:22px; font-weight:bold; color:#1E2A47;">${item.title}</span>
     </div>
   `).join('');
 
   app.innerHTML = `
-    <div class="p-6 bg-gray-50 min-h-screen">
-      <h1 class="text-3xl font-bold text-center mb-8 text-blue-700">الأحرف</h1>
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+    <div style="padding:16px; background:#F8FAFC; min-height:100vh;">
+      <h1 style="font-size:28px; font-weight:bold; text-align:center; margin-bottom:20px; color:#1E2A47;">الأحرف الأبجدية</h1>
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;">
         ${itemsHTML}
       </div>
     </div>
   `;
 }
 
+// ================== الإصلاح الثاني ==================
+// تم إصلاح دالة عرض الأطعمة (إزالة `${br}` الخاطئ وإضافة onclick)
 function renderFoodMenu(app){
   renderTopbar(app, 'قائمة الأطعمة والمسميات', 'تدريبات التسمية والتعزيز', () => {
     state.view = 'home'; render();
