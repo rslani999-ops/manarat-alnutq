@@ -1245,7 +1245,7 @@ const const alphabetData = [
 ];
 
 
-function renderLetterDisplay() {
+function renderLetterDisplay(app) {
   const itemsHTML = alphabetData.map(item => `
     <div class="flex flex-col items-center justify-center p-5 bg-white rounded-2xl shadow-md border-4 border-blue-100 hover:border-blue-400 transition-all duration-300">
       <img src="${item.image}" alt="${item.title}" class="w-32 h-32 object-contain mb-4 filter drop-shadow-md">
@@ -1254,10 +1254,10 @@ function renderLetterDisplay() {
     </div>
   `).join('');
 
-  return `
+  app.innerHTML = `
     <div class="p-6 bg-gray-50 min-h-screen">
-      <h1 class="text-3xl font-bold text-center mb-8 text-blue-700">صفحة التشخيص والتدريب النطقي</h1>
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+      <h1 class="text-3xl font-bold text-center mb-8 text-blue-700">الأحرف</h1>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
         ${itemsHTML}
       </div>
     </div>
