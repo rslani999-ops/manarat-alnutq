@@ -327,7 +327,6 @@ const SESSION_TYPES = [
   { id: 4, name: 'الجلسة الرابعة: تدريب الحرف في جمل', icon: '✍️' }
 ];
 
-// دالة مساعدة لإنشاء هدف افتراضي حسب نوع الجلسة
 function getDefaultGoal(letter, type){
   const names = {
     1: `نطق حرف (${letter}) بشكل مجرد`,
@@ -367,7 +366,8 @@ onAuthStateChanged(auth, async (u) => {
   } else {
     state.user = null; state.role = null;
     if (state.view !== 'auth' && state.view !== 'register' && state.view !== 'reset-password') {
-      state.view = 'home'; render();
+      state.view = 'home';
+      render();
     }
   }
 });
@@ -507,7 +507,7 @@ function renderAuth(app){
       const res = await signInWithEmailAndPassword(auth, email, pass);
       state.user = res.user;
       await fetchUserData(res.user.uid);
-    } catch (e) { showToast('خطأ في بيانات الدخول'); }
+    } catch (e) { showToast('خطأ في بيانات الدخول: '+e.message); }
   };
   card.querySelector('#toRegister').onclick = () => { state.view = 'register'; render(); };
   card.querySelector('#toReset').onclick = () => { state.view = 'reset-password'; render(); };
@@ -545,7 +545,7 @@ function renderRegister(app){
       showToast('تم إنشاء الحساب بنجاح');
       if(role === 'teacher') await fetchTeacherStudents();
       else render();
-    } catch (e) { showToast('فشل التسجيل: كلمة المرور ضعيفة أو البريد مستخدم'); }
+    } catch (e) { showToast('فشل التسجيل: ' + e.message); }
   };
   app.appendChild(card);
 }
@@ -742,7 +742,7 @@ window.removeStudent = async function(studentId){
 };
 
 // ============================================================
-// ========== صفحة التشخيص ==========
+// ========== صفحة التشخيص (بدون تكرار وبدون فتح صفحات جديدة) ==========
 // ============================================================
 function renderDiagnosticSession(app){
   renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
@@ -800,8 +800,16 @@ function renderDiagnosticSession(app){
     } catch(e) { showToast('خطأ في الحفظ'); console.error(e); }
   };
 
-  const container = document.createElement('div');
-  container.style.marginTop = '15px';
+  // ===== حاوية الحروف (نستخدم معرفاً ثابتاً لتحديثها بدلاً من إعادة إنشائها) =====
+  let container = document.getElementById('lettersContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.style.marginTop = '15px';
+    container.id = 'lettersContainer';
+    app.appendChild(container);
+  } else {
+    container.innerHTML = ''; // إفراغ المحتوى القديم
+  }
 
   LETTER_GROUPS.forEach(group => {
     const title = document.createElement('div');
@@ -823,26 +831,29 @@ function renderDiagnosticSession(app){
         <span class="letter-title">${titleStr}</span>
         <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
         <div class="eval-btns">
-          <button class="eval-btn passed ${status==='passed'?'active':''}" id="p_${letter}">أتقن</button>
-          <button class="eval-btn trained ${status==='trained'?'active':''}" id="tr_${letter}">اجتاز بعد تدريب</button>
-          <button class="eval-btn need ${status==='need'?'active':''}" id="n_${letter}">تدريب</button>
-          <button class="eval-btn unclear ${status==='unclear'?'active':''}" id="u_${letter}">غير واضح</button>
+          <button class="eval-btn passed ${status==='passed'?'active':''}" data-letter="${letter}" data-value="passed">أتقن</button>
+          <button class="eval-btn trained ${status==='trained'?'active':''}" data-letter="${letter}" data-value="trained">اجتاز بعد تدريب</button>
+          <button class="eval-btn need ${status==='need'?'active':''}" data-letter="${letter}" data-value="need">تدريب</button>
+          <button class="eval-btn unclear ${status==='unclear'?'active':''}" data-letter="${letter}" data-value="unclear">غير واضح</button>
         </div>
       `;
       grid.appendChild(card);
 
-      setTimeout(() => {
-        document.getElementById(`p_${letter}`).onclick = () => { state.diagEval[letter] = 'passed'; renderDiagnosticSession(app); };
-        document.getElementById(`tr_${letter}`).onclick = () => { state.diagEval[letter] = 'trained'; renderDiagnosticSession(app); };
-        document.getElementById(`n_${letter}`).onclick = () => { state.diagEval[letter] = 'need'; renderDiagnosticSession(app); };
-        document.getElementById(`u_${letter}`).onclick = () => { state.diagEval[letter] = 'unclear'; renderDiagnosticSession(app); };
-      }, 0);
+      // ربط الأحداث بشكل مباشر دون استدعاء renderDiagnosticSession بأكمله
+      const btns = card.querySelectorAll('.eval-btn');
+      btns.forEach(btn => {
+        btn.onclick = () => {
+          const letterVal = btn.dataset.letter;
+          const value = btn.dataset.value;
+          state.diagEval[letterVal] = value;
+          // تحديث واجهة المستخدم دون إعادة إنشاء الصفحة بالكامل
+          renderDiagnosticSession(app);
+        };
+      });
     });
 
     container.appendChild(grid);
   });
-
-  app.appendChild(container);
 }
 
 // ============================================================
@@ -1082,7 +1093,7 @@ async function renderStudentMenu(app){
 }
 
 // ============================================================
-// ========== إدارة الجلسات (مع رقم تلقائي ونموذج متكامل) ==========
+// ========== إدارة الجلسات ==========
 // ============================================================
 async function renderSpeechSessions(app){
   if(!state.currentStudent){
@@ -1145,7 +1156,6 @@ async function renderSpeechSessions(app){
     }
 
     try {
-      // حساب رقم الجلسة التلقائي
       const qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
       const snapCount = await getDocs(qCount);
       const sessionNumber = snapCount.size + 1;
@@ -1199,7 +1209,6 @@ async function renderSpeechSessions(app){
     if(snap.empty){
       listCard.innerHTML += '<p class="muted">لا توجد جلسات سابقة مسجلة.</p>';
     } else {
-      // تنظيم الجلسات حسب الحرف
       const sessionsByLetter = {};
       snap.forEach(d => {
         const sess = { id: d.id, ...d.data() };
@@ -1277,7 +1286,7 @@ async function renderSpeechSessions(app){
 }
 
 // ============================================================
-// ========== عرض جلسة واحدة (النموذج الاحترافي) ==========
+// ========== عرض جلسة واحدة ==========
 // ============================================================
 function renderSingleSession(app){
   const sess = state.currentSession;
@@ -1288,7 +1297,6 @@ function renderSingleSession(app){
   const letterTitle = letterTitleMap[letter] || '';
   const teacherName = state.user?.displayName || state.user?.email || 'المعلم';
   
-  // حساب يوم الأسبوع
   const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const sessionDate = new Date(sess.date + 'T00:00:00');
   const dayName = days[sessionDate.getDay()] || '';
@@ -1298,7 +1306,6 @@ function renderSingleSession(app){
     render();
   });
 
-  // جلب بيانات الحرف
   const letterData = LETTER_DATABASE[letter] || {
     place: 'مخرج الحرف العام',
     vowels: { fatha: `${letter}َ`, damma: `${letter}ُ`, kasra: `${letter}ِ`, sukoon: `${letter}ْ` },
@@ -1310,7 +1317,6 @@ function renderSingleSession(app){
     sentences: [`جملة تدريبية لحرف ${letter}.`]
   };
 
-  // ===== بطاقة النموذج الاحترافي =====
   const infoCard = document.createElement('div');
   infoCard.className = 'card';
   infoCard.style.borderRadius = '24px';
@@ -1334,34 +1340,21 @@ function renderSingleSession(app){
   };
   
   infoCard.innerHTML = `
-    <!-- رأس النموذج -->
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; background:#F0F7FF; padding:16px; border-radius:18px; margin-bottom:16px;">
       <div><span style="font-weight:bold; color:var(--mint-deep);">📅 اليوم:</span> ${dayName}</div>
       <div><span style="font-weight:bold; color:var(--mint-deep);">📆 التاريخ:</span> ${sess.date}</div>
-      <div><span style="font-weight:bold; color:var(--mint-deep);">⏱️ المدة:</span> 
-        ${state.role === 'teacher' || state.role === 'admin' ? 
-          `<input type="text" id="editDuration" value="${sess.duration || '30 دقيقة'}" style="width:120px; padding:4px 10px; border-radius:12px; border:1.5px solid var(--line); font-size:14px;">` : 
-          sess.duration || '30 دقيقة'
-        }
-      </div>
+      <div><span style="font-weight:bold; color:var(--mint-deep);">⏱️ المدة:</span> ${sess.duration || '30 دقيقة'}</div>
       <div><span style="font-weight:bold; color:var(--mint-deep);">🔢 رقم الجلسة:</span> #${sess.sessionNumber || '?'}</div>
     </div>
 
-    <!-- الهدف، الأدوات، الطريقة -->
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
       <div style="grid-column: 1 / -1;">
         <span style="font-weight:bold; color:var(--mint-deep);">🎯 الهدف:</span>
-        ${state.role === 'teacher' || state.role === 'admin' ? 
-          `<input type="text" id="editGoal" value="${sess.goal || ''}" style="width:100%; padding:8px 14px; border-radius:12px; border:1.5px solid var(--line); font-size:15px; margin-top:4px;">` : 
-          `<span style="display:block; padding:8px 14px; background:#f9f9f9; border-radius:12px; margin-top:4px;">${sess.goal || ''}</span>`
-        }
+        <span style="display:block; padding:8px 14px; background:#f9f9f9; border-radius:12px; margin-top:4px;">${sess.goal || ''}</span>
       </div>
       <div>
         <span style="font-weight:bold; color:var(--mint-deep);">🛠️ الأدوات:</span>
-        ${state.role === 'teacher' || state.role === 'admin' ? 
-          `<input type="text" id="editTools" value="${sess.tools || ''}" placeholder="مثال: بطاقات، مرآة..." style="width:100%; padding:8px 14px; border-radius:12px; border:1.5px solid var(--line); font-size:15px; margin-top:4px;">` : 
-          `<span style="display:block; padding:8px 14px; background:#f9f9f9; border-radius:12px; margin-top:4px;">${sess.tools || 'غير محدد'}</span>`
-        }
+        <span style="display:block; padding:8px 14px; background:#f9f9f9; border-radius:12px; margin-top:4px;">${sess.tools || 'غير محدد'}</span>
       </div>
       <div>
         <span style="font-weight:bold; color:var(--mint-deep);">📍 مخرج الحرف:</span>
@@ -1369,24 +1362,13 @@ function renderSingleSession(app){
       </div>
     </div>
 
-    <!-- الطريقة المتبعة -->
     <div style="margin-top:12px;">
       <span style="font-weight:bold; color:var(--mint-deep);">📋 الطريقة المتبعة في تحقيق الهدف:</span>
-      ${state.role === 'teacher' || state.role === 'admin' ? 
-        `<textarea id="editMethod" rows="2" placeholder="اذكر الخطوات المتبعة في التدريب..." style="width:100%; padding:8px 14px; border-radius:12px; border:1.5px solid var(--line); font-family:'Tajawal'; font-size:15px; margin-top:4px;">${sess.method || ''}</textarea>` : 
-        `<span style="display:block; padding:8px 14px; background:#f9f9f9; border-radius:12px; margin-top:4px;">${sess.method || 'غير محددة'}</span>`
-      }
+      <span style="display:block; padding:8px 14px; background:#f9f9f9; border-radius:12px; margin-top:4px;">${sess.method || 'غير محددة'}</span>
     </div>
-
-    ${state.role === 'teacher' || state.role === 'admin' ? `
-      <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn btn-success btn-sm" id="saveSessionDetails" style="border-radius:50px; padding:8px 24px;">💾 حفظ تفاصيل الجلسة</button>
-      </div>
-    ` : ''}
 
     <hr style="border:0; border-top:2px dashed var(--line); margin:16px 0;">
 
-    <!-- التقييم -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
         <span style="font-weight:bold; color:var(--mint-deep);">📊 التقييم الحالي:</span>
@@ -1399,7 +1381,6 @@ function renderSingleSession(app){
       </div>
     </div>
 
-    <!-- أزرار التقييم -->
     ${state.role === 'teacher' || state.role === 'admin' ? `
       <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
         <button class="btn-eval" data-value="passed" style="background:#E8F5E9; color:#2E7D32; border:2px solid #2E7D32; border-radius:50px; padding:8px 20px; font-weight:bold; cursor:pointer; font-size:14px; transition:all 0.2s; ${currentEval === 'passed' ? 'box-shadow:0 0 0 3px #2E7D32;' : ''}">✅ اجتاز</button>
@@ -1427,34 +1408,8 @@ function renderSingleSession(app){
 
   app.appendChild(infoCard);
 
-  // ===== ربط أحداث التعديل والحفظ للمعلم =====
+  // ===== ربط أحداث التقييم =====
   if(state.role === 'teacher' || state.role === 'admin'){
-    // حفظ تفاصيل الجلسة
-    document.getElementById('saveSessionDetails').onclick = async () => {
-      const duration = document.getElementById('editDuration').value;
-      const goal = document.getElementById('editGoal').value;
-      const tools = document.getElementById('editTools').value;
-      const method = document.getElementById('editMethod').value;
-      
-      try {
-        await updateDoc(doc(db, "sessions", sess.id), {
-          duration: duration,
-          goal: goal,
-          tools: tools,
-          method: method
-        });
-        sess.duration = duration;
-        sess.goal = goal;
-        sess.tools = tools;
-        sess.method = method;
-        showToast('✅ تم حفظ تفاصيل الجلسة بنجاح');
-        renderSingleSession(app);
-      } catch(e) {
-        showToast('خطأ في حفظ التفاصيل');
-      }
-    };
-
-    // أزرار التقييم السريع
     document.querySelectorAll('.btn-eval').forEach(btn => {
       btn.onclick = async () => {
         const val = btn.dataset.value;
@@ -1462,7 +1417,6 @@ function renderSingleSession(app){
       };
     });
 
-    // شريط النسبة المئوية
     const rangeInput = document.getElementById('successRange');
     const valueDisplay = document.getElementById('successValue');
     if(rangeInput && valueDisplay) {
@@ -1471,7 +1425,6 @@ function renderSingleSession(app){
       };
     }
 
-    // حفظ النسبة فقط
     document.getElementById('saveRateBtn').onclick = async () => {
       const rate = parseInt(document.getElementById('successRange').value);
       try {
@@ -1484,7 +1437,6 @@ function renderSingleSession(app){
       }
     };
 
-    // حفظ التقييم الكامل
     document.getElementById('saveEvalBtn').onclick = async () => {
       const selectedBtn = document.querySelector('.btn-eval[style*="box-shadow"]');
       const evalValue = selectedBtn ? selectedBtn.dataset.value : 'none';
@@ -1504,7 +1456,6 @@ function renderSingleSession(app){
       }
     };
 
-    // إعادة ضبط التقييم
     document.getElementById('resetEvalBtn').onclick = async () => {
       if(confirm('هل أنت متأكد من إعادة ضبط التقييم؟')) {
         try {
@@ -1828,6 +1779,11 @@ function renderFoodMenu(app){
 function renderStudentProfile(app){ app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>'; }
 function renderLetterTraining(app){ app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>'; }
 
+// بدء التطبيق
+render();
+</script>
+</body>
+</html>
 // بدء التطبيق
 render();
 </script>
