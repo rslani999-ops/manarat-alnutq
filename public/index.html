@@ -665,6 +665,7 @@
       if (state.view === 'iep-session') return renderIEPSession(app);
       if (state.view === 'food-menu') return renderFoodMenu(app);
       if (state.view === 'letter-display') return renderLetterDisplay(app);
+      if (state.view === 'sessions-log') return renderSessionsLog(app);
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
     }
@@ -839,131 +840,40 @@
     }
 
     // ============================================================
-    // ====== لوحة المعلم الخاصة (مع الجدول الجديد) ======
+    // ====== لوحة المعلم الخاصة (مع الأزرار الثلاثة) ======
     // ============================================================
-    async function renderTeacherDashboard(app) {
+    function renderTeacherDashboard(app) {
       renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
-      // ===== 1. الأزرار السريعة =====
+      // ===== الأزرار الثلاثة =====
       const actCard = document.createElement('div');
       actCard.className = 'card no-print';
       actCard.innerHTML = `
         <h3>الجلسات والتقييم السحابي</h3>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="btnSessions">📋 سجل الجلسات السحابي</button>
+          <button class="btn btn-success btn-sm" id="btnSessionsLog">📊 جدول سجل الجلسات</button>
           <button class="btn btn-soft btn-sm" id="btnIEP">📄 إدارة الخطة IEP</button>
-          <button class="btn btn-soft btn-sm" id="btnPrintTable">🖨️ طباعة الجدول</button>
-          <button class="btn btn-soft btn-sm" id="btnPDFTable">📑 تصدير الجدول PDF</button>
         </div>
       `;
       app.appendChild(actCard);
+      
       actCard.querySelector('#btnSessions').onclick = () => {
         if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
-        state.view = 'speech-sessions'; render();
+        state.view = 'speech-sessions';
+        render();
+      };
+      actCard.querySelector('#btnSessionsLog').onclick = () => {
+        state.view = 'sessions-log';
+        render();
       };
       actCard.querySelector('#btnIEP').onclick = () => {
         if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
-        state.view = 'iep-session'; render();
+        state.view = 'iep-session';
+        render();
       };
 
-      // ===== 2. جدول سجل الجلسات لجميع الطلاب =====
-      const tableCard = document.createElement('div');
-      tableCard.className = 'card';
-      tableCard.id = 'sessionsTableCard';
-      tableCard.innerHTML = `<h3>📊 جدول سجل الجلسات لجميع الطلاب</h3><p class="muted">جميع الجلسات المسجلة لطلابك مرتبة حسب التاريخ.</p>`;
-      
-      const tableContainer = document.createElement('div');
-      tableContainer.className = 'table-container';
-      
-      // جلب الجلسات
-      let allSessions = [];
-      try {
-        for (const student of state.myStudents) {
-          const q = query(collection(db, "sessions"), where("studentId", "==", student.id));
-          const snap = await getDocs(q);
-          snap.forEach(d => {
-            const data = d.data();
-            allSessions.push({
-              id: d.id,
-              studentName: student.fullName || student.email,
-              studentId: student.id,
-              ...data
-            });
-          });
-        }
-        // ترتيب تنازلي حسب التاريخ (الأحدث أولاً)
-        allSessions.sort((a, b) => {
-          const dateA = a.createdAt || a.date || '1970-01-01';
-          const dateB = b.createdAt || b.date || '1970-01-01';
-          return dateB.localeCompare(dateA);
-        });
-      } catch(e) {
-        console.error(e);
-        tableContainer.innerHTML = `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
-        tableCard.appendChild(tableContainer);
-        app.appendChild(tableCard);
-        // ... باقي الكود
-        // سأكمل كتابة باقي الدوال في الرد النهائي
-      }
-
-      if (allSessions.length === 0) {
-        tableContainer.innerHTML = `<p class="muted">لا توجد جلسات مسجلة لأي من طلابك.</p>`;
-      } else {
-        const table = document.createElement('table');
-        table.className = 'sessions-table';
-        const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-        
-        let thead = `<thead><tr>
-          <th>#</th><th>اليوم</th><th>التاريخ</th><th>اسم الطالب</th><th>الحرف</th><th>نوع التدريب</th><th>التقييم النهائي</th><th>التوصيات</th>
-        </tr></thead><tbody>`;
-        
-        allSessions.forEach((s, index) => {
-          const dateObj = new Date(s.date + 'T00:00:00');
-          const dayName = days[dateObj.getDay()] || '';
-          const typeInfo = SESSION_TYPES.find(t => t.id === s.sessionType) || SESSION_TYPES[0];
-          let evalText = s.evaluation || 'غير مقيم';
-          if (s.evaluation === 'passed') evalText = '✅ اجتاز';
-          else if (s.evaluation === 'trained') evalText = '🔄 اجتاز بعد تدريب';
-          else if (s.evaluation === 'need') evalText = '⚠️ يحتاج تدريب';
-          else if (s.evaluation === 'unclear') evalText = '❌ غير واضح';
-          
-          const recommendations = s.notes || s.recommendations || '-';
-          
-          thead += `<tr>
-            <td>${index + 1}</td>
-            <td>${dayName}</td>
-            <td>${s.date}</td>
-            <td><strong>${s.studentName}</strong></td>
-            <td>${s.letter}</td>
-            <td>${typeInfo.icon} ${typeInfo.name}</td>
-            <td><span class="badge ${s.evaluation === 'passed' ? 'badge-passed' : s.evaluation === 'trained' ? 'badge-trained' : s.evaluation === 'need' ? 'badge-need' : 'badge-unclear'}">${evalText}</span></td>
-            <td>${recommendations}</td>
-          </tr>`;
-        });
-        thead += `</tbody>`;
-        table.innerHTML = thead;
-        tableContainer.appendChild(table);
-      }
-      tableCard.appendChild(tableContainer);
-      app.appendChild(tableCard);
-
-      // أزرار الطباعة والـ PDF
-      actCard.querySelector('#btnPrintTable').onclick = () => {
-        window.print();
-      };
-      actCard.querySelector('#btnPDFTable').onclick = () => {
-        const element = document.getElementById('sessionsTableCard');
-        const opt = {
-          margin: 10,
-          filename: 'سجل_الجلسات_الطلاب.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        };
-        html2pdf().set(opt).from(element).save();
-      };
-
-      // ===== 3. قائمة طلابي (كما هي) =====
+      // ===== قائمة طلابي (كما هي) =====
       const myCard = document.createElement('div');
       myCard.className = 'card no-print';
       myCard.innerHTML = '<h3>📋 قائمة طلابك المضافين</h3>';
@@ -1001,7 +911,7 @@
       }
       app.appendChild(myCard);
 
-      // ===== 4. الطلاب المتاحون (كما هي) =====
+      // ===== الطلاب المتاحون (كما هي) =====
       const freeCard = document.createElement('div');
       freeCard.className = 'card no-print';
       freeCard.innerHTML = '<h3>➕ الطلاب المتاحون للإضافة (بدون معلم)</h3>';
@@ -1046,6 +956,120 @@
         await fetchTeacherStudents();
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
+
+    // ============================================================
+    // ====== صفحة جدول سجل الجلسات (sessions-log) ======
+    // ============================================================
+    async function renderSessionsLog(app) {
+      renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات المسجلة للطلاب', () => {
+        state.view = 'teacher-dashboard';
+        render();
+      });
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'sessionsLogCard';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+          <h3 style="margin:0;">📊 جدول سجل الجلسات لجميع الطلاب</h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="printLogBtn">🖨️ طباعة</button>
+            <button class="btn btn-soft btn-sm" id="pdfLogBtn">📑 تصدير PDF</button>
+          </div>
+        </div>
+        <p class="muted">جميع الجلسات المسجلة لطلابك مرتبة حسب التاريخ (الأحدث أولاً).</p>
+        <div class="table-container" id="logTableContainer">
+          <p class="muted">⏳ جاري تحميل الجلسات...</p>
+        </div>
+      `;
+      app.appendChild(card);
+
+      // جلب الجلسات
+      try {
+        let allSessions = [];
+        for (const student of state.myStudents) {
+          const q = query(collection(db, "sessions"), where("studentId", "==", student.id));
+          const snap = await getDocs(q);
+          snap.forEach(d => {
+            const data = d.data();
+            allSessions.push({
+              id: d.id,
+              studentName: student.fullName || student.email,
+              studentId: student.id,
+              ...data
+            });
+          });
+        }
+        // ترتيب تنازلي حسب التاريخ (الأحدث أولاً)
+        allSessions.sort((a, b) => {
+          const dateA = a.createdAt || a.date || '1970-01-01';
+          const dateB = b.createdAt || b.date || '1970-01-01';
+          return dateB.localeCompare(dateA);
+        });
+
+        const container = document.getElementById('logTableContainer');
+        if (allSessions.length === 0) {
+          container.innerHTML = `<p class="muted">لا توجد جلسات مسجلة لأي من طلابك.</p>`;
+        } else {
+          const table = document.createElement('table');
+          table.className = 'sessions-table';
+          const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+          
+          let thead = `<thead><tr>
+            <th>#</th><th>اليوم</th><th>التاريخ</th><th>اسم الطالب</th><th>الحرف</th><th>نوع التدريب</th><th>التقييم النهائي</th><th>التوصيات</th>
+          </tr></thead><tbody>`;
+          
+          allSessions.forEach((s, index) => {
+            const dateObj = new Date(s.date + 'T00:00:00');
+            const dayName = days[dateObj.getDay()] || '';
+            const typeInfo = SESSION_TYPES.find(t => t.id === s.sessionType) || SESSION_TYPES[0];
+            let evalText = s.evaluation || 'غير مقيم';
+            let evalClass = 'badge-need';
+            if (s.evaluation === 'passed') { evalText = '✅ اجتاز'; evalClass = 'badge-passed'; }
+            else if (s.evaluation === 'trained') { evalText = '🔄 اجتاز بعد تدريب'; evalClass = 'badge-trained'; }
+            else if (s.evaluation === 'need') { evalText = '⚠️ يحتاج تدريب'; evalClass = 'badge-need'; }
+            else if (s.evaluation === 'unclear') { evalText = '❌ غير واضح'; evalClass = 'badge-unclear'; }
+            
+            const recommendations = s.recommendations || s.notes || '-';
+            
+            thead += `<tr>
+              <td>${index + 1}</td>
+              <td>${dayName}</td>
+              <td>${s.date}</td>
+              <td><strong>${s.studentName}</strong></td>
+              <td>${s.letter}</td>
+              <td>${typeInfo.icon} ${typeInfo.name}</td>
+              <td><span class="badge ${evalClass}">${evalText}</span></td>
+              <td>${recommendations}</td>
+            </tr>`;
+          });
+          thead += `</tbody>`;
+          table.innerHTML = thead;
+          container.innerHTML = '';
+          container.appendChild(table);
+        }
+
+        // ربط أزرار الطباعة و PDF
+        document.getElementById('printLogBtn').onclick = () => {
+          window.print();
+        };
+        document.getElementById('pdfLogBtn').onclick = () => {
+          const element = document.getElementById('sessionsLogCard');
+          const opt = {
+            margin: 10,
+            filename: 'سجل_الجلسات_الطلاب.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          };
+          html2pdf().set(opt).from(element).save();
+        };
+
+      } catch(e) {
+        console.error(e);
+        document.getElementById('logTableContainer').innerHTML = `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
+      }
+    }
 
     // ====== التشخيص الشامل ======
     function renderComprehensiveDiagnosis(container) {
@@ -1532,7 +1556,6 @@
       const evalLabels = { 'passed':'✅ اجتاز', 'trained':'🔄 اجتاز بعد تدريب', 'need':'⚠️ يحتاج تدريب', 'unclear':'❌ غير واضح', 'none':'⏳ قيد التقييم' };
       const evalColors = { 'passed':'#2E7D32', 'trained':'#0288D1', 'need':'#F57F17', 'unclear':'#C62828', 'none':'#6B7A99' };
 
-      // حقل التوصيات
       const recommendations = sess.recommendations || sess.notes || '';
 
       const infoCard = document.createElement('div');
@@ -1635,7 +1658,6 @@
 
       // ===== ربط الأحداث =====
       if (state.role === 'teacher' || state.role === 'admin') {
-        // أزرار التقييم
         document.querySelectorAll('.btn-eval').forEach(btn => {
           btn.onclick = async () => {
             const val = btn.dataset.value;
@@ -1643,14 +1665,12 @@
           };
         });
 
-        // نسبة النجاح
         const range = document.getElementById('successRange');
         const valDisplay = document.getElementById('successValue');
         if (range && valDisplay) {
           range.oninput = () => { valDisplay.textContent = range.value + '%'; };
         }
 
-        // حفظ النسبة فقط
         document.getElementById('saveRateBtn').onclick = async () => {
           const rate = parseInt(document.getElementById('successRange').value);
           try {
@@ -1661,7 +1681,6 @@
           } catch(e) { showToast('خطأ في حفظ النسبة'); }
         };
 
-        // حفظ التقييم والتوصيات
         document.getElementById('saveEvalBtn').onclick = async () => {
           const selected = document.querySelector('.btn-eval[style*="box-shadow"]');
           const evalValue = selected ? selected.dataset.value : 'none';
@@ -1682,7 +1701,6 @@
           } catch(e) { showToast('خطأ في حفظ التقييم'); }
         };
 
-        // إعادة ضبط
         document.getElementById('resetEvalBtn').onclick = async () => {
           if (confirm('إعادة ضبط التقييم؟')) {
             try {
@@ -1695,12 +1713,10 @@
           }
         };
 
-        // الانتقال للجلسة التالية (اختياري)
         const goNextBtn = document.getElementById('goNextBtn');
         if (goNextBtn) {
           goNextBtn.onclick = async () => {
             const nextType = sess.sessionType + 1;
-            // التحقق من وجود جلسة تالية
             const qCheck = query(
               collection(db, "sessions"),
               where("studentId", "==", sess.studentId),
@@ -1713,7 +1729,6 @@
               snapCheck.forEach(d => targetSession = { id: d.id, ...d.data() });
               showToast(`🔁 الجلسة التالية موجودة، سيتم الانتقال إليها.`);
             } else {
-              // إنشاء الجلسة التالية
               const newGoal = getDefaultGoal(sess.letter, nextType);
               const today = new Date().toISOString().split('T')[0];
               const qCount = query(collection(db, "sessions"), where("studentId", "==", sess.studentId));
@@ -1749,7 +1764,6 @@
           };
         }
 
-        // حذف الجلسة
         document.getElementById('deleteSessBtn').onclick = async () => {
           if (confirm(`هل أنت متأكد من حذف الجلسة رقم (${sess.sessionNumber})؟`)) {
             try {
@@ -1764,7 +1778,6 @@
         };
       }
 
-      // دالة تحديث التقييم (للاستخدام الداخلي)
       async function updateEval(val) {
         try {
           await updateDoc(doc(db, "sessions", sess.id), { evaluation: val });
