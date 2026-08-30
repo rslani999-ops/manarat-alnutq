@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>منارة النطق</title>
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
@@ -34,7 +33,6 @@
       width: 100%;
     }
 
-    /* ====== الشريط العلوي ====== */
     .topbar {
       display: flex;
       align-items: center;
@@ -77,7 +75,6 @@
     }
     .btn-nav:hover { background: #F5F8FC; }
 
-    /* ====== البطاقات والأزرار ====== */
     .card {
       background: white;
       border-radius: 18px;
@@ -114,7 +111,6 @@
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn-block { width: 100%; }
 
-    /* ====== النماذج والمدخلات ====== */
     input, select, textarea {
       width: 100%;
       padding: 12px 14px;
@@ -167,7 +163,6 @@
       box-shadow: 0 10px 24px rgba(0,0,0,0.2);
     }
 
-    /* ====== عناصر الطلاب والجلسات ====== */
     .student-row {
       padding: 12px;
       border-bottom: 1px solid var(--line);
@@ -294,7 +289,6 @@
       border: 1px solid var(--line);
     }
 
-    /* ====== تذييل الصفحة ====== */
     footer {
       background: white;
       border-top: 1px solid var(--line);
@@ -337,7 +331,6 @@
       margin-top: 2px;
     }
 
-    /* ====== الشبكات والقوائم ====== */
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -390,7 +383,6 @@
     }
     #iep-print-area { display: none; }
 
-    /* ====== جداول الجلسات ====== */
     .sessions-table {
       width: 100%;
       border-collapse: collapse;
@@ -415,7 +407,6 @@
       overflow-x: auto;
     }
 
-    /* ====== شبكة المفردات (بأيقونات أكبر) ====== */
     .vocab-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -452,7 +443,6 @@
       color: var(--ink);
     }
 
-    /* ====== الطباعة ====== */
     @media print {
       body { background: white; color: black; }
       .topbar, .btn, .nav-btns, footer, #iep-print-area, .no-print { display: none !important; }
@@ -475,7 +465,6 @@
 <body>
   <div id="app"></div>
 
-  <!-- ====== تذييل الصفحة (معدل) ====== -->
   <footer>
     <div class="footer-main">
       <span>© 2025 منارة النطق - جميع الحقوق محفوظة</span>
@@ -490,7 +479,6 @@
   </footer>
 
   <script type="module">
-    // ====== استيرادات Firebase ======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
     import {
       getAuth,
@@ -515,7 +503,6 @@
       deleteDoc
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
-    // ====== تهيئة Firebase ======
     const firebaseConfig = {
       apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
       authDomain: "manarat-alnutq.firebaseapp.com",
@@ -552,7 +539,7 @@
     const letterTitleMap = {};
     alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
 
-    // ====== قوائم المفردات الموسعة والمعدلة ======
+    // ====== قوائم المفردات ======
     const VOCAB_LISTS = {
       'الأشكال': [
         { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
@@ -625,10 +612,9 @@
         { word: 'وروار', icon: '🐦' }, { word: 'هدهد', icon: '🐦' }, { word: 'باز', icon: '🦅' }
       ]
     };
-
     const VOCAB_CATEGORIES = Object.keys(VOCAB_LISTS);
 
-    // ====== أنواع الجلسات وقاعدة بيانات الحروف ======
+    // ====== أنواع الجلسات ======
     const SESSION_TYPES = [
       { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
       { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
@@ -819,7 +805,6 @@
         banner.querySelector('#btnAuthHome').onclick = () => { state.view = 'auth'; render(); };
       }
 
-      // ===== شبكة القوائم =====
       const grid = document.createElement('div');
       grid.className = 'grid-2';
 
@@ -851,7 +836,6 @@
         grid.appendChild(card);
       });
 
-      // الحروف الأبجدية
       const lettersCard = document.createElement('div');
       lettersCard.className = 'card';
       lettersCard.style.cursor = 'pointer';
@@ -870,7 +854,7 @@
     }
 
     // ============================================================
-    // ====== صفحة عرض قائمة المفردات (بأيقونات أكبر) ======
+    // ====== صفحة عرض قائمة المفردات ======
     // ============================================================
     function renderVocabList(app) {
       const category = state.currentVocabCategory || 'الفاكهة';
@@ -898,9 +882,9 @@
       app.appendChild(card);
     }
 
-    // ====== باقي الدوال (مختصرة ولكنها كاملة) ======
-
-    // ---- المصادقة ----
+    // ============================================================
+    // ====== دوال المصادقة ======
+    // ============================================================
     function renderAuth(app) {
       renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
       const card = document.createElement('div');
@@ -995,7 +979,7 @@
       app.appendChild(card);
     }
 
-    // ---- جلب البيانات ----
+    // ====== جلب بيانات المستخدم ======
     async function fetchUserData(uid) {
       try {
         const uDoc = await getDoc(doc(db, "users", uid));
@@ -1032,7 +1016,9 @@
       } catch(e) { showToast('خطأ في تحميل بيانات الطلاب'); }
     }
 
-    // ---- لوحة المعلم ----
+    // ============================================================
+    // ====== لوحة المعلم ======
+    // ============================================================
     function renderTeacherDashboard(app) {
       renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
@@ -1063,7 +1049,6 @@
         render();
       };
 
-      // قائمة طلابي
       const myCard = document.createElement('div');
       myCard.className = 'card no-print';
       myCard.innerHTML = '<h3>📋 قائمة طلابك المضافين</h3>';
@@ -1101,7 +1086,6 @@
       }
       app.appendChild(myCard);
 
-      // الطلاب المتاحون
       const freeCard = document.createElement('div');
       freeCard.className = 'card no-print';
       freeCard.innerHTML = '<h3>➕ الطلاب المتاحون للإضافة (بدون معلم)</h3>';
@@ -1147,122 +1131,9 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
-    // ---- التشخيص ----
-    function renderDiagnosticSession(app) {
-      renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
-        state.view = 'teacher-dashboard';
-        render();
-      });
-
-      const nameCard = document.createElement('div');
-      nameCard.className = 'card';
-      nameCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-      nameCard.style.border = '2px solid var(--mint-deep)';
-      nameCard.innerHTML = `<h2 style="margin:0;color:var(--mint-deep);text-align:center;">👤 الطالب: ${state.currentStudent?.fullName || state.currentStudent?.email || 'غير محدد'}</h2>`;
-      app.appendChild(nameCard);
-
-      let compContainer = document.getElementById('comprehensiveContainer');
-      if (!compContainer) {
-        compContainer = document.createElement('div');
-        compContainer.id = 'comprehensiveContainer';
-        app.appendChild(compContainer);
-      }
-      renderComprehensiveDiagnosis(compContainer);
-
-      const letterCard = document.createElement('div');
-      letterCard.className = 'card';
-      letterCard.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <div>
-            <h3 style="margin:0;">📋 تشخيص الحروف حسب مخرج النطق</h3>
-            <p class="muted">اختر التقييم المناسب لكل حرف، ثم احفظ الكل.</p>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-danger btn-sm" id="resetDiag">🗑️ مسح تشخيص الحروف</button>
-            <button class="btn btn-success btn-sm" id="saveAllDiag">💾 حفظ التشخيص الكامل</button>
-          </div>
-        </div>
-      `;
-      app.appendChild(letterCard);
-
-      letterCard.querySelector('#resetDiag').onclick = async () => {
-        if (confirm('هل أنت متأكد؟ سيتم مسح تشخيص الحروف فقط.')) {
-          state.diagEval = {};
-          try {
-            await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
-            showToast('تم مسح تشخيص الحروف');
-            renderDiagnosticSession(app);
-          } catch(e) { showToast('خطأ في المسح'); }
-        }
-      };
-
-      letterCard.querySelector('#saveAllDiag').onclick = async () => {
-        try {
-          const ref = doc(db, "users", state.currentStudent.id);
-          await updateDoc(ref, {
-            diagnostic: state.diagEval,
-            comprehensive: state.comprehensive
-          });
-          showToast('✅ تم حفظ التشخيص الكامل بنجاح');
-        } catch(e) {
-          showToast('❌ خطأ في الحفظ: ' + e.message);
-        }
-      };
-
-      let container = document.getElementById('lettersContainer');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'lettersContainer';
-        container.style.marginTop = '15px';
-        app.appendChild(container);
-      } else {
-        container.innerHTML = '';
-      }
-
-      LETTER_GROUPS.forEach(group => {
-        const title = document.createElement('div');
-        title.className = 'group-title';
-        title.textContent = group.name;
-        container.appendChild(title);
-
-        const grid = document.createElement('div');
-        grid.className = 'diag-grid';
-
-        group.letters.forEach(letter => {
-          const status = state.diagEval[letter] || 'none';
-          const titleStr = letterTitleMap[letter] || '';
-          const card = document.createElement('div');
-          card.className = 'letter-card';
-
-          card.innerHTML = `
-            <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
-            <span class="letter-title">${titleStr}</span>
-            <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
-            <div class="eval-btns">
-              <button class="eval-btn passed ${status === 'passed' ? 'active' : ''}" data-letter="${letter}" data-value="passed">أتقن</button>
-              <button class="eval-btn trained ${status === 'trained' ? 'active' : ''}" data-letter="${letter}" data-value="trained">اجتاز بعد تدريب</button>
-              <button class="eval-btn need ${status === 'need' ? 'active' : ''}" data-letter="${letter}" data-value="need">تدريب</button>
-              <button class="eval-btn unclear ${status === 'unclear' ? 'active' : ''}" data-letter="${letter}" data-value="unclear">غير واضح</button>
-            </div>
-          `;
-          grid.appendChild(card);
-
-          const btns = card.querySelectorAll('.eval-btn');
-          btns.forEach(btn => {
-            btn.onclick = () => {
-              const l = btn.dataset.letter;
-              const v = btn.dataset.value;
-              state.diagEval[l] = v;
-              renderDiagnosticSession(app);
-            };
-          });
-        });
-
-        container.appendChild(grid);
-      });
-    }
-
-    // ---- التشخيص الشامل ----
+    // ============================================================
+    // ====== التشخيص الشامل ======
+    // ============================================================
     function renderComprehensiveDiagnosis(container) {
       container.innerHTML = '';
       const card = document.createElement('div');
@@ -1411,7 +1282,217 @@
       if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
     }
 
-    // ---- صفحة الطالب ----
+    // ============================================================
+    // ====== صفحة التشخيص (مع إنشاء IEP تلقائي) ======
+    // ============================================================
+    function renderDiagnosticSession(app) {
+      renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
+        state.view = 'teacher-dashboard';
+        render();
+      });
+
+      const nameCard = document.createElement('div');
+      nameCard.className = 'card';
+      nameCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+      nameCard.style.border = '2px solid var(--mint-deep)';
+      nameCard.innerHTML = `<h2 style="margin:0;color:var(--mint-deep);text-align:center;">👤 الطالب: ${state.currentStudent?.fullName || state.currentStudent?.email || 'غير محدد'}</h2>`;
+      app.appendChild(nameCard);
+
+      let compContainer = document.getElementById('comprehensiveContainer');
+      if (!compContainer) {
+        compContainer = document.createElement('div');
+        compContainer.id = 'comprehensiveContainer';
+        app.appendChild(compContainer);
+      }
+      renderComprehensiveDiagnosis(compContainer);
+
+      const letterCard = document.createElement('div');
+      letterCard.className = 'card';
+      letterCard.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h3 style="margin:0;">📋 تشخيص الحروف حسب مخرج النطق</h3>
+            <p class="muted">اختر التقييم المناسب لكل حرف، ثم احفظ الكل.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-danger btn-sm" id="resetDiag">🗑️ مسح تشخيص الحروف</button>
+            <button class="btn btn-success btn-sm" id="saveAllDiag">💾 حفظ التشخيص الكامل</button>
+          </div>
+        </div>
+      `;
+      app.appendChild(letterCard);
+
+      letterCard.querySelector('#resetDiag').onclick = async () => {
+        if (confirm('هل أنت متأكد؟ سيتم مسح تشخيص الحروف فقط.')) {
+          state.diagEval = {};
+          try {
+            await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
+            showToast('تم مسح تشخيص الحروف');
+            renderDiagnosticSession(app);
+          } catch(e) { showToast('خطأ في المسح'); }
+        }
+      };
+
+      // ===== زر حفظ التشخيص مع إنشاء IEP تلقائي =====
+      letterCard.querySelector('#saveAllDiag').onclick = async () => {
+        try {
+          const ref = doc(db, "users", state.currentStudent.id);
+          
+          // 1. حفظ التشخيص الشامل + تشخيص الحروف
+          await updateDoc(ref, {
+            diagnostic: state.diagEval,
+            comprehensive: state.comprehensive
+          });
+          
+          // 2. تحليل الحروف وتصنيفها
+          const letters = state.diagEval || {};
+          const passed = [];
+          const trained = [];
+          const need = [];
+          const unclear = [];
+          
+          Object.keys(letters).forEach(letter => {
+            const status = letters[letter];
+            if (status === 'passed') passed.push(letter);
+            else if (status === 'trained') trained.push(letter);
+            else if (status === 'need') need.push(letter);
+            else if (status === 'unclear') unclear.push(letter);
+          });
+          
+          // 3. إنشاء الخطة الفردية (IEP) تلقائياً
+          const iepData = generateIEP(passed, trained, need, unclear, state.currentStudent);
+          
+          // 4. حفظ الخطة في مجموعة iep
+          await setDoc(doc(db, "iep", state.currentStudent.id), iepData);
+          
+          showToast('✅ تم حفظ التشخيص الكامل وإنشاء الخطة الفردية (IEP) تلقائياً!');
+        } catch(e) {
+          console.error('خطأ في الحفظ:', e);
+          showToast('❌ خطأ في الحفظ: ' + e.message);
+        }
+      };
+
+      // ===== شبكة الحروف =====
+      let container = document.getElementById('lettersContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'lettersContainer';
+        container.style.marginTop = '15px';
+        app.appendChild(container);
+      } else {
+        container.innerHTML = '';
+      }
+
+      LETTER_GROUPS.forEach(group => {
+        const title = document.createElement('div');
+        title.className = 'group-title';
+        title.textContent = group.name;
+        container.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'diag-grid';
+
+        group.letters.forEach(letter => {
+          const status = state.diagEval[letter] || 'none';
+          const titleStr = letterTitleMap[letter] || '';
+          const card = document.createElement('div');
+          card.className = 'letter-card';
+
+          card.innerHTML = `
+            <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
+            <span class="letter-title">${titleStr}</span>
+            <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
+            <div class="eval-btns">
+              <button class="eval-btn passed ${status === 'passed' ? 'active' : ''}" data-letter="${letter}" data-value="passed">أتقن</button>
+              <button class="eval-btn trained ${status === 'trained' ? 'active' : ''}" data-letter="${letter}" data-value="trained">اجتاز بعد تدريب</button>
+              <button class="eval-btn need ${status === 'need' ? 'active' : ''}" data-letter="${letter}" data-value="need">تدريب</button>
+              <button class="eval-btn unclear ${status === 'unclear' ? 'active' : ''}" data-letter="${letter}" data-value="unclear">غير واضح</button>
+            </div>
+          `;
+          grid.appendChild(card);
+
+          const btns = card.querySelectorAll('.eval-btn');
+          btns.forEach(btn => {
+            btn.onclick = () => {
+              const l = btn.dataset.letter;
+              const v = btn.dataset.value;
+              state.diagEval[l] = v;
+              renderDiagnosticSession(app);
+            };
+          });
+        });
+
+        container.appendChild(grid);
+      });
+    }
+
+    // ============================================================
+    // ====== دالة توليد الخطة الفردية (IEP) ======
+    // ============================================================
+    function generateIEP(passed, trained, need, unclear, student) {
+      const studentName = student?.fullName || student?.email || 'الطالب';
+      
+      let diagnosisText = `الطالب: ${studentName}\n\n`;
+      
+      if (passed.length > 0) {
+        diagnosisText += `✅ الحروف المتقنة: ${passed.join('، ')}\n`;
+      }
+      if (trained.length > 0) {
+        diagnosisText += `🔄 الحروف التي اجتازها بعد تدريب: ${trained.join('، ')}\n`;
+      }
+      if (need.length > 0) {
+        diagnosisText += `⚠️ الحروف التي تحتاج إلى تدريب: ${need.join('، ')}\n`;
+      }
+      if (unclear.length > 0) {
+        diagnosisText += `❌ الحروف غير الواضحة في النطق: ${unclear.join('، ')}\n`;
+      }
+      
+      if (need.length === 0 && unclear.length === 0 && trained.length === 0) {
+        diagnosisText += `\n🎉 الطالب أتقن جميع الحروف بشكل ممتاز.`;
+      } else {
+        diagnosisText += `\n📋 ملخص: يعاني الطالب من صعوبات في نطق بعض الحروف، ويحتاج إلى برنامج تدريبي مكثف لتحسين النطق.`;
+      }
+      
+      const targetLetters = [...need, ...unclear, ...trained];
+      const targetLettersStr = targetLetters.length > 0 ? targetLetters.join('، ') : 'جميع الحروف';
+      
+      let longGoal = '';
+      if (targetLetters.length === 0) {
+        longGoal = `تعزيز مهارات النطق لدى الطالب والحفاظ على المكتسبات اللغوية.`;
+      } else {
+        longGoal = `تمكين الطالب من نطق الحروف المستهدفة (${targetLettersStr}) بشكل صحيح في جميع مواضع الكلمة (بداية، وسط، نهاية)، وفي سياق الجمل، مع تحسين وضوح النطق وزيادة الثقة اللغوية.`;
+      }
+      
+      let shortGoals = '';
+      if (targetLetters.length === 0) {
+        shortGoals = `1. تعزيز النطق الصحيح للحروف المتقنة.\n2. تطوير مهارات الاستماع والتمييز السمعي.\n3. تحسين الطلاقة اللغوية في المحادثة اليومية.`;
+      } else {
+        shortGoals = `1. أن ينطق الطالب الحروف المستهدفة (${targetLettersStr}) بشكل مفرد وصحيح.\n2. أن ينطق الطالب الحروف المستهدفة في بداية الكلمة ووسطها ونهايتها.\n3. أن يستخدم الطالب الحروف المستهدفة في جمل بسيطة بشكل صحيح.\n4. أن يميز الطالب سمعياً بين الحروف المتشابهة في المخرج.`;
+      }
+      
+      let notes = '';
+      if (targetLetters.length === 0) {
+        notes = `- الاستمرار في تدريبات النطق اليومية للحفاظ على المهارات.\n- تشجيع الطالب على القراءة والمحادثة.\n- متابعة تقدم الطالب بشكل دوري.`;
+      } else {
+        notes = `- تخصيص 10-15 دقيقة يومياً للتدريب على الحروف المستهدفة.\n- استخدام المرآة لتدريب الطالب على مخارج الحروف.\n- تدريبات سمعية للتمييز بين الحروف المتشابهة.\n- تكرار الكلمات والجمل التي تحتوي على الحروف المستهدفة.\n- متابعة مع أخصائي النطق بشكل دوري.`;
+      }
+      
+      return {
+        diagnosis: diagnosisText,
+        longGoal: longGoal,
+        shortGoals: shortGoals,
+        notes: notes,
+        updatedAt: new Date().toISOString(),
+        passed: passed,
+        trained: trained,
+        need: need,
+        unclear: unclear
+      };
+    }
+
+    // ============================================================
+    // ====== صفحة الطالب ======
+    // ============================================================
     async function renderStudentMenu(app) {
       renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
       const uDoc = await getDoc(doc(db, "users", state.user.uid));
@@ -1470,7 +1551,9 @@
       app.appendChild(sessionsCard);
     }
 
-    // ---- إدارة الجلسات ----
+    // ============================================================
+    // ====== إدارة الجلسات ======
+    // ============================================================
     async function renderSpeechSessions(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للسجل');
@@ -1608,7 +1691,9 @@
       app.appendChild(listCard);
     }
 
-    // ---- عرض جلسة واحدة ----
+    // ============================================================
+    // ====== عرض جلسة واحدة ======
+    // ============================================================
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -1877,7 +1962,9 @@
       }
     }
 
-    // ---- الخطة الفردية IEP ----
+    // ============================================================
+    // ====== الخطة الفردية IEP ======
+    // ============================================================
     async function renderIEPSession(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للخطة');
@@ -1900,8 +1987,17 @@
       try {
         const docRef = doc(db, "iep", state.currentStudent.id);
         const snap = await getDoc(docRef);
-        if (snap.exists()) iep = snap.data();
-      } catch(e) {}
+        if (snap.exists()) {
+          iep = snap.data();
+          // إذا كانت الخطة تحتوي على حقول قديمة، نضمن وجود الحقول الجديدة
+          if (!iep.diagnosis) iep.diagnosis = 'اضطراب نطق بالحروف (لدغة)';
+          if (!iep.longGoal) iep.longGoal = 'أن ينطق الطالب الحروف المستهدفة بشكل صحيح في الكلمات والجمل.';
+          if (!iep.shortGoals) iep.shortGoals = '1. نطق الحرف بشكل مفرد صحيح.\n2. نطق الحرف في بداية الكلمة ووسطها ونهايتها.';
+          if (!iep.notes) iep.notes = 'متابعة منزلية يومية لمدة 10 دقائق.';
+        }
+      } catch(e) {
+        console.error('خطأ في جلب الخطة:', e);
+      }
 
       let studentSessions = [];
       try {
@@ -1922,14 +2018,19 @@
         </div>
         <hr>
         <label><b>تشخيص حالة الطالب:</b></label>
-        <textarea id="iepDiagnosis" rows="3">${iep.diagnosis}</textarea>
+        <textarea id="iepDiagnosis" rows="6" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:15px;background:#FBFDFE;margin-bottom:12px;">${iep.diagnosis}</textarea>
+        
         <label><b>الهدف العام:</b></label>
-        <input type="text" id="iepLongGoal" value="${iep.longGoal}">
+        <textarea id="iepLongGoal" rows="2" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:15px;background:#FBFDFE;margin-bottom:12px;">${iep.longGoal}</textarea>
+        
         <label><b>الأهداف القصيرة:</b></label>
-        <textarea id="iepShortGoals" rows="3">${iep.shortGoals}</textarea>
-        <label><b>توصيات:</b></label>
-        <textarea id="iepNotes" rows="2">${iep.notes}</textarea>
-        ${state.role === 'teacher' || state.role === 'admin' ? '<button class="btn btn-success btn-sm" id="saveIEPBtn">حفظ الخطة</button>' : ''}
+        <textarea id="iepShortGoals" rows="4" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:15px;background:#FBFDFE;margin-bottom:12px;">${iep.shortGoals}</textarea>
+        
+        <label><b>التوصيات:</b></label>
+        <textarea id="iepNotes" rows="4" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:15px;background:#FBFDFE;margin-bottom:12px;">${iep.notes}</textarea>
+        
+        ${state.role === 'teacher' || state.role === 'admin' ? '<button class="btn btn-success btn-sm" id="saveIEPBtn">💾 حفظ الخطة</button>' : ''}
+        <p class="muted" style="margin-top:8px;">ℹ️ تم إنشاء هذه الخطة تلقائياً بناءً على نتائج التشخيص. يمكنك تعديلها يدوياً حسب الحاجة.</p>
       `;
       app.appendChild(formCard);
 
@@ -1954,8 +2055,8 @@
             <p><strong>البريد:</strong> ${state.currentStudent.email}</p>
             <hr>
             <h2>التشخيص والأهداف</h2>
-            <p><strong>التشخيص:</strong> ${data.diagnosis}</p>
-            <p><strong>الهدف العام:</strong> ${data.longGoal}</p>
+            <p><strong>التشخيص:</strong><br>${data.diagnosis.replace(/\n/g,'<br>')}</p>
+            <p><strong>الهدف العام:</strong><br>${data.longGoal}</p>
             <p><strong>الأهداف القصيرة:</strong><br>${data.shortGoals.replace(/\n/g,'<br>')}</p>
             <p><strong>التوصيات:</strong><br>${data.notes.replace(/\n/g,'<br>')}</p>
             <hr>
@@ -1981,9 +2082,9 @@
           };
           try {
             await setDoc(doc(db, "iep", state.currentStudent.id), updated);
-            showToast('تم حفظ الخطة');
+            showToast('✅ تم حفظ الخطة بنجاح');
             updatePrint(updated);
-          } catch(e) { showToast('خطأ في حفظ الخطة'); }
+          } catch(e) { showToast('❌ خطأ في حفظ الخطة: ' + e.message); }
         };
       }
 
@@ -2001,7 +2102,9 @@
       formCard.querySelector('#btnPrint').onclick = () => window.print();
     }
 
-    // ---- جدول سجل الجلسات ----
+    // ============================================================
+    // ====== جدول سجل الجلسات ======
+    // ============================================================
     async function renderSessionsLog(app) {
       renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات المسجلة للطلاب', () => {
         state.view = 'teacher-dashboard';
@@ -2110,7 +2213,9 @@
       }
     }
 
-    // ---- الحروف الأبجدية ----
+    // ============================================================
+    // ====== الحروف الأبجدية ======
+    // ============================================================
     function renderLetterDisplay(app) {
       app.innerHTML = `
         <div style="padding:16px;background:#F8FAFC;min-height:100vh;">
@@ -2130,7 +2235,9 @@
       `;
     }
 
-    // ---- مراقبة المصادقة ----
+    // ============================================================
+    // ====== مراقبة المصادقة ======
+    // ============================================================
     onAuthStateChanged(auth, async (u) => {
       if (u) {
         state.user = u;
@@ -2145,7 +2252,9 @@
       }
     });
 
-    // ---- بدء التطبيق ----
+    // ============================================================
+    // ====== بدء التطبيق ======
+    // ============================================================
     render();
   </script>
 </body>
