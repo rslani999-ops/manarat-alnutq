@@ -295,12 +295,23 @@
       color: #6B7A99;
       margin-top: auto;
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    footer .footer-links {
+      display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 8px 20px;
     }
     footer a { color: var(--mint-deep); text-decoration: none; font-weight: 700; }
     footer a:hover { text-decoration: underline; }
+    footer .school-info {
+      font-size: 12px;
+      color: #888;
+      margin-top: 2px;
+    }
 
     .grid-2 {
       display: grid;
@@ -374,9 +385,15 @@
 <body>
   <div id="app"></div>
   <footer>
-    <span>© 2025 منارة النطق - جميع الحقوق محفوظة</span>
-    <span>تطوير: <a href="#">الأستاذ محمد سويد العنزي</a></span>
-    <span><a href="#">سياسة الخصوصية</a> | <a href="#">اتصل بنا</a></span>
+    <div>
+      <span>© 2025 منارة النطق - جميع الحقوق محفوظة</span>
+      <span>تطوير: <a href="#">الأستاذ محمد سويد العنزي</a></span>
+      <div class="school-info">ابتدائيه قتيبه بن مسلم في حفر الباطن</div>
+    </div>
+    <div class="footer-links">
+      <a href="mailto:rslani999@gmail.com">سياسة الخصوصية</a>
+      <a href="mailto:rslani999@gmail.com">اتصل بنا (rslan i999@gmail.com)</a>
+    </div>
   </footer>
 
   <script type="module">
@@ -526,7 +543,7 @@
       t.textContent = msg;
       document.body.appendChild(t);
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => t.remove(), 2500);
+      toastTimer = setTimeout(() => t.remove(), 3000);
     }
 
     // ====== شريط الأعلى ======
@@ -619,7 +636,6 @@
       if (state.view === 'iep-session') return renderIEPSession(app);
       if (state.view === 'food-menu') return renderFoodMenu(app);
       if (state.view === 'letter-display') return renderLetterDisplay(app);
-      // صفحات افتراضية
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
     }
@@ -816,7 +832,6 @@
         state.view = 'iep-session'; render();
       };
 
-      // قائمة طلابي
       const myCard = document.createElement('div');
       myCard.className = 'card';
       myCard.innerHTML = '<h3>قائمة طلابك المضافين</h3>';
@@ -854,7 +869,6 @@
       }
       app.appendChild(myCard);
 
-      // طلاب متاحون
       const freeCard = document.createElement('div');
       freeCard.className = 'card';
       freeCard.innerHTML = '<h3>الطلاب المتاحون للإضافة (بدون معلم)</h3>';
@@ -900,9 +914,7 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
-    // ============================================================
-    // ====== التشخيص الشامل (مرة واحدة فقط) ======
-    // ============================================================
+    // ====== التشخيص الشامل ======
     function renderComprehensiveDiagnosis(container) {
       container.innerHTML = '';
       const card = document.createElement('div');
@@ -1021,7 +1033,6 @@
       `;
       container.appendChild(card);
 
-      // ===== ربط أحداث التشخيص الشامل =====
       const keys = ['hearing','hearingAid','vision','movement','attention','comprehension','physical','psychological','scans','surgeries'];
       keys.forEach(key => {
         const group = card.querySelector(`[data-key="${key}"]`)?.closest('.diag-option-group');
@@ -1031,40 +1042,34 @@
           opt.onclick = () => {
             const val = opt.dataset.value;
             state.comprehensive[key] = val;
-            // إظهار/إخفاء الحقول
             if (key === 'scans') {
-              const container2 = card.querySelector('#scanDetailsContainer');
-              if (val === 'done') container2.style.display = 'block';
-              else container2.style.display = 'none';
+              const c = card.querySelector('#scanDetailsContainer');
+              if (val === 'done') c.style.display = 'block';
+              else c.style.display = 'none';
             }
             if (key === 'surgeries') {
-              const container2 = card.querySelector('#surgeryDetailsContainer');
-              if (val === 'done') container2.style.display = 'block';
-              else container2.style.display = 'none';
+              const c = card.querySelector('#surgeryDetailsContainer');
+              if (val === 'done') c.style.display = 'block';
+              else c.style.display = 'none';
             }
-            // إعادة رسم التشخيص الشامل فقط
             renderComprehensiveDiagnosis(container);
           };
         });
       });
 
-      // ربط حقول التفاصيل
       const scanInput = card.querySelector('#scanDetailsInput');
       if (scanInput) scanInput.oninput = (e) => { state.comprehensive.scanDetails = e.target.value; };
       const surgeryInput = card.querySelector('#surgeryDetailsInput');
       if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
     }
 
-    // ============================================================
-    // ====== صفحة التشخيص (بدون تكرار) ======
-    // ============================================================
+    // ====== صفحة التشخيص ======
     function renderDiagnosticSession(app) {
       renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
         state.view = 'teacher-dashboard';
         render();
       });
 
-      // اسم الطالب
       const nameCard = document.createElement('div');
       nameCard.className = 'card';
       nameCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
@@ -1072,7 +1077,6 @@
       nameCard.innerHTML = `<h2 style="margin:0;color:var(--mint-deep);text-align:center;">👤 الطالب: ${state.currentStudent?.fullName || state.currentStudent?.email || 'غير محدد'}</h2>`;
       app.appendChild(nameCard);
 
-      // ===== التشخيص الشامل (مرة واحدة فقط) =====
       let compContainer = document.getElementById('comprehensiveContainer');
       if (!compContainer) {
         compContainer = document.createElement('div');
@@ -1081,7 +1085,6 @@
       }
       renderComprehensiveDiagnosis(compContainer);
 
-      // ===== تشخيص الحروف =====
       const letterCard = document.createElement('div');
       letterCard.className = 'card';
       letterCard.innerHTML = `
@@ -1122,7 +1125,6 @@
         }
       };
 
-      // ===== حاوية الحروف (تُحدث في مكانها) =====
       let container = document.getElementById('lettersContainer');
       if (!container) {
         container = document.createElement('div');
@@ -1161,14 +1163,12 @@
           `;
           grid.appendChild(card);
 
-          // ربط الأحداث مباشرة
           const btns = card.querySelectorAll('.eval-btn');
           btns.forEach(btn => {
             btn.onclick = () => {
               const l = btn.dataset.letter;
               const v = btn.dataset.value;
               state.diagEval[l] = v;
-              // إعادة رسم الحروف فقط
               renderDiagnosticSession(app);
             };
           });
@@ -1178,9 +1178,7 @@
       });
     }
 
-    // ============================================================
     // ====== صفحة الطالب ======
-    // ============================================================
     async function renderStudentMenu(app) {
       renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
       const uDoc = await getDoc(doc(db, "users", state.user.uid));
@@ -1231,13 +1229,13 @@
             }, 0);
           });
         }
-      } catch(e) { sessionsCard.innerHTML += '<p class="muted">خطأ في تحميل الجلسات.</p>'; }
+      } catch(e) {
+        sessionsCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
+      }
       app.appendChild(sessionsCard);
     }
 
-    // ============================================================
     // ====== إدارة الجلسات ======
-    // ============================================================
     async function renderSpeechSessions(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للسجل');
@@ -1250,7 +1248,6 @@
         render();
       });
 
-      // إضافة جلسة
       const addCard = document.createElement('div');
       addCard.className = 'card';
       addCard.style.borderRadius = '20px';
@@ -1271,7 +1268,7 @@
           </div>
           <div>
             <label style="font-weight:bold;display:block;margin-bottom:4px;">⏱️ المدة:</label>
-            <input type="text" id="sessDuration" value="30 دقيقة" placeholder="مثال: 30 دقيقة">
+            <input type="text" id="sessDuration" value="30 دقيقة">
           </div>
           <div style="grid-column:1/-1;">
             <label style="font-weight:bold;display:block;margin-bottom:4px;">🎯 الهدف التعليمي:</label>
@@ -1326,26 +1323,28 @@
         }
       };
 
-      // قائمة الجلسات
       const listCard = document.createElement('div');
       listCard.className = 'card';
       listCard.innerHTML = '<h3>📋 الجلسات المسجلة للطالب</h3>';
 
       try {
-        const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id), orderBy("sessionNumber", "asc"));
+        const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
         const snap = await getDocs(qS);
         if (snap.empty) {
           listCard.innerHTML += '<p class="muted">لا توجد جلسات سابقة.</p>';
         } else {
+          const allSessions = [];
+          snap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+          allSessions.sort((a,b) => (a.sessionNumber||0) - (b.sessionNumber||0));
+
           const byLetter = {};
-          snap.forEach(d => {
-            const sess = d.data();
+          allSessions.forEach(sess => {
             if (!byLetter[sess.letter]) byLetter[sess.letter] = [];
-            byLetter[sess.letter].push({ id: d.id, ...sess });
+            byLetter[sess.letter].push(sess);
           });
 
           Object.keys(byLetter).forEach(letter => {
-            const sessions = byLetter[letter].sort((a,b) => (a.sessionNumber||0) - (b.sessionNumber||0));
+            const sessions = byLetter[letter];
             const header = document.createElement('div');
             header.style.cssText = 'font-size:18px;font-weight:bold;color:var(--mint-deep);margin:16px 0 8px 0;padding:6px 14px;background:#EAF6F4;border-radius:30px;display:inline-block;';
             header.textContent = `🔤 حرف (${letter}) - ${letterTitleMap[letter] || ''}`;
@@ -1382,9 +1381,7 @@
       app.appendChild(listCard);
     }
 
-    // ============================================================
-    // ====== عرض جلسة واحدة ======
-    // ============================================================
+    // ====== عرض جلسة واحدة (مع خاصية الانتقال التلقائي) ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -1445,8 +1442,8 @@
             </div>
           </div>
           <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-success btn-sm" id="saveEvalBtn" style="border-radius:50px;padding:8px 24px;">💾 حفظ التقييم الكامل</button>
-            <button class="btn btn-soft btn-sm" id="resetEvalBtn" style="border-radius:50px;padding:8px 24px;">🔄 إعادة ضبط التقييم</button>
+            <button class="btn btn-success btn-sm" id="saveEvalBtn" style="border-radius:50px;padding:8px 24px;">💾 حفظ التقييم</button>
+            <button class="btn btn-soft btn-sm" id="resetEvalBtn" style="border-radius:50px;padding:8px 24px;">🔄 إعادة ضبط</button>
           </div>
         ` : `<div style="margin-top:12px;background:#F0F7FF;padding:12px;border-radius:16px;font-size:14px;color:#0288D1;">💡 التقييم متاح للمعلم فقط.</div>`}
       `;
@@ -1498,7 +1495,7 @@
       trainCard.innerHTML = content;
       app.appendChild(trainCard);
 
-      // ربط أحداث التقييم
+      // ===== منطق التقييم والانتقال التلقائي =====
       if (state.role === 'teacher' || state.role === 'admin') {
         document.querySelectorAll('.btn-eval').forEach(btn => {
           btn.onclick = async () => {
@@ -1549,6 +1546,7 @@
         };
       }
 
+      // دالة التقييم مع الانتقال التلقائي
       async function updateEval(val) {
         try {
           await updateDoc(doc(db, "sessions", sess.id), { evaluation: val });
@@ -1561,14 +1559,59 @@
           }
           sess.evaluation = val;
           showToast(`✅ تم تحديث التقييم: ${evalLabels[val]}`);
+
+          // ===== الانتقال التلقائي إذا كان التقييم "اجتاز" =====
+          if (val === 'passed' && sess.sessionType < 4) {
+            const nextType = sess.sessionType + 1;
+            // التحقق من عدم وجود جلسة من هذا النوع بالفعل لنفس الطالب والحرف
+            const qCheck = query(
+              collection(db, "sessions"),
+              where("studentId", "==", sess.studentId),
+              where("letter", "==", sess.letter),
+              where("sessionType", "==", nextType)
+            );
+            const snapCheck = await getDocs(qCheck);
+            if (snapCheck.empty) {
+              // إنشاء الجلسة التالية تلقائياً
+              const newGoal = getDefaultGoal(sess.letter, nextType);
+              const today = new Date().toISOString().split('T')[0];
+              // حساب رقم الجلسة الجديد
+              const qCount = query(collection(db, "sessions"), where("studentId", "==", sess.studentId));
+              const countSnap = await getDocs(qCount);
+              const newNumber = countSnap.size + 1;
+
+              await addDoc(collection(db, "sessions"), {
+                studentId: sess.studentId,
+                teacherId: sess.teacherId,
+                letter: sess.letter,
+                sessionType: nextType,
+                sessionNumber: newNumber,
+                date: today,
+                duration: '30 دقيقة',
+                goal: newGoal,
+                tools: '',
+                method: '',
+                evaluation: 'none',
+                successRate: 0,
+                notes: '',
+                createdAt: new Date().toISOString()
+              });
+              showToast(`🎉 تم إنشاء الجلسة التالية تلقائياً (${SESSION_TYPES.find(t=>t.id===nextType)?.name})`);
+            } else {
+              showToast(`💡 الجلسة التالية موجودة بالفعل.`);
+            }
+          }
+
+          // إعادة تحميل الجلسة الحالية
           renderSingleSession(app);
-        } catch(e) { showToast('خطأ أثناء حفظ التقييم'); }
+        } catch(e) {
+          showToast('❌ خطأ أثناء حفظ التقييم: ' + e.message);
+          console.error(e);
+        }
       }
     }
 
-    // ============================================================
     // ====== الخطة الفردية IEP ======
-    // ============================================================
     async function renderIEPSession(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للخطة');
@@ -1596,7 +1639,7 @@
 
       let studentSessions = [];
       try {
-        const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id), orderBy("date", "desc"));
+        const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
         const snap = await getDocs(qS);
         snap.forEach(d => studentSessions.push({ id: d.id, ...d.data() }));
       } catch(e) {}
@@ -1651,7 +1694,7 @@
             <p><strong>التوصيات:</strong><br>${data.notes.replace(/\n/g,'<br>')}</p>
             <hr>
             <h2>ملخص الجلسات</h2>
-            ${studentSessions.length ? studentSessions.map(s => {
+            ${studentSessions.length ? studentSessions.sort((a,b)=>(a.sessionNumber||0)-(b.sessionNumber||0)).map(s => {
               const ti = SESSION_TYPES.find(t => t.id === s.sessionType) || SESSION_TYPES[0];
               return `<div style="margin-bottom:8px;padding:8px;background:#f9f9f9;border-radius:6px;"><strong>${ti.icon} ${ti.name}</strong> - حرف ${s.letter} - ${s.date} - التقييم: ${s.evaluation||'غير مقيم'} | نسبة النجاح: ${s.successRate||0}%</div>`;
             }).join('') : '<p>لا توجد جلسات مسجلة.</p>'}
@@ -1692,9 +1735,7 @@
       formCard.querySelector('#btnPrint').onclick = () => window.print();
     }
 
-    // ============================================================
     // ====== صفحات إضافية ======
-    // ============================================================
     function renderLetterDisplay(app) {
       app.innerHTML = `
         <div style="padding:16px;background:#F8FAFC;min-height:100vh;">
