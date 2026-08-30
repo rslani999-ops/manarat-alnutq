@@ -391,6 +391,41 @@
       overflow-x: auto;
     }
 
+    /* تنسيق شبكة القوائم التعليمية */
+    .vocab-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .vocab-item {
+      background: #F8FAFC;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .vocab-item:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-color: var(--mint);
+    }
+    .vocab-item .icon {
+      font-size: 32px;
+      line-height: 1.2;
+    }
+    .vocab-item .word {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
     @media print {
       body { background: white; color: black; }
       .topbar, .btn, .nav-btns, footer, #iep-print-area, .no-print { display: none !important; }
@@ -472,7 +507,6 @@
       { name: 'حروف حلقية', letters: ['أ','هـ','ع','ح','خ','غ'] }
     ];
     const ALL_LETTERS = LETTER_GROUPS.flatMap(g => g.letters);
-    const FOOD_ITEMS = ['تفاحة','موزة','برتقالة','عنب','تمر','خبز','حليب','ماء'];
 
     const alphabetData = [
       { letter: 'أ', title: 'أسد' }, { letter: 'ب', title: 'بطة' }, { letter: 'ت', title: 'تاج' }, { letter: 'ث', title: 'ثوب' },
@@ -486,56 +520,182 @@
     const letterTitleMap = {};
     alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
 
-    const SESSION_TYPES = [
-      { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
-      { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
-      { id: 3, name: 'الحرف في كلمات', icon: '📝' },
-      { id: 4, name: 'الحرف في جمل', icon: '✍️' }
-    ];
-
-    const LETTER_DATABASE = {
-      'ر': {
-        place: 'طرف اللسان مع اللثة العليا',
-        vowels: { fatha: 'رَ', damma: 'رُ', kasra: 'رِ', sukoon: 'رْ' },
-        words: {
-          start: ['رَسَمَ','رَجُل','رِمَال'],
-          middle: ['شَجَرَة','مَرْكَب','جَرَس'],
-          end: ['قَمَر','بَحْر','مَطَر']
-        },
-        sentences: ['رَسَمَ رَامِي رُمَّاناً.', 'يَسِيرُ المَرْكَبُ فِي البَحْرِ.', 'قَرَأَ طَارِقٌ عَنِ القَمَرِ.']
-      },
-      'ب': {
-        place: 'انطباق الشفتين',
-        vowels: { fatha: 'بَ', damma: 'بُ', kasra: 'بِ', sukoon: 'بْ' },
-        words: {
-          start: ['بَاب','بَيْت','بَقَرَة'],
-          middle: ['جَبَل','حَبْل','مَكْتَب'],
-          end: ['عِنَب','كَلْب','حَلِيب']
-        },
-        sentences: ['بَنَى بَاسِمٌ بَيْتاً.', 'أَكَلَ بَدْرٌ العِنَبَ.', 'الكَلْبُ عِنْدَ البَابِ.']
-      }
+    // ====== قوائم المفردات الجديدة (15 كلمة لكل قائمة) ======
+    const VOCAB_LISTS = {
+      'الأشكال': [
+        { word: 'دائرة', icon: '⭕' },
+        { word: 'مربع', icon: '🟨' },
+        { word: 'مثلث', icon: '🔺' },
+        { word: 'مستطيل', icon: '▬' },
+        { word: 'نجمة', icon: '⭐' },
+        { word: 'قلب', icon: '❤️' },
+        { word: 'هلال', icon: '🌙' },
+        { word: 'بيضاوي', icon: '🥚' },
+        { word: 'معين', icon: '🔶' },
+        { word: 'خماسي', icon: '⬠' },
+        { word: 'سداسي', icon: '⬡' },
+        { word: 'مخروط', icon: '🔺' },
+        { word: 'أسطوانة', icon: '🧴' },
+        { word: 'كرة', icon: '⚽' },
+        { word: 'مكعب', icon: '🧊' }
+      ],
+      'الألوان': [
+        { word: 'أحمر', icon: '🔴' },
+        { word: 'أزرق', icon: '🔵' },
+        { word: 'أصفر', icon: '🟡' },
+        { word: 'أخضر', icon: '🟢' },
+        { word: 'برتقالي', icon: '🟠' },
+        { word: 'بنفسجي', icon: '🟣' },
+        { word: 'وردي', icon: '💗' },
+        { word: 'بني', icon: '🟤' },
+        { word: 'رمادي', icon: '🔘' },
+        { word: 'أبيض', icon: '⚪' },
+        { word: 'أسود', icon: '⚫' },
+        { word: 'نحاسي', icon: '🟠' },
+        { word: 'فيروزي', icon: '💎' },
+        { word: 'ذهبي', icon: '✨' },
+        { word: 'فضي', icon: '🔘' }
+      ],
+      'الفاكهة': [
+        { word: 'تفاحة', icon: '🍎' },
+        { word: 'موز', icon: '🍌' },
+        { word: 'برتقال', icon: '🍊' },
+        { word: 'عنب', icon: '🍇' },
+        { word: 'فراولة', icon: '🍓' },
+        { word: 'بطيخ', icon: '🍉' },
+        { word: 'مانجو', icon: '🥭' },
+        { word: 'أناناس', icon: '🍍' },
+        { word: 'كمثرى', icon: '🍐' },
+        { word: 'خوخ', icon: '🍑' },
+        { word: 'كرز', icon: '🍒' },
+        { word: 'ليمون', icon: '🍋' },
+        { word: 'جريب فروت', icon: '🍊' },
+        { word: 'رمان', icon: '🍎' },
+        { word: 'توت', icon: '🫐' }
+      ],
+      'الخضروات': [
+        { word: 'جزر', icon: '🥕' },
+        { word: 'طماطم', icon: '🍅' },
+        { word: 'خيار', icon: '🥒' },
+        { word: 'فلفل', icon: '🫑' },
+        { word: 'بصل', icon: '🧅' },
+        { word: 'ثوم', icon: '🧄' },
+        { word: 'بطاطس', icon: '🥔' },
+        { word: 'بطيخ أحمر', icon: '🍉' },
+        { word: 'كوسا', icon: '🥒' },
+        { word: 'باذنجان', icon: '🍆' },
+        { word: 'قرنبيط', icon: '🥦' },
+        { word: 'سبانخ', icon: '🍃' },
+        { word: 'خس', icon: '🥬' },
+        { word: 'فجل', icon: '🧄' },
+        { word: 'كراث', icon: '🧅' }
+      ],
+      'الحيوانات': [
+        { word: 'أسد', icon: '🦁' },
+        { word: 'نمر', icon: '🐅' },
+        { word: 'فيل', icon: '🐘' },
+        { word: 'زرافة', icon: '🦒' },
+        { word: 'حمار', icon: '🐴' },
+        { word: 'حصان', icon: '🐎' },
+        { word: 'بقرة', icon: '🐄' },
+        { word: 'خروف', icon: '🐑' },
+        { word: 'ماعز', icon: '🐐' },
+        { word: 'قرد', icon: '🐒' },
+        { word: 'ذئب', icon: '🐺' },
+        { word: 'ثعلب', icon: '🦊' },
+        { word: 'دب', icon: '🐻' },
+        { word: 'غزال', icon: '🦌' },
+        { word: 'ناقة', icon: '🐫' }
+      ],
+      'النباتات': [
+        { word: 'ورد', icon: '🌹' },
+        { word: 'ياسمين', icon: '🌼' },
+        { word: 'نخلة', icon: '🌴' },
+        { word: 'شجرة', icon: '🌳' },
+        { word: 'زهرة', icon: '🌸' },
+        { word: 'عشب', icon: '🌿' },
+        { word: 'أزهار', icon: '🌺' },
+        { word: 'بابونج', icon: '🌼' },
+        { word: 'نعناع', icon: '🌿' },
+        { word: 'ريحان', icon: '🌿' },
+        { word: 'صبار', icon: '🌵' },
+        { word: 'خيزران', icon: '🎋' },
+        { word: 'سرخس', icon: '🌿' },
+        { word: 'طحلب', icon: '🌿' },
+        { word: 'قرنفل', icon: '🌸' }
+      ],
+      'أعضاء الجسم': [
+        { word: 'رأس', icon: '👤' },
+        { word: 'عين', icon: '👁️' },
+        { word: 'أنف', icon: '👃' },
+        { word: 'فم', icon: '👄' },
+        { word: 'أذن', icon: '👂' },
+        { word: 'يد', icon: '✋' },
+        { word: 'قدم', icon: '🦶' },
+        { word: 'قلب', icon: '❤️' },
+        { word: 'رئة', icon: '🫁' },
+        { word: 'كبد', icon: '🧬' },
+        { word: 'كلية', icon: '🧬' },
+        { word: 'معدة', icon: '🧬' },
+        { word: 'أمعاء', icon: '🧬' },
+        { word: 'عظام', icon: '🦴' },
+        { word: 'جلد', icon: '🧴' }
+      ],
+      'الأثاث': [
+        { word: 'كرسي', icon: '🪑' },
+        { word: 'طاولة', icon: '🪑' },
+        { word: 'سرير', icon: '🛏️' },
+        { word: 'خزانة', icon: '🗄️' },
+        { word: 'رف', icon: '📚' },
+        { word: 'سجادة', icon: '🧶' },
+        { word: 'ستارة', icon: '🪟' },
+        { word: 'مرآة', icon: '🪞' },
+        { word: 'ساعة', icon: '🕰️' },
+        { word: 'مصباح', icon: '💡' },
+        { word: 'مكتب', icon: '🪑' },
+        { word: 'أريكة', icon: '🛋️' },
+        { word: 'دولاب', icon: '🗄️' },
+        { word: 'طاولة جانبية', icon: '🪑' },
+        { word: 'شماعة', icon: '🧥' }
+      ],
+      'الحشرات': [
+        { word: 'نحلة', icon: '🐝' },
+        { word: 'فراشة', icon: '🦋' },
+        { word: 'ذبابة', icon: '🪰' },
+        { word: 'بعوضة', icon: '🪟' },
+        { word: 'نملة', icon: '🐜' },
+        { word: 'خنفساء', icon: '🪲' },
+        { word: 'صرصور', icon: '🪳' },
+        { word: 'جندب', icon: '🦗' },
+        { word: 'يعسوب', icon: '🪰' },
+        { word: 'دعسوقة', icon: '🐞' },
+        { word: 'أبو مقص', icon: '🪲' },
+        { word: 'نمل أبيض', icon: '🐜' },
+        { word: 'برغوث', icon: '🐜' },
+        { word: 'قراد', icon: '🪲' },
+        { word: 'عنكبوت', icon: '🕷️' }
+      ],
+      'الطيور': [
+        { word: 'عصفور', icon: '🐦' },
+        { word: 'حمامة', icon: '🕊️' },
+        { word: 'غراب', icon: '🐦' },
+        { word: 'نسر', icon: '🦅' },
+        { word: 'صقر', icon: '🦅' },
+        { word: 'بومة', icon: '🦉' },
+        { word: 'بطريق', icon: '🐧' },
+        { word: 'بلبل', icon: '🐦' },
+        { word: 'طاووس', icon: '🦚' },
+        { word: 'نعامة', icon: '🦩' },
+        { word: 'بطة', icon: '🦆' },
+        { word: 'دجاجة', icon: '🐔' },
+        { word: 'وروار', icon: '🐦' },
+        { word: 'هدهد', icon: '🐦' },
+        { word: 'باز', icon: '🦅' }
+      ]
     };
 
-    function getDefaultGoal(letter, type) {
-      const names = {
-        1: `نطق حرف (${letter}) بشكل مجرد`,
-        2: `نطق حرف (${letter}) مع الحركات (فتحة، ضمة، كسرة، سكون)`,
-        3: `نطق حرف (${letter}) في مواقع مختلفة من الكلمة`,
-        4: `نطق حرف (${letter}) في جمل بسيطة`
-      };
-      return names[type] || `تدريب حرف (${letter})`;
-    }
-
-    function speakText(text) {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ar-SA';
-        utterance.rate = 0.8;
-        window.speechSynthesis.speak(utterance);
-      }
-    }
-    window.speakText = speakText;
+    // قائمة بأسماء القوائم للعرض في الصفحة الرئيسية
+    const VOCAB_CATEGORIES = Object.keys(VOCAB_LISTS);
 
     // ====== الحالة العامة ======
     let state = {
@@ -574,6 +734,17 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
+
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ar-SA';
+        utterance.rate = 0.8;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+    window.speakText = speakText;
 
     // ====== شريط الأعلى ======
     function renderTopbar(appContainer, title, sub, onBack) {
@@ -663,16 +834,20 @@
       if (state.view === 'speech-sessions') return renderSpeechSessions(app);
       if (state.view === 'single-session') return renderSingleSession(app);
       if (state.view === 'iep-session') return renderIEPSession(app);
-      if (state.view === 'food-menu') return renderFoodMenu(app);
       if (state.view === 'letter-display') return renderLetterDisplay(app);
       if (state.view === 'sessions-log') return renderSessionsLog(app);
+      if (state.view === 'vocab-list') return renderVocabList(app);
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
     }
 
-    // ====== الصفحة الرئيسية ======
+    // ============================================================
+    // ====== الصفحة الرئيسية (مع القوائم الجديدة) ======
+    // ============================================================
     function renderHome(app) {
       renderTopbar(app, 'منارة النطق', 'المنصة التدريبية المباشرة');
+      
+      // البانر العلوي
       const banner = document.createElement('div');
       banner.className = 'card';
       banner.style.background = 'linear-gradient(135deg, #357E74, #4FB6A8)';
@@ -680,32 +855,106 @@
       banner.innerHTML = `
         <h2 style="margin-top:0;">منصة تشخيص وتدريب النطق الشاملة</h2>
         <p>تشخيص 28 حرفاً مع الصوت والصورة وإدارة الجلسات الأسبوعية العلاجية المباشرة والخطة الفردية (IEP).</p>
-        ${!state.user ? '<button class="btn btn-soft" id="btnAuthHome" style="color:#357E74;">تسجيل الدخول / إنشاء حساب</button>' : ''}
+        <p style="font-size:14px; opacity:0.9;">استكشف القوائم التعليمية أدناه لزيادة الثروة اللغوية.</p>
+        ${!state.user ? '<button class="btn btn-soft" id="btnAuthHome" style="color:#357E74; margin-top:8px;">تسجيل الدخول / إنشاء حساب</button>' : ''}
       `;
       app.appendChild(banner);
       if (!state.user) {
         banner.querySelector('#btnAuthHome').onclick = () => { state.view = 'auth'; render(); };
       }
 
+      // ===== شبكة القوائم (11 قائمة: 10 مفردات + الحروف الأبجدية) =====
       const grid = document.createElement('div');
       grid.className = 'grid-2';
-      grid.innerHTML = `
-        <div class="card" style="cursor:pointer;" id="goFood">
-          <h3>🍎 التدريب على الأطعمة</h3>
-          <p class="muted">قوائم المسميات التفاعلية المناسبة لجلسات التسمية والتعزيز.</p>
-          <button class="btn btn-soft btn-sm">استكشف القائمة العامة</button>
-        </div>
-        <div class="card" style="cursor:pointer;" id="goLetters">
-          <h3>🔤 الحروف الأبجدية</h3>
-          <p class="muted">عرض جميع الحروف مع الصور التوضيحية.</p>
-          <button class="btn btn-soft btn-sm">عرض الحروف</button>
-        </div>
+
+      // قوائم المفردات
+      VOCAB_CATEGORIES.forEach(category => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.cursor = 'pointer';
+        card.style.transition = '0.2s';
+        card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; };
+        card.onmouseout = () => { card.style.transform = 'translateY(0)'; };
+        
+        // اختيار أيقونة تمثيلية للقائمة
+        const iconMap = {
+          'الأشكال': '🔷',
+          'الألوان': '🎨',
+          'الفاكهة': '🍎',
+          'الخضروات': '🥕',
+          'الحيوانات': '🦁',
+          'النباتات': '🌿',
+          'أعضاء الجسم': '🧍',
+          'الأثاث': '🪑',
+          'الحشرات': '🐝',
+          'الطيور': '🕊️'
+        };
+        const icon = iconMap[category] || '📚';
+        
+        card.innerHTML = `
+          <h3>${icon} ${category}</h3>
+          <p class="muted">${VOCAB_LISTS[category].length} كلمة تدريبية</p>
+          <button class="btn btn-soft btn-sm">استكشف القائمة</button>
+        `;
+        card.onclick = () => {
+          state.view = 'vocab-list';
+          state.currentVocabCategory = category;
+          render();
+        };
+        grid.appendChild(card);
+      });
+
+      // الحروف الأبجدية
+      const lettersCard = document.createElement('div');
+      lettersCard.className = 'card';
+      lettersCard.style.cursor = 'pointer';
+      lettersCard.style.transition = '0.2s';
+      lettersCard.onmouseover = () => { lettersCard.style.transform = 'translateY(-4px)'; };
+      lettersCard.onmouseout = () => { lettersCard.style.transform = 'translateY(0)'; };
+      lettersCard.innerHTML = `
+        <h3>🔤 الحروف الأبجدية</h3>
+        <p class="muted">28 حرفاً مع الصور التوضيحية</p>
+        <button class="btn btn-soft btn-sm">عرض الحروف</button>
       `;
+      lettersCard.onclick = () => { state.view = 'letter-display'; render(); };
+      grid.appendChild(lettersCard);
+
       app.appendChild(grid);
-      grid.querySelector('#goFood').onclick = () => { state.view = 'food-menu'; render(); };
-      grid.querySelector('#goLetters').onclick = () => { state.view = 'letter-display'; render(); };
     }
 
+    // ============================================================
+    // ====== صفحة عرض قائمة المفردات ======
+    // ============================================================
+    function renderVocabList(app) {
+      const category = state.currentVocabCategory || 'الفاكهة';
+      const items = VOCAB_LISTS[category] || [];
+      
+      renderTopbar(app, `📚 ${category}`, `${items.length} كلمة تدريبية`, () => {
+        state.view = 'home';
+        render();
+      });
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3 style="margin-bottom:4px;">📖 ${category}</h3>
+        <p class="muted">اضغط على أي كلمة للاستماع إلى نطقها الصحيح</p>
+        <div class="vocab-grid">
+          ${items.map(item => `
+            <div class="vocab-item" onclick="speakText('${item.word}')">
+              <span class="icon">${item.icon}</span>
+              <span class="word">${item.word}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      app.appendChild(card);
+    }
+
+    // ====== باقي الدوال (التشخيص، الجلسات، إلخ) ======
+    // (سيتم إدراجها مختصرة للحفاظ على طول الكود، لكنها تعمل بنفس الطريقة السابقة)
+    // بما أن الطول كبير، سأضعها بشكل مبسط ولكن كامل الوظائف.
+    
     // ====== المصادقة ======
     function renderAuth(app) {
       renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
@@ -766,8 +1015,7 @@
             teacherId: null,
             diagnostic: {}
           });
-          state.user = res.user;
-          state.role = role;
+          state.user = res.user; state.role = role;
           state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
           showToast('تم إنشاء الحساب بنجاح');
           if (role === 'teacher') await fetchTeacherStudents();
@@ -802,7 +1050,7 @@
       app.appendChild(card);
     }
 
-    // ====== جلب بيانات المستخدم والطلاب ======
+    // ====== جلب بيانات المستخدم والطلاب (مختصر) ======
     async function fetchUserData(uid) {
       try {
         const uDoc = await getDoc(doc(db, "users", uid));
@@ -839,13 +1087,10 @@
       } catch(e) { showToast('خطأ في تحميل بيانات الطلاب'); }
     }
 
-    // ============================================================
-    // ====== لوحة المعلم الخاصة (مع الأزرار الثلاثة) ======
-    // ============================================================
+    // ====== لوحة المعلم (مختصرة) ======
     function renderTeacherDashboard(app) {
       renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
-      // ===== الأزرار الثلاثة =====
       const actCard = document.createElement('div');
       actCard.className = 'card no-print';
       actCard.innerHTML = `
@@ -873,7 +1118,7 @@
         render();
       };
 
-      // ===== قائمة طلابي (كما هي) =====
+      // قائمة طلابي
       const myCard = document.createElement('div');
       myCard.className = 'card no-print';
       myCard.innerHTML = '<h3>📋 قائمة طلابك المضافين</h3>';
@@ -911,7 +1156,7 @@
       }
       app.appendChild(myCard);
 
-      // ===== الطلاب المتاحون (كما هي) =====
+      // الطلاب المتاحون
       const freeCard = document.createElement('div');
       freeCard.className = 'card no-print';
       freeCard.innerHTML = '<h3>➕ الطلاب المتاحون للإضافة (بدون معلم)</h3>';
@@ -957,121 +1202,124 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
-    // ============================================================
-    // ====== صفحة جدول سجل الجلسات (sessions-log) ======
-    // ============================================================
-    async function renderSessionsLog(app) {
-      renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات المسجلة للطلاب', () => {
+    // ====== صفحة التشخيص (مختصرة) ======
+    function renderDiagnosticSession(app) {
+      renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
         state.view = 'teacher-dashboard';
         render();
       });
 
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.id = 'sessionsLogCard';
-      card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-          <h3 style="margin:0;">📊 جدول سجل الجلسات لجميع الطلاب</h3>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" id="printLogBtn">🖨️ طباعة</button>
-            <button class="btn btn-soft btn-sm" id="pdfLogBtn">📑 تصدير PDF</button>
+      const nameCard = document.createElement('div');
+      nameCard.className = 'card';
+      nameCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+      nameCard.style.border = '2px solid var(--mint-deep)';
+      nameCard.innerHTML = `<h2 style="margin:0;color:var(--mint-deep);text-align:center;">👤 الطالب: ${state.currentStudent?.fullName || state.currentStudent?.email || 'غير محدد'}</h2>`;
+      app.appendChild(nameCard);
+
+      // التشخيص الشامل (يتم استدعاؤه من دالة منفصلة)
+      let compContainer = document.getElementById('comprehensiveContainer');
+      if (!compContainer) {
+        compContainer = document.createElement('div');
+        compContainer.id = 'comprehensiveContainer';
+        app.appendChild(compContainer);
+      }
+      renderComprehensiveDiagnosis(compContainer);
+
+      // تشخيص الحروف
+      const letterCard = document.createElement('div');
+      letterCard.className = 'card';
+      letterCard.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h3 style="margin:0;">📋 تشخيص الحروف حسب مخرج النطق</h3>
+            <p class="muted">اختر التقييم المناسب لكل حرف، ثم احفظ الكل.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-danger btn-sm" id="resetDiag">🗑️ مسح تشخيص الحروف</button>
+            <button class="btn btn-success btn-sm" id="saveAllDiag">💾 حفظ التشخيص الكامل</button>
           </div>
         </div>
-        <p class="muted">جميع الجلسات المسجلة لطلابك مرتبة حسب التاريخ (الأحدث أولاً).</p>
-        <div class="table-container" id="logTableContainer">
-          <p class="muted">⏳ جاري تحميل الجلسات...</p>
-        </div>
       `;
-      app.appendChild(card);
+      app.appendChild(letterCard);
 
-      // جلب الجلسات
-      try {
-        let allSessions = [];
-        for (const student of state.myStudents) {
-          const q = query(collection(db, "sessions"), where("studentId", "==", student.id));
-          const snap = await getDocs(q);
-          snap.forEach(d => {
-            const data = d.data();
-            allSessions.push({
-              id: d.id,
-              studentName: student.fullName || student.email,
-              studentId: student.id,
-              ...data
-            });
-          });
+      letterCard.querySelector('#resetDiag').onclick = async () => {
+        if (confirm('هل أنت متأكد؟ سيتم مسح تشخيص الحروف فقط.')) {
+          state.diagEval = {};
+          try {
+            await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
+            showToast('تم مسح تشخيص الحروف');
+            renderDiagnosticSession(app);
+          } catch(e) { showToast('خطأ في المسح'); }
         }
-        // ترتيب تنازلي حسب التاريخ (الأحدث أولاً)
-        allSessions.sort((a, b) => {
-          const dateA = a.createdAt || a.date || '1970-01-01';
-          const dateB = b.createdAt || b.date || '1970-01-01';
-          return dateB.localeCompare(dateA);
+      };
+
+      letterCard.querySelector('#saveAllDiag').onclick = async () => {
+        try {
+          const ref = doc(db, "users", state.currentStudent.id);
+          await updateDoc(ref, {
+            diagnostic: state.diagEval,
+            comprehensive: state.comprehensive
+          });
+          showToast('✅ تم حفظ التشخيص الكامل بنجاح');
+        } catch(e) {
+          showToast('❌ خطأ في الحفظ: ' + e.message);
+        }
+      };
+
+      let container = document.getElementById('lettersContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'lettersContainer';
+        container.style.marginTop = '15px';
+        app.appendChild(container);
+      } else {
+        container.innerHTML = '';
+      }
+
+      LETTER_GROUPS.forEach(group => {
+        const title = document.createElement('div');
+        title.className = 'group-title';
+        title.textContent = group.name;
+        container.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'diag-grid';
+
+        group.letters.forEach(letter => {
+          const status = state.diagEval[letter] || 'none';
+          const titleStr = letterTitleMap[letter] || '';
+          const card = document.createElement('div');
+          card.className = 'letter-card';
+
+          card.innerHTML = `
+            <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
+            <span class="letter-title">${titleStr}</span>
+            <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
+            <div class="eval-btns">
+              <button class="eval-btn passed ${status === 'passed' ? 'active' : ''}" data-letter="${letter}" data-value="passed">أتقن</button>
+              <button class="eval-btn trained ${status === 'trained' ? 'active' : ''}" data-letter="${letter}" data-value="trained">اجتاز بعد تدريب</button>
+              <button class="eval-btn need ${status === 'need' ? 'active' : ''}" data-letter="${letter}" data-value="need">تدريب</button>
+              <button class="eval-btn unclear ${status === 'unclear' ? 'active' : ''}" data-letter="${letter}" data-value="unclear">غير واضح</button>
+            </div>
+          `;
+          grid.appendChild(card);
+
+          const btns = card.querySelectorAll('.eval-btn');
+          btns.forEach(btn => {
+            btn.onclick = () => {
+              const l = btn.dataset.letter;
+              const v = btn.dataset.value;
+              state.diagEval[l] = v;
+              renderDiagnosticSession(app);
+            };
+          });
         });
 
-        const container = document.getElementById('logTableContainer');
-        if (allSessions.length === 0) {
-          container.innerHTML = `<p class="muted">لا توجد جلسات مسجلة لأي من طلابك.</p>`;
-        } else {
-          const table = document.createElement('table');
-          table.className = 'sessions-table';
-          const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-          
-          let thead = `<thead><tr>
-            <th>#</th><th>اليوم</th><th>التاريخ</th><th>اسم الطالب</th><th>الحرف</th><th>نوع التدريب</th><th>التقييم النهائي</th><th>التوصيات</th>
-          </tr></thead><tbody>`;
-          
-          allSessions.forEach((s, index) => {
-            const dateObj = new Date(s.date + 'T00:00:00');
-            const dayName = days[dateObj.getDay()] || '';
-            const typeInfo = SESSION_TYPES.find(t => t.id === s.sessionType) || SESSION_TYPES[0];
-            let evalText = s.evaluation || 'غير مقيم';
-            let evalClass = 'badge-need';
-            if (s.evaluation === 'passed') { evalText = '✅ اجتاز'; evalClass = 'badge-passed'; }
-            else if (s.evaluation === 'trained') { evalText = '🔄 اجتاز بعد تدريب'; evalClass = 'badge-trained'; }
-            else if (s.evaluation === 'need') { evalText = '⚠️ يحتاج تدريب'; evalClass = 'badge-need'; }
-            else if (s.evaluation === 'unclear') { evalText = '❌ غير واضح'; evalClass = 'badge-unclear'; }
-            
-            const recommendations = s.recommendations || s.notes || '-';
-            
-            thead += `<tr>
-              <td>${index + 1}</td>
-              <td>${dayName}</td>
-              <td>${s.date}</td>
-              <td><strong>${s.studentName}</strong></td>
-              <td>${s.letter}</td>
-              <td>${typeInfo.icon} ${typeInfo.name}</td>
-              <td><span class="badge ${evalClass}">${evalText}</span></td>
-              <td>${recommendations}</td>
-            </tr>`;
-          });
-          thead += `</tbody>`;
-          table.innerHTML = thead;
-          container.innerHTML = '';
-          container.appendChild(table);
-        }
-
-        // ربط أزرار الطباعة و PDF
-        document.getElementById('printLogBtn').onclick = () => {
-          window.print();
-        };
-        document.getElementById('pdfLogBtn').onclick = () => {
-          const element = document.getElementById('sessionsLogCard');
-          const opt = {
-            margin: 10,
-            filename: 'سجل_الجلسات_الطلاب.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-          };
-          html2pdf().set(opt).from(element).save();
-        };
-
-      } catch(e) {
-        console.error(e);
-        document.getElementById('logTableContainer').innerHTML = `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
-      }
+        container.appendChild(grid);
+      });
     }
 
-    // ====== التشخيص الشامل ======
+    // ====== التشخيص الشامل (مختصر) ======
     function renderComprehensiveDiagnosis(container) {
       container.innerHTML = '';
       const card = document.createElement('div');
@@ -1220,122 +1468,7 @@
       if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
     }
 
-    // ====== صفحة التشخيص ======
-    function renderDiagnosticSession(app) {
-      renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
-        state.view = 'teacher-dashboard';
-        render();
-      });
-
-      const nameCard = document.createElement('div');
-      nameCard.className = 'card';
-      nameCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-      nameCard.style.border = '2px solid var(--mint-deep)';
-      nameCard.innerHTML = `<h2 style="margin:0;color:var(--mint-deep);text-align:center;">👤 الطالب: ${state.currentStudent?.fullName || state.currentStudent?.email || 'غير محدد'}</h2>`;
-      app.appendChild(nameCard);
-
-      let compContainer = document.getElementById('comprehensiveContainer');
-      if (!compContainer) {
-        compContainer = document.createElement('div');
-        compContainer.id = 'comprehensiveContainer';
-        app.appendChild(compContainer);
-      }
-      renderComprehensiveDiagnosis(compContainer);
-
-      const letterCard = document.createElement('div');
-      letterCard.className = 'card';
-      letterCard.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <div>
-            <h3 style="margin:0;">📋 تشخيص الحروف حسب مخرج النطق</h3>
-            <p class="muted">اختر التقييم المناسب لكل حرف، ثم احفظ الكل.</p>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-danger btn-sm" id="resetDiag">🗑️ مسح تشخيص الحروف</button>
-            <button class="btn btn-success btn-sm" id="saveAllDiag">💾 حفظ التشخيص الكامل</button>
-          </div>
-        </div>
-      `;
-      app.appendChild(letterCard);
-
-      letterCard.querySelector('#resetDiag').onclick = async () => {
-        if (confirm('هل أنت متأكد؟ سيتم مسح تشخيص الحروف فقط.')) {
-          state.diagEval = {};
-          try {
-            await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
-            showToast('تم مسح تشخيص الحروف');
-            renderDiagnosticSession(app);
-          } catch(e) { showToast('خطأ في المسح'); }
-        }
-      };
-
-      letterCard.querySelector('#saveAllDiag').onclick = async () => {
-        try {
-          const ref = doc(db, "users", state.currentStudent.id);
-          await updateDoc(ref, {
-            diagnostic: state.diagEval,
-            comprehensive: state.comprehensive
-          });
-          showToast('✅ تم حفظ التشخيص الكامل بنجاح');
-        } catch(e) {
-          showToast('❌ خطأ في الحفظ: ' + e.message);
-        }
-      };
-
-      let container = document.getElementById('lettersContainer');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'lettersContainer';
-        container.style.marginTop = '15px';
-        app.appendChild(container);
-      } else {
-        container.innerHTML = '';
-      }
-
-      LETTER_GROUPS.forEach(group => {
-        const title = document.createElement('div');
-        title.className = 'group-title';
-        title.textContent = group.name;
-        container.appendChild(title);
-
-        const grid = document.createElement('div');
-        grid.className = 'diag-grid';
-
-        group.letters.forEach(letter => {
-          const status = state.diagEval[letter] || 'none';
-          const titleStr = letterTitleMap[letter] || '';
-          const card = document.createElement('div');
-          card.className = 'letter-card';
-
-          card.innerHTML = `
-            <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
-            <span class="letter-title">${titleStr}</span>
-            <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
-            <div class="eval-btns">
-              <button class="eval-btn passed ${status === 'passed' ? 'active' : ''}" data-letter="${letter}" data-value="passed">أتقن</button>
-              <button class="eval-btn trained ${status === 'trained' ? 'active' : ''}" data-letter="${letter}" data-value="trained">اجتاز بعد تدريب</button>
-              <button class="eval-btn need ${status === 'need' ? 'active' : ''}" data-letter="${letter}" data-value="need">تدريب</button>
-              <button class="eval-btn unclear ${status === 'unclear' ? 'active' : ''}" data-letter="${letter}" data-value="unclear">غير واضح</button>
-            </div>
-          `;
-          grid.appendChild(card);
-
-          const btns = card.querySelectorAll('.eval-btn');
-          btns.forEach(btn => {
-            btn.onclick = () => {
-              const l = btn.dataset.letter;
-              const v = btn.dataset.value;
-              state.diagEval[l] = v;
-              renderDiagnosticSession(app);
-            };
-          });
-        });
-
-        container.appendChild(grid);
-      });
-    }
-
-    // ====== صفحة الطالب ======
+    // ====== صفحة الطالب (مختصرة) ======
     async function renderStudentMenu(app) {
       renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
       const uDoc = await getDoc(doc(db, "users", state.user.uid));
@@ -1394,7 +1527,7 @@
       app.appendChild(sessionsCard);
     }
 
-    // ====== إدارة الجلسات ======
+    // ====== إدارة الجلسات (مختصرة) ======
     async function renderSpeechSessions(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للسجل');
@@ -1419,7 +1552,12 @@
           </div>
           <div>
             <label style="font-weight:bold;display:block;margin-bottom:4px;">📚 نوع الجلسة:</label>
-            <select id="sessType">${SESSION_TYPES.map(t => `<option value="${t.id}">${t.icon} ${t.name}</option>`).join('')}</select>
+            <select id="sessType">
+              <option value="1">🔊 الحرف مجرداً</option>
+              <option value="2">📖 الحرف مع الحركات</option>
+              <option value="3">📝 الحرف في كلمات</option>
+              <option value="4">✍️ الحرف في جمل</option>
+            </select>
           </div>
           <div>
             <label style="font-weight:bold;display:block;margin-bottom:4px;">📅 التاريخ:</label>
@@ -1527,9 +1665,25 @@
       app.appendChild(listCard);
     }
 
-    // ============================================================
-    // ====== عرض جلسة واحدة (مع الانتقال الاختياري والحذف) ======
-    // ============================================================
+    // ====== أنواع الجلسات ======
+    const SESSION_TYPES = [
+      { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
+      { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
+      { id: 3, name: 'الحرف في كلمات', icon: '📝' },
+      { id: 4, name: 'الحرف في جمل', icon: '✍️' }
+    ];
+
+    function getDefaultGoal(letter, type) {
+      const names = {
+        1: `نطق حرف (${letter}) بشكل مجرد`,
+        2: `نطق حرف (${letter}) مع الحركات (فتحة، ضمة، كسرة، سكون)`,
+        3: `نطق حرف (${letter}) في مواقع مختلفة من الكلمة`,
+        4: `نطق حرف (${letter}) في جمل بسيطة`
+      };
+      return names[type] || `تدريب حرف (${letter})`;
+    }
+
+    // ====== عرض جلسة واحدة (مختصرة) ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -1798,7 +1952,7 @@
       }
     }
 
-    // ====== الخطة الفردية IEP ======
+    // ====== الخطة الفردية IEP (مختصرة) ======
     async function renderIEPSession(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للخطة');
@@ -1922,7 +2076,116 @@
       formCard.querySelector('#btnPrint').onclick = () => window.print();
     }
 
-    // ====== صفحات إضافية ======
+    // ====== جدول سجل الجلسات ======
+    async function renderSessionsLog(app) {
+      renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات المسجلة للطلاب', () => {
+        state.view = 'teacher-dashboard';
+        render();
+      });
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'sessionsLogCard';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+          <h3 style="margin:0;">📊 جدول سجل الجلسات لجميع الطلاب</h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="printLogBtn">🖨️ طباعة</button>
+            <button class="btn btn-soft btn-sm" id="pdfLogBtn">📑 تصدير PDF</button>
+          </div>
+        </div>
+        <p class="muted">جميع الجلسات المسجلة لطلابك مرتبة حسب التاريخ (الأحدث أولاً).</p>
+        <div class="table-container" id="logTableContainer">
+          <p class="muted">⏳ جاري تحميل الجلسات...</p>
+        </div>
+      `;
+      app.appendChild(card);
+
+      try {
+        let allSessions = [];
+        for (const student of state.myStudents) {
+          const q = query(collection(db, "sessions"), where("studentId", "==", student.id));
+          const snap = await getDocs(q);
+          snap.forEach(d => {
+            const data = d.data();
+            allSessions.push({
+              id: d.id,
+              studentName: student.fullName || student.email,
+              studentId: student.id,
+              ...data
+            });
+          });
+        }
+        allSessions.sort((a, b) => {
+          const dateA = a.createdAt || a.date || '1970-01-01';
+          const dateB = b.createdAt || b.date || '1970-01-01';
+          return dateB.localeCompare(dateA);
+        });
+
+        const container = document.getElementById('logTableContainer');
+        if (allSessions.length === 0) {
+          container.innerHTML = `<p class="muted">لا توجد جلسات مسجلة لأي من طلابك.</p>`;
+        } else {
+          const table = document.createElement('table');
+          table.className = 'sessions-table';
+          const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+          
+          let thead = `<thead><tr>
+            <th>#</th><th>اليوم</th><th>التاريخ</th><th>اسم الطالب</th><th>الحرف</th><th>نوع التدريب</th><th>التقييم النهائي</th><th>التوصيات</th>
+          </tr></thead><tbody>`;
+          
+          allSessions.forEach((s, index) => {
+            const dateObj = new Date(s.date + 'T00:00:00');
+            const dayName = days[dateObj.getDay()] || '';
+            const typeInfo = SESSION_TYPES.find(t => t.id === s.sessionType) || SESSION_TYPES[0];
+            let evalText = s.evaluation || 'غير مقيم';
+            let evalClass = 'badge-need';
+            if (s.evaluation === 'passed') { evalText = '✅ اجتاز'; evalClass = 'badge-passed'; }
+            else if (s.evaluation === 'trained') { evalText = '🔄 اجتاز بعد تدريب'; evalClass = 'badge-trained'; }
+            else if (s.evaluation === 'need') { evalText = '⚠️ يحتاج تدريب'; evalClass = 'badge-need'; }
+            else if (s.evaluation === 'unclear') { evalText = '❌ غير واضح'; evalClass = 'badge-unclear'; }
+            
+            const recommendations = s.recommendations || s.notes || '-';
+            
+            thead += `<tr>
+              <td>${index + 1}</td>
+              <td>${dayName}</td>
+              <td>${s.date}</td>
+              <td><strong>${s.studentName}</strong></td>
+              <td>${s.letter}</td>
+              <td>${typeInfo.icon} ${typeInfo.name}</td>
+              <td><span class="badge ${evalClass}">${evalText}</span></td>
+              <td>${recommendations}</td>
+            </tr>`;
+          });
+          thead += `</tbody>`;
+          table.innerHTML = thead;
+          container.innerHTML = '';
+          container.appendChild(table);
+        }
+
+        document.getElementById('printLogBtn').onclick = () => {
+          window.print();
+        };
+        document.getElementById('pdfLogBtn').onclick = () => {
+          const element = document.getElementById('sessionsLogCard');
+          const opt = {
+            margin: 10,
+            filename: 'سجل_الجلسات_الطلاب.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          };
+          html2pdf().set(opt).from(element).save();
+        };
+
+      } catch(e) {
+        console.error(e);
+        document.getElementById('logTableContainer').innerHTML = `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
+      }
+    }
+
+    // ====== الحروف الأبجدية ======
     function renderLetterDisplay(app) {
       app.innerHTML = `
         <div style="padding:16px;background:#F8FAFC;min-height:100vh;">
@@ -1942,18 +2205,21 @@
       `;
     }
 
-    function renderFoodMenu(app) {
-      renderTopbar(app, 'قائمة الأطعمة والمسميات', 'تدريبات التسمية', () => { state.view = 'home'; render(); });
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <h3>🍎 كروت الأطعمة للتسمية والنطق</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:15px;">
-          ${FOOD_ITEMS.map(item => `<div class="vowel-box" onclick="speakText('${item}')" style="padding:20px 10px;border-radius:16px;">🍎 ${item}</div>`).join('')}
-        </div>
-      `;
-      app.appendChild(card);
-    }
+    // ====== قاعدة بيانات الحروف ======
+    const LETTER_DATABASE = {
+      'ر': {
+        place: 'طرف اللسان مع اللثة العليا',
+        vowels: { fatha: 'رَ', damma: 'رُ', kasra: 'رِ', sukoon: 'رْ' },
+        words: { start: ['رَسَمَ','رَجُل','رِمَال'], middle: ['شَجَرَة','مَرْكَب','جَرَس'], end: ['قَمَر','بَحْر','مَطَر'] },
+        sentences: ['رَسَمَ رَامِي رُمَّاناً.', 'يَسِيرُ المَرْكَبُ فِي البَحْرِ.', 'قَرَأَ طَارِقٌ عَنِ القَمَرِ.']
+      },
+      'ب': {
+        place: 'انطباق الشفتين',
+        vowels: { fatha: 'بَ', damma: 'بُ', kasra: 'بِ', sukoon: 'بْ' },
+        words: { start: ['بَاب','بَيْت','بَقَرَة'], middle: ['جَبَل','حَبْل','مَكْتَب'], end: ['عِنَب','كَلْب','حَلِيب'] },
+        sentences: ['بَنَى بَاسِمٌ بَيْتاً.', 'أَكَلَ بَدْرٌ العِنَبَ.', 'الكَلْبُ عِنْدَ البَابِ.']
+      }
+    };
 
     // ====== مراقبة المصادقة وبدء التطبيق ======
     onAuthStateChanged(auth, async (u) => {
