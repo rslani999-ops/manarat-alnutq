@@ -4,9 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>منارة النطق</title>
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
+    /* ====== المتغيرات والأساسيات ====== */
     :root {
       --ink: #1E2A47;
       --paper: #EFF5FB;
@@ -31,6 +33,8 @@
       flex: 1;
       width: 100%;
     }
+
+    /* ====== الشريط العلوي ====== */
     .topbar {
       display: flex;
       align-items: center;
@@ -73,6 +77,7 @@
     }
     .btn-nav:hover { background: #F5F8FC; }
 
+    /* ====== البطاقات والأزرار ====== */
     .card {
       background: white;
       border-radius: 18px;
@@ -109,6 +114,7 @@
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn-block { width: 100%; }
 
+    /* ====== النماذج والمدخلات ====== */
     input, select, textarea {
       width: 100%;
       padding: 12px 14px;
@@ -161,6 +167,7 @@
       box-shadow: 0 10px 24px rgba(0,0,0,0.2);
     }
 
+    /* ====== عناصر الطلاب والجلسات ====== */
     .student-row {
       padding: 12px;
       border-bottom: 1px solid var(--line);
@@ -287,6 +294,7 @@
       border: 1px solid var(--line);
     }
 
+    /* ====== تذييل الصفحة ====== */
     footer {
       background: white;
       border-top: 1px solid var(--line);
@@ -298,15 +306,30 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+    }
+    footer .footer-main {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px 16px;
+    }
+    footer .footer-main .sep {
+      color: var(--line);
     }
     footer .footer-links {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 8px 20px;
+      gap: 12px 20px;
     }
-    footer a { color: var(--mint-deep); text-decoration: none; font-weight: 700; }
+    footer a {
+      color: var(--mint-deep);
+      text-decoration: none;
+      font-weight: 700;
+      transition: 0.2s;
+    }
     footer a:hover { text-decoration: underline; }
     footer .school-info {
       font-size: 12px;
@@ -314,6 +337,7 @@
       margin-top: 2px;
     }
 
+    /* ====== الشبكات والقوائم ====== */
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -366,7 +390,7 @@
     }
     #iep-print-area { display: none; }
 
-    /* تنسيق الجدول */
+    /* ====== جداول الجلسات ====== */
     .sessions-table {
       width: 100%;
       border-collapse: collapse;
@@ -391,41 +415,44 @@
       overflow-x: auto;
     }
 
-    /* تنسيق شبكة القوائم التعليمية */
+    /* ====== شبكة المفردات (بأيقونات أكبر) ====== */
     .vocab-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
     }
     .vocab-item {
       background: #F8FAFC;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px 8px;
+      border: 2px solid var(--line);
+      border-radius: 20px;
+      padding: 20px 12px;
       text-align: center;
       cursor: pointer;
-      transition: 0.2s;
+      transition: 0.25s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 8px;
+      min-height: 150px;
+      justify-content: center;
     }
     .vocab-item:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
       border-color: var(--mint);
     }
     .vocab-item .icon {
-      font-size: 32px;
+      font-size: 56px;
       line-height: 1.2;
     }
     .vocab-item .word {
-      font-size: 16px;
-      font-weight: 600;
+      font-size: 18px;
+      font-weight: 700;
       color: var(--ink);
     }
 
+    /* ====== الطباعة ====== */
     @media print {
       body { background: white; color: black; }
       .topbar, .btn, .nav-btns, footer, #iep-print-area, .no-print { display: none !important; }
@@ -447,19 +474,23 @@
 </head>
 <body>
   <div id="app"></div>
+
+  <!-- ====== تذييل الصفحة (معدل) ====== -->
   <footer>
-    <div>
+    <div class="footer-main">
       <span>© 2025 منارة النطق - جميع الحقوق محفوظة</span>
+      <span class="sep">|</span>
       <span>تطوير: <a href="#">الأستاذ محمد سويد العنزي</a></span>
-      <div class="school-info">ابتدائيه قتيبه بن مسلم في حفر الباطن</div>
     </div>
+    <div class="school-info">ابتدائية قتيبة بن مسلم - حفر الباطن</div>
     <div class="footer-links">
       <a href="mailto:rslani999@gmail.com">سياسة الخصوصية</a>
-      <a href="mailto:rslani999@gmail.com">اتصل بنا (rslan i999@gmail.com)</a>
+      <a href="mailto:rslani999@gmail.com">اتصل بنا</a>
     </div>
   </footer>
 
   <script type="module">
+    // ====== استيرادات Firebase ======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
     import {
       getAuth,
@@ -484,6 +515,7 @@
       deleteDoc
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
+    // ====== تهيئة Firebase ======
     const firebaseConfig = {
       apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
       authDomain: "manarat-alnutq.firebaseapp.com",
@@ -520,182 +552,125 @@
     const letterTitleMap = {};
     alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
 
-    // ====== قوائم المفردات الجديدة (15 كلمة لكل قائمة) ======
+    // ====== قوائم المفردات الموسعة والمعدلة ======
     const VOCAB_LISTS = {
       'الأشكال': [
-        { word: 'دائرة', icon: '⭕' },
-        { word: 'مربع', icon: '🟨' },
-        { word: 'مثلث', icon: '🔺' },
-        { word: 'مستطيل', icon: '▬' },
-        { word: 'نجمة', icon: '⭐' },
-        { word: 'قلب', icon: '❤️' },
-        { word: 'هلال', icon: '🌙' },
-        { word: 'بيضاوي', icon: '🥚' },
-        { word: 'معين', icon: '🔶' },
-        { word: 'خماسي', icon: '⬠' },
-        { word: 'سداسي', icon: '⬡' },
-        { word: 'مخروط', icon: '🔺' },
-        { word: 'أسطوانة', icon: '🧴' },
-        { word: 'كرة', icon: '⚽' },
-        { word: 'مكعب', icon: '🧊' }
+        { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
+        { word: 'مستطيل', icon: '▬' }, { word: 'نجمة', icon: '⭐' }, { word: 'قلب', icon: '❤️' },
+        { word: 'هلال', icon: '🌙' }, { word: 'بيضاوي', icon: '🥚' }, { word: 'معين', icon: '🔶' },
+        { word: 'خماسي', icon: '⬠' }, { word: 'سداسي', icon: '⬡' }, { word: 'مخروط', icon: '🔺' },
+        { word: 'أسطوانة', icon: '🧴' }, { word: 'كرة', icon: '⚽' }, { word: 'مكعب', icon: '🧊' }
       ],
       'الألوان': [
-        { word: 'أحمر', icon: '🔴' },
-        { word: 'أزرق', icon: '🔵' },
-        { word: 'أصفر', icon: '🟡' },
-        { word: 'أخضر', icon: '🟢' },
-        { word: 'برتقالي', icon: '🟠' },
-        { word: 'بنفسجي', icon: '🟣' },
-        { word: 'وردي', icon: '💗' },
-        { word: 'بني', icon: '🟤' },
-        { word: 'رمادي', icon: '🔘' },
-        { word: 'أبيض', icon: '⚪' },
-        { word: 'أسود', icon: '⚫' },
-        { word: 'نحاسي', icon: '🟠' },
-        { word: 'فيروزي', icon: '💎' },
-        { word: 'ذهبي', icon: '✨' },
-        { word: 'فضي', icon: '🔘' }
+        { word: 'أحمر', icon: '🔴' }, { word: 'أزرق', icon: '🔵' }, { word: 'أصفر', icon: '🟡' },
+        { word: 'أخضر', icon: '🟢' }, { word: 'برتقالي', icon: '🟠' }, { word: 'بنفسجي', icon: '🟣' },
+        { word: 'وردي', icon: '💗' }, { word: 'بني', icon: '🟤' }, { word: 'رمادي', icon: '🔘' },
+        { word: 'أبيض', icon: '⚪' }, { word: 'أسود', icon: '⚫' }, { word: 'نحاسي', icon: '🟠' },
+        { word: 'فيروزي', icon: '💎' }, { word: 'ذهبي', icon: '✨' }, { word: 'فضي', icon: '🔘' }
       ],
       'الفاكهة': [
-        { word: 'تفاحة', icon: '🍎' },
-        { word: 'موز', icon: '🍌' },
-        { word: 'برتقال', icon: '🍊' },
-        { word: 'عنب', icon: '🍇' },
-        { word: 'فراولة', icon: '🍓' },
-        { word: 'بطيخ', icon: '🍉' },
-        { word: 'مانجو', icon: '🥭' },
-        { word: 'أناناس', icon: '🍍' },
-        { word: 'كمثرى', icon: '🍐' },
-        { word: 'خوخ', icon: '🍑' },
-        { word: 'كرز', icon: '🍒' },
-        { word: 'ليمون', icon: '🍋' },
-        { word: 'جريب فروت', icon: '🍊' },
-        { word: 'رمان', icon: '🍎' },
-        { word: 'توت', icon: '🫐' }
+        { word: 'تفاحة', icon: '🍎' }, { word: 'موز', icon: '🍌' }, { word: 'برتقال', icon: '🍊' },
+        { word: 'عنب', icon: '🍇' }, { word: 'فراولة', icon: '🍓' }, { word: 'بطيخ', icon: '🍉' },
+        { word: 'مانجو', icon: '🥭' }, { word: 'أناناس', icon: '🍍' }, { word: 'كمثرى', icon: '🍐' },
+        { word: 'خوخ', icon: '🍑' }, { word: 'كرز', icon: '🍒' }, { word: 'ليمون', icon: '🍋' },
+        { word: 'جريب فروت', icon: '🍊' }, { word: 'رمان', icon: '🍎' }, { word: 'توت', icon: '🫐' }
       ],
       'الخضروات': [
-        { word: 'جزر', icon: '🥕' },
-        { word: 'طماطم', icon: '🍅' },
-        { word: 'خيار', icon: '🥒' },
-        { word: 'فلفل', icon: '🫑' },
-        { word: 'بصل', icon: '🧅' },
-        { word: 'ثوم', icon: '🧄' },
-        { word: 'بطاطس', icon: '🥔' },
-        { word: 'بطيخ أحمر', icon: '🍉' },
-        { word: 'كوسا', icon: '🥒' },
-        { word: 'باذنجان', icon: '🍆' },
-        { word: 'قرنبيط', icon: '🥦' },
-        { word: 'سبانخ', icon: '🍃' },
-        { word: 'خس', icon: '🥬' },
-        { word: 'فجل', icon: '🧄' },
-        { word: 'كراث', icon: '🧅' }
+        { word: 'جزر', icon: '🥕' }, { word: 'طماطم', icon: '🍅' }, { word: 'خيار', icon: '🥒' },
+        { word: 'فلفل', icon: '🫑' }, { word: 'بصل', icon: '🧅' }, { word: 'ثوم', icon: '🧄' },
+        { word: 'بطاطس', icon: '🥔' }, { word: 'كوسا', icon: '🥒' }, { word: 'باذنجان', icon: '🍆' },
+        { word: 'قرنبيط', icon: '🥦' }, { word: 'سبانخ', icon: '🍃' }, { word: 'خس', icon: '🥬' },
+        { word: 'فجل', icon: '🥕' }, { word: 'كراث', icon: '🧅' }, { word: 'قرع', icon: '🎃' }
       ],
       'الحيوانات': [
-        { word: 'أسد', icon: '🦁' },
-        { word: 'نمر', icon: '🐅' },
-        { word: 'فيل', icon: '🐘' },
-        { word: 'زرافة', icon: '🦒' },
-        { word: 'حمار', icon: '🐴' },
-        { word: 'حصان', icon: '🐎' },
-        { word: 'بقرة', icon: '🐄' },
-        { word: 'خروف', icon: '🐑' },
-        { word: 'ماعز', icon: '🐐' },
-        { word: 'قرد', icon: '🐒' },
-        { word: 'ذئب', icon: '🐺' },
-        { word: 'ثعلب', icon: '🦊' },
-        { word: 'دب', icon: '🐻' },
-        { word: 'غزال', icon: '🦌' },
-        { word: 'ناقة', icon: '🐫' }
+        { word: 'أسد', icon: '🦁' }, { word: 'نمر', icon: '🐅' }, { word: 'فيل', icon: '🐘' },
+        { word: 'زرافة', icon: '🦒' }, { word: 'حمار', icon: '🐴' }, { word: 'حصان', icon: '🐎' },
+        { word: 'بقرة', icon: '🐄' }, { word: 'خروف', icon: '🐑' }, { word: 'ماعز', icon: '🐐' },
+        { word: 'قرد', icon: '🐒' }, { word: 'ذئب', icon: '🐺' }, { word: 'ثعلب', icon: '🦊' },
+        { word: 'دب', icon: '🐻' }, { word: 'غزال', icon: '🦌' }, { word: 'ناقة', icon: '🐫' }
       ],
       'النباتات': [
-        { word: 'ورد', icon: '🌹' },
-        { word: 'ياسمين', icon: '🌼' },
-        { word: 'نخلة', icon: '🌴' },
-        { word: 'شجرة', icon: '🌳' },
-        { word: 'زهرة', icon: '🌸' },
-        { word: 'عشب', icon: '🌿' },
-        { word: 'أزهار', icon: '🌺' },
-        { word: 'بابونج', icon: '🌼' },
-        { word: 'نعناع', icon: '🌿' },
-        { word: 'ريحان', icon: '🌿' },
-        { word: 'صبار', icon: '🌵' },
-        { word: 'خيزران', icon: '🎋' },
-        { word: 'سرخس', icon: '🌿' },
-        { word: 'طحلب', icon: '🌿' },
-        { word: 'قرنفل', icon: '🌸' }
+        { word: 'ورد', icon: '🌹' }, { word: 'ياسمين', icon: '🌼' }, { word: 'نخلة', icon: '🌴' },
+        { word: 'شجرة', icon: '🌳' }, { word: 'زهرة', icon: '🌸' }, { word: 'عشب', icon: '🌿' },
+        { word: 'أزهار', icon: '🌺' }, { word: 'بابونج', icon: '🌼' }, { word: 'نعناع', icon: '🍃' },
+        { word: 'ريحان', icon: '🌱' }, { word: 'صبار', icon: '🌵' }, { word: 'خيزران', icon: '🎋' },
+        { word: 'سرخس', icon: '🌿' }, { word: 'طحلب', icon: '🪴' }, { word: 'قرنفل', icon: '🌸' }
       ],
       'أعضاء الجسم': [
-        { word: 'رأس', icon: '👤' },
-        { word: 'عين', icon: '👁️' },
-        { word: 'أنف', icon: '👃' },
-        { word: 'فم', icon: '👄' },
-        { word: 'أذن', icon: '👂' },
-        { word: 'يد', icon: '✋' },
-        { word: 'قدم', icon: '🦶' },
-        { word: 'قلب', icon: '❤️' },
-        { word: 'رئة', icon: '🫁' },
-        { word: 'كبد', icon: '🧬' },
-        { word: 'كلية', icon: '🧬' },
-        { word: 'معدة', icon: '🧬' },
-        { word: 'أمعاء', icon: '🧬' },
-        { word: 'عظام', icon: '🦴' },
-        { word: 'جلد', icon: '🧴' }
+        { word: 'رأس', icon: '👤' }, { word: 'عين', icon: '👁️' }, { word: 'أنف', icon: '👃' },
+        { word: 'فم', icon: '👄' }, { word: 'أذن', icon: '👂' }, { word: 'يد', icon: '✋' },
+        { word: 'قدم', icon: '🦶' }, { word: 'قلب', icon: '🫀' }, { word: 'رئة', icon: '🫁' },
+        { word: 'كبد', icon: '🧬' }, { word: 'كلية', icon: '🧬' }, { word: 'معدة', icon: '🫃' },
+        { word: 'أمعاء', icon: '🧬' }, { word: 'عظام', icon: '🦴' }, { word: 'جلد', icon: '🧴' }
       ],
       'الأثاث': [
-        { word: 'كرسي', icon: '🪑' },
-        { word: 'طاولة', icon: '🪑' },
-        { word: 'سرير', icon: '🛏️' },
-        { word: 'خزانة', icon: '🗄️' },
-        { word: 'رف', icon: '📚' },
-        { word: 'سجادة', icon: '🧶' },
-        { word: 'ستارة', icon: '🪟' },
-        { word: 'مرآة', icon: '🪞' },
-        { word: 'ساعة', icon: '🕰️' },
-        { word: 'مصباح', icon: '💡' },
-        { word: 'مكتب', icon: '🪑' },
-        { word: 'أريكة', icon: '🛋️' },
-        { word: 'دولاب', icon: '🗄️' },
-        { word: 'طاولة جانبية', icon: '🪑' },
-        { word: 'شماعة', icon: '🧥' }
+        { word: 'كرسي', icon: '🪑' }, { word: 'طاولة', icon: '🪑' }, { word: 'سرير', icon: '🛏️' },
+        { word: 'خزانة', icon: '🗄️' }, { word: 'رف كتب', icon: '📚' }, { word: 'سجادة', icon: '🧶' },
+        { word: 'ستارة', icon: '🪟' }, { word: 'مرآة', icon: '🪞' }, { word: 'ساعة', icon: '🕰️' },
+        { word: 'مصباح', icon: '💡' }, { word: 'مكتب', icon: '🪑' }, { word: 'أريكة', icon: '🛋️' },
+        { word: 'دولاب', icon: '🗄️' }, { word: 'طاولة جانبية', icon: '🪑' }, { word: 'شماعة', icon: '🧥' }
       ],
       'الحشرات': [
-        { word: 'نحلة', icon: '🐝' },
-        { word: 'فراشة', icon: '🦋' },
-        { word: 'ذبابة', icon: '🪰' },
-        { word: 'بعوضة', icon: '🪟' },
-        { word: 'نملة', icon: '🐜' },
-        { word: 'خنفساء', icon: '🪲' },
-        { word: 'صرصور', icon: '🪳' },
-        { word: 'جندب', icon: '🦗' },
-        { word: 'يعسوب', icon: '🪰' },
-        { word: 'دعسوقة', icon: '🐞' },
-        { word: 'أبو مقص', icon: '🪲' },
-        { word: 'نمل أبيض', icon: '🐜' },
-        { word: 'برغوث', icon: '🐜' },
-        { word: 'قراد', icon: '🪲' },
-        { word: 'عنكبوت', icon: '🕷️' }
+        { word: 'نحلة', icon: '🐝' }, { word: 'فراشة', icon: '🦋' }, { word: 'ذبابة', icon: '🪰' },
+        { word: 'بعوضة', icon: '🪟' }, { word: 'نملة', icon: '🐜' }, { word: 'خنفساء', icon: '🪲' },
+        { word: 'صرصور', icon: '🪳' }, { word: 'جندب', icon: '🦗' }, { word: 'يعسوب', icon: '🪰' },
+        { word: 'دعسوقة', icon: '🐞' }, { word: 'أبو مقص', icon: '🪲' }, { word: 'نمل أبيض', icon: '🐜' },
+        { word: 'برغوث', icon: '🐜' }, { word: 'قراد', icon: '🪲' }, { word: 'عنكبوت', icon: '🕷️' }
       ],
       'الطيور': [
-        { word: 'عصفور', icon: '🐦' },
-        { word: 'حمامة', icon: '🕊️' },
-        { word: 'غراب', icon: '🐦' },
-        { word: 'نسر', icon: '🦅' },
-        { word: 'صقر', icon: '🦅' },
-        { word: 'بومة', icon: '🦉' },
-        { word: 'بطريق', icon: '🐧' },
-        { word: 'بلبل', icon: '🐦' },
-        { word: 'طاووس', icon: '🦚' },
-        { word: 'نعامة', icon: '🦩' },
-        { word: 'بطة', icon: '🦆' },
-        { word: 'دجاجة', icon: '🐔' },
-        { word: 'وروار', icon: '🐦' },
-        { word: 'هدهد', icon: '🐦' },
-        { word: 'باز', icon: '🦅' }
+        { word: 'عصفور', icon: '🐦' }, { word: 'حمامة', icon: '🕊️' }, { word: 'غراب', icon: '🐦' },
+        { word: 'نسر', icon: '🦅' }, { word: 'صقر', icon: '🦅' }, { word: 'بومة', icon: '🦉' },
+        { word: 'بطريق', icon: '🐧' }, { word: 'بلبل', icon: '🐦' }, { word: 'طاووس', icon: '🦚' },
+        { word: 'نعامة', icon: '🦩' }, { word: 'بطة', icon: '🦆' }, { word: 'دجاجة', icon: '🐔' },
+        { word: 'وروار', icon: '🐦' }, { word: 'هدهد', icon: '🐦' }, { word: 'باز', icon: '🦅' }
       ]
     };
 
-    // قائمة بأسماء القوائم للعرض في الصفحة الرئيسية
     const VOCAB_CATEGORIES = Object.keys(VOCAB_LISTS);
+
+    // ====== أنواع الجلسات وقاعدة بيانات الحروف ======
+    const SESSION_TYPES = [
+      { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
+      { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
+      { id: 3, name: 'الحرف في كلمات', icon: '📝' },
+      { id: 4, name: 'الحرف في جمل', icon: '✍️' }
+    ];
+
+    const LETTER_DATABASE = {
+      'ر': {
+        place: 'طرف اللسان مع اللثة العليا',
+        vowels: { fatha: 'رَ', damma: 'رُ', kasra: 'رِ', sukoon: 'رْ' },
+        words: { start: ['رَسَمَ','رَجُل','رِمَال'], middle: ['شَجَرَة','مَرْكَب','جَرَس'], end: ['قَمَر','بَحْر','مَطَر'] },
+        sentences: ['رَسَمَ رَامِي رُمَّاناً.', 'يَسِيرُ المَرْكَبُ فِي البَحْرِ.', 'قَرَأَ طَارِقٌ عَنِ القَمَرِ.']
+      },
+      'ب': {
+        place: 'انطباق الشفتين',
+        vowels: { fatha: 'بَ', damma: 'بُ', kasra: 'بِ', sukoon: 'بْ' },
+        words: { start: ['بَاب','بَيْت','بَقَرَة'], middle: ['جَبَل','حَبْل','مَكْتَب'], end: ['عِنَب','كَلْب','حَلِيب'] },
+        sentences: ['بَنَى بَاسِمٌ بَيْتاً.', 'أَكَلَ بَدْرٌ العِنَبَ.', 'الكَلْبُ عِنْدَ البَابِ.']
+      }
+    };
+
+    function getDefaultGoal(letter, type) {
+      const names = {
+        1: `نطق حرف (${letter}) بشكل مجرد`,
+        2: `نطق حرف (${letter}) مع الحركات (فتحة، ضمة، كسرة، سكون)`,
+        3: `نطق حرف (${letter}) في مواقع مختلفة من الكلمة`,
+        4: `نطق حرف (${letter}) في جمل بسيطة`
+      };
+      return names[type] || `تدريب حرف (${letter})`;
+    }
+
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ar-SA';
+        utterance.rate = 0.8;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+    window.speakText = speakText;
 
     // ====== الحالة العامة ======
     let state = {
@@ -707,19 +682,12 @@
       currentStudent: null,
       diagEval: {},
       currentSession: null,
+      currentVocabCategory: null,
       comprehensive: {
-        hearing: 'normal',
-        hearingAid: 'none',
-        vision: 'normal',
-        movement: 'none',
-        attention: 'stable',
-        comprehension: 'normal',
-        physical: 'normal',
-        psychological: 'stable',
-        scans: 'none',
-        surgeries: 'none',
-        scanDetails: '',
-        surgeryDetails: ''
+        hearing: 'normal', hearingAid: 'none', vision: 'normal', movement: 'none',
+        attention: 'stable', comprehension: 'normal', physical: 'normal',
+        psychological: 'stable', scans: 'none', surgeries: 'none',
+        scanDetails: '', surgeryDetails: ''
       }
     };
 
@@ -734,17 +702,6 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
-
-    function speakText(text) {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ar-SA';
-        utterance.rate = 0.8;
-        window.speechSynthesis.speak(utterance);
-      }
-    }
-    window.speakText = speakText;
 
     // ====== شريط الأعلى ======
     function renderTopbar(appContainer, title, sub, onBack) {
@@ -842,12 +799,11 @@
     }
 
     // ============================================================
-    // ====== الصفحة الرئيسية (مع القوائم الجديدة) ======
+    // ====== الصفحة الرئيسية ======
     // ============================================================
     function renderHome(app) {
       renderTopbar(app, 'منارة النطق', 'المنصة التدريبية المباشرة');
-      
-      // البانر العلوي
+
       const banner = document.createElement('div');
       banner.className = 'card';
       banner.style.background = 'linear-gradient(135deg, #357E74, #4FB6A8)';
@@ -863,11 +819,10 @@
         banner.querySelector('#btnAuthHome').onclick = () => { state.view = 'auth'; render(); };
       }
 
-      // ===== شبكة القوائم (11 قائمة: 10 مفردات + الحروف الأبجدية) =====
+      // ===== شبكة القوائم =====
       const grid = document.createElement('div');
       grid.className = 'grid-2';
 
-      // قوائم المفردات
       VOCAB_CATEGORIES.forEach(category => {
         const card = document.createElement('div');
         card.className = 'card';
@@ -875,22 +830,14 @@
         card.style.transition = '0.2s';
         card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; };
         card.onmouseout = () => { card.style.transform = 'translateY(0)'; };
-        
-        // اختيار أيقونة تمثيلية للقائمة
+
         const iconMap = {
-          'الأشكال': '🔷',
-          'الألوان': '🎨',
-          'الفاكهة': '🍎',
-          'الخضروات': '🥕',
-          'الحيوانات': '🦁',
-          'النباتات': '🌿',
-          'أعضاء الجسم': '🧍',
-          'الأثاث': '🪑',
-          'الحشرات': '🐝',
-          'الطيور': '🕊️'
+          'الأشكال': '🔷', 'الألوان': '🎨', 'الفاكهة': '🍎', 'الخضروات': '🥕',
+          'الحيوانات': '🦁', 'النباتات': '🌿', 'أعضاء الجسم': '🧍',
+          'الأثاث': '🪑', 'الحشرات': '🐝', 'الطيور': '🕊️'
         };
         const icon = iconMap[category] || '📚';
-        
+
         card.innerHTML = `
           <h3>${icon} ${category}</h3>
           <p class="muted">${VOCAB_LISTS[category].length} كلمة تدريبية</p>
@@ -923,12 +870,12 @@
     }
 
     // ============================================================
-    // ====== صفحة عرض قائمة المفردات ======
+    // ====== صفحة عرض قائمة المفردات (بأيقونات أكبر) ======
     // ============================================================
     function renderVocabList(app) {
       const category = state.currentVocabCategory || 'الفاكهة';
       const items = VOCAB_LISTS[category] || [];
-      
+
       renderTopbar(app, `📚 ${category}`, `${items.length} كلمة تدريبية`, () => {
         state.view = 'home';
         render();
@@ -951,11 +898,9 @@
       app.appendChild(card);
     }
 
-    // ====== باقي الدوال (التشخيص، الجلسات، إلخ) ======
-    // (سيتم إدراجها مختصرة للحفاظ على طول الكود، لكنها تعمل بنفس الطريقة السابقة)
-    // بما أن الطول كبير، سأضعها بشكل مبسط ولكن كامل الوظائف.
-    
-    // ====== المصادقة ======
+    // ====== باقي الدوال (مختصرة ولكنها كاملة) ======
+
+    // ---- المصادقة ----
     function renderAuth(app) {
       renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
       const card = document.createElement('div');
@@ -1050,7 +995,7 @@
       app.appendChild(card);
     }
 
-    // ====== جلب بيانات المستخدم والطلاب (مختصر) ======
+    // ---- جلب البيانات ----
     async function fetchUserData(uid) {
       try {
         const uDoc = await getDoc(doc(db, "users", uid));
@@ -1087,7 +1032,7 @@
       } catch(e) { showToast('خطأ في تحميل بيانات الطلاب'); }
     }
 
-    // ====== لوحة المعلم (مختصرة) ======
+    // ---- لوحة المعلم ----
     function renderTeacherDashboard(app) {
       renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
@@ -1102,7 +1047,7 @@
         </div>
       `;
       app.appendChild(actCard);
-      
+
       actCard.querySelector('#btnSessions').onclick = () => {
         if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
         state.view = 'speech-sessions';
@@ -1202,7 +1147,7 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
-    // ====== صفحة التشخيص (مختصرة) ======
+    // ---- التشخيص ----
     function renderDiagnosticSession(app) {
       renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
         state.view = 'teacher-dashboard';
@@ -1216,7 +1161,6 @@
       nameCard.innerHTML = `<h2 style="margin:0;color:var(--mint-deep);text-align:center;">👤 الطالب: ${state.currentStudent?.fullName || state.currentStudent?.email || 'غير محدد'}</h2>`;
       app.appendChild(nameCard);
 
-      // التشخيص الشامل (يتم استدعاؤه من دالة منفصلة)
       let compContainer = document.getElementById('comprehensiveContainer');
       if (!compContainer) {
         compContainer = document.createElement('div');
@@ -1225,7 +1169,6 @@
       }
       renderComprehensiveDiagnosis(compContainer);
 
-      // تشخيص الحروف
       const letterCard = document.createElement('div');
       letterCard.className = 'card';
       letterCard.innerHTML = `
@@ -1319,7 +1262,7 @@
       });
     }
 
-    // ====== التشخيص الشامل (مختصر) ======
+    // ---- التشخيص الشامل ----
     function renderComprehensiveDiagnosis(container) {
       container.innerHTML = '';
       const card = document.createElement('div');
@@ -1468,7 +1411,7 @@
       if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
     }
 
-    // ====== صفحة الطالب (مختصرة) ======
+    // ---- صفحة الطالب ----
     async function renderStudentMenu(app) {
       renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
       const uDoc = await getDoc(doc(db, "users", state.user.uid));
@@ -1527,7 +1470,7 @@
       app.appendChild(sessionsCard);
     }
 
-    // ====== إدارة الجلسات (مختصرة) ======
+    // ---- إدارة الجلسات ----
     async function renderSpeechSessions(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للسجل');
@@ -1665,25 +1608,7 @@
       app.appendChild(listCard);
     }
 
-    // ====== أنواع الجلسات ======
-    const SESSION_TYPES = [
-      { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
-      { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
-      { id: 3, name: 'الحرف في كلمات', icon: '📝' },
-      { id: 4, name: 'الحرف في جمل', icon: '✍️' }
-    ];
-
-    function getDefaultGoal(letter, type) {
-      const names = {
-        1: `نطق حرف (${letter}) بشكل مجرد`,
-        2: `نطق حرف (${letter}) مع الحركات (فتحة، ضمة، كسرة، سكون)`,
-        3: `نطق حرف (${letter}) في مواقع مختلفة من الكلمة`,
-        4: `نطق حرف (${letter}) في جمل بسيطة`
-      };
-      return names[type] || `تدريب حرف (${letter})`;
-    }
-
-    // ====== عرض جلسة واحدة (مختصرة) ======
+    // ---- عرض جلسة واحدة ----
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -1727,10 +1652,10 @@
         <div><strong>🛠️ الأدوات:</strong> ${sess.tools || 'غير محدد'}</div>
         <div><strong>📍 مخرج الحرف:</strong> ${letterData.place}</div>
         <div><strong>📋 الطريقة:</strong> ${sess.method || 'غير محددة'}</div>
-        
+
         <div style="margin-top:12px;">
           <label><strong>📝 التوصيات (اختياري):</strong></label>
-          ${state.role === 'teacher' || state.role === 'admin' ? 
+          ${state.role === 'teacher' || state.role === 'admin' ?
             `<textarea id="recommendationsInput" rows="2" style="width:100%;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;margin-top:4px;">${recommendations}</textarea>` :
             `<div style="background:#f9f9f9;padding:8px 12px;border-radius:12px;margin-top:4px;">${recommendations || 'لا توجد توصيات'}</div>`
           }
@@ -1810,7 +1735,7 @@
       trainCard.innerHTML = content;
       app.appendChild(trainCard);
 
-      // ===== ربط الأحداث =====
+      // ربط الأحداث
       if (state.role === 'teacher' || state.role === 'admin') {
         document.querySelectorAll('.btn-eval').forEach(btn => {
           btn.onclick = async () => {
@@ -1841,8 +1766,8 @@
           const rate = parseInt(document.getElementById('successRange').value);
           const recommendations = document.getElementById('recommendationsInput').value.trim();
           try {
-            await updateDoc(doc(db, "sessions", sess.id), { 
-              evaluation: evalValue, 
+            await updateDoc(doc(db, "sessions", sess.id), {
+              evaluation: evalValue,
               successRate: rate,
               recommendations: recommendations,
               notes: recommendations
@@ -1952,7 +1877,7 @@
       }
     }
 
-    // ====== الخطة الفردية IEP (مختصرة) ======
+    // ---- الخطة الفردية IEP ----
     async function renderIEPSession(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للخطة');
@@ -2076,7 +2001,7 @@
       formCard.querySelector('#btnPrint').onclick = () => window.print();
     }
 
-    // ====== جدول سجل الجلسات ======
+    // ---- جدول سجل الجلسات ----
     async function renderSessionsLog(app) {
       renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات المسجلة للطلاب', () => {
         state.view = 'teacher-dashboard';
@@ -2129,11 +2054,11 @@
           const table = document.createElement('table');
           table.className = 'sessions-table';
           const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-          
+
           let thead = `<thead><tr>
             <th>#</th><th>اليوم</th><th>التاريخ</th><th>اسم الطالب</th><th>الحرف</th><th>نوع التدريب</th><th>التقييم النهائي</th><th>التوصيات</th>
           </tr></thead><tbody>`;
-          
+
           allSessions.forEach((s, index) => {
             const dateObj = new Date(s.date + 'T00:00:00');
             const dayName = days[dateObj.getDay()] || '';
@@ -2144,9 +2069,9 @@
             else if (s.evaluation === 'trained') { evalText = '🔄 اجتاز بعد تدريب'; evalClass = 'badge-trained'; }
             else if (s.evaluation === 'need') { evalText = '⚠️ يحتاج تدريب'; evalClass = 'badge-need'; }
             else if (s.evaluation === 'unclear') { evalText = '❌ غير واضح'; evalClass = 'badge-unclear'; }
-            
+
             const recommendations = s.recommendations || s.notes || '-';
-            
+
             thead += `<tr>
               <td>${index + 1}</td>
               <td>${dayName}</td>
@@ -2185,7 +2110,7 @@
       }
     }
 
-    // ====== الحروف الأبجدية ======
+    // ---- الحروف الأبجدية ----
     function renderLetterDisplay(app) {
       app.innerHTML = `
         <div style="padding:16px;background:#F8FAFC;min-height:100vh;">
@@ -2205,23 +2130,7 @@
       `;
     }
 
-    // ====== قاعدة بيانات الحروف ======
-    const LETTER_DATABASE = {
-      'ر': {
-        place: 'طرف اللسان مع اللثة العليا',
-        vowels: { fatha: 'رَ', damma: 'رُ', kasra: 'رِ', sukoon: 'رْ' },
-        words: { start: ['رَسَمَ','رَجُل','رِمَال'], middle: ['شَجَرَة','مَرْكَب','جَرَس'], end: ['قَمَر','بَحْر','مَطَر'] },
-        sentences: ['رَسَمَ رَامِي رُمَّاناً.', 'يَسِيرُ المَرْكَبُ فِي البَحْرِ.', 'قَرَأَ طَارِقٌ عَنِ القَمَرِ.']
-      },
-      'ب': {
-        place: 'انطباق الشفتين',
-        vowels: { fatha: 'بَ', damma: 'بُ', kasra: 'بِ', sukoon: 'بْ' },
-        words: { start: ['بَاب','بَيْت','بَقَرَة'], middle: ['جَبَل','حَبْل','مَكْتَب'], end: ['عِنَب','كَلْب','حَلِيب'] },
-        sentences: ['بَنَى بَاسِمٌ بَيْتاً.', 'أَكَلَ بَدْرٌ العِنَبَ.', 'الكَلْبُ عِنْدَ البَابِ.']
-      }
-    };
-
-    // ====== مراقبة المصادقة وبدء التطبيق ======
+    // ---- مراقبة المصادقة ----
     onAuthStateChanged(auth, async (u) => {
       if (u) {
         state.user = u;
@@ -2236,6 +2145,7 @@
       }
     });
 
+    // ---- بدء التطبيق ----
     render();
   </script>
 </body>
