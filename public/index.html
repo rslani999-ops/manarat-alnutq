@@ -1491,7 +1491,7 @@
     }
 
     // ============================================================
-    // ====== صفحة الطالب ======
+    // ====== صفحة الطالب (مع عرض الخطة للقراءة فقط) ======
     // ============================================================
     async function renderStudentMenu(app) {
       renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
@@ -1511,6 +1511,50 @@
       `;
       app.appendChild(summary);
 
+      // ===== عرض الخطة الفردية (IEP) للقراءة فقط =====
+      const iepCard = document.createElement('div');
+      iepCard.className = 'card';
+      iepCard.innerHTML = `<h3>📋 الخطة الفردية (IEP)</h3>`;
+      
+      try {
+        const iepDoc = await getDoc(doc(db, "iep", state.user.uid));
+        if (iepDoc.exists()) {
+          const iepData = iepDoc.data();
+          iepCard.innerHTML += `
+            <div style="background:#f9f9f9;padding:16px;border-radius:12px;border-right:4px solid var(--mint-deep);">
+              <div style="margin-bottom:12px;">
+                <strong style="color:var(--mint-deep);">📝 تشخيص الحالة:</strong>
+                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.diagnosis || 'لا يوجد تشخيص'}</div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <strong style="color:var(--mint-deep);">🎯 الهدف العام:</strong>
+                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.longGoal || 'لا يوجد هدف عام'}</div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <strong style="color:var(--mint-deep);">📌 الأهداف القصيرة:</strong>
+                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.shortGoals || 'لا توجد أهداف قصيرة'}</div>
+              </div>
+              <div>
+                <strong style="color:var(--mint-deep);">💡 التوصيات:</strong>
+                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.notes || 'لا توجد توصيات'}</div>
+              </div>
+              <div style="margin-top:12px;font-size:12px;color:#6B7A99;">
+                آخر تحديث: ${iepData.updatedAt ? new Date(iepData.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}
+              </div>
+            </div>
+            <p class="muted" style="margin-top:8px;">ℹ️ هذه الخطة للقراءة فقط، يمكنك مناقشتها مع معلمك.</p>
+          `;
+        } else {
+          iepCard.innerHTML += `<p class="muted">⚠️ لا توجد خطة فردية مسجلة حتى الآن. يرجى التواصل مع معلمك لإجراء التشخيص.</p>`;
+        }
+      } catch(e) {
+        console.error('خطأ في جلب الخطة:', e);
+        iepCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الخطة الفردية.</p>`;
+      }
+      
+      app.appendChild(iepCard);
+
+      // ===== سجل الجلسات =====
       const sessionsCard = document.createElement('div');
       sessionsCard.className = 'card';
       sessionsCard.innerHTML = '<h3>📂 سجل جلسات التدريب الخاصة بك</h3>';
@@ -1989,7 +2033,6 @@
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           iep = snap.data();
-          // إذا كانت الخطة تحتوي على حقول قديمة، نضمن وجود الحقول الجديدة
           if (!iep.diagnosis) iep.diagnosis = 'اضطراب نطق بالحروف (لدغة)';
           if (!iep.longGoal) iep.longGoal = 'أن ينطق الطالب الحروف المستهدفة بشكل صحيح في الكلمات والجمل.';
           if (!iep.shortGoals) iep.shortGoals = '1. نطق الحرف بشكل مفرد صحيح.\n2. نطق الحرف في بداية الكلمة ووسطها ونهايتها.';
