@@ -695,28 +695,40 @@
       }
     };
 
-    function getDefaultGoal(letter, type) {
-      const names = {
-        1: `نطق حرف (${letter}) بشكل مجرد`,
-        2: `نطق حرف (${letter}) مع الحركات (فتحة، ضمة، كسرة، سكون)`,
-        3: `نطق حرف (${letter}) في مواقع مختلفة من الكلمة`,
-        4: `نطق حرف (${letter}) في جمل بسيطة`
-      };
-      return names[type] || `تدريب حرف (${letter})`;
-    }
-
-    function speakText(text) {
+    // ====== دالة النطق المحسنة (بصوت رجل وبدون تنوين) ======
+    function speakText(text, useFatha = false) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
+        
+        let finalText = text;
+        // إذا كان النص حرفاً واحداً وطلبنا الفتحة
+        if (useFatha && text.length === 1 && /[أ-ي]/.test(text)) {
+          finalText = text + 'َ'; // إضافة فتحة
+        }
+        // إزالة التنوين (إذا وجد) من الكلمات
+        // نترك النص كما هو لأنه غالباً ما يكون مكتوباً بالشكل المطلوب
+        
+        const utterance = new SpeechSynthesisUtterance(finalText);
         utterance.lang = 'ar-SA';
         utterance.rate = 0.8;
+        
+        // محاولة اختيار صوت رجل (ذكر)
+        const voices = window.speechSynthesis.getVoices();
+        const maleVoice = voices.find(v => v.lang === 'ar-SA' && (v.name.includes('Male') || v.name.includes('Riyad')));
+        if (maleVoice) {
+          utterance.voice = maleVoice;
+        } else {
+          // محاولة اختيار أي صوت عربي
+          const arabicVoice = voices.find(v => v.lang === 'ar-SA');
+          if (arabicVoice) utterance.voice = arabicVoice;
+        }
+        
         window.speechSynthesis.speak(utterance);
       }
     }
     window.speakText = speakText;
 
-    // ====== دالة التسجيل الصوتي باستخدام Web Speech API ======
+    // ====== دالة التسجيل الصوتي ======
     function startRecording(letter, callback) {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         showToast('❌ المتصفح لا يدعم خاصية التسجيل الصوتي. يرجى استخدام Chrome أو Edge.');
@@ -729,7 +741,6 @@
       recognition.continuous = false;
       recognition.interimResults = false;
 
-      // إظهار مؤشر التسجيل
       showToast('🎤 جاري الاستماع... تحدث الآن');
 
       recognition.onresult = (event) => {
@@ -745,9 +756,7 @@
         recognition.stop();
       };
 
-      recognition.onend = () => {
-        // يمكن إضافة سلوك عند انتهاء التسجيل
-      };
+      recognition.onend = () => {};
 
       try {
         recognition.start();
@@ -788,7 +797,7 @@
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
 
-    // ====== شريط الأعلى ======
+    // ====== شريط الأعلى (مع إصلاح خطأ الخروج) ======
     function renderTopbar(appContainer, title, sub, onBack) {
       const bar = document.createElement('div');
       bar.className = 'topbar';
@@ -833,22 +842,30 @@
           actions.appendChild(btnAdmin);
         }
 
+        // ===== زر الخروج مع معالجة أفضل للأخطاء =====
         const btnLogout = document.createElement('button');
         btnLogout.className = 'btn-nav';
         btnLogout.style.color = 'var(--coral)';
         btnLogout.textContent = 'خروج';
         btnLogout.onclick = async () => {
           try {
-            if (iepPrintArea) { iepPrintArea.remove(); iepPrintArea = null; }
+            if (iepPrintArea) { 
+              try { iepPrintArea.remove(); } catch(e) {}
+              iepPrintArea = null; 
+            }
             await signOut(auth);
-            state.user = null; state.role = null;
+            state.user = null; 
+            state.role = null;
             state.currentStudent = null;
             state.myStudents = [];
             state.freeStudents = [];
             state.view = 'home';
             showToast('تم تسجيل الخروج بنجاح');
             render();
-          } catch(e) { showToast('خطأ أثناء خروج الحساب'); }
+          } catch(e) {
+            console.error('خطأ في الخروج:', e);
+            showToast('❌ خطأ أثناء خروج الحساب: ' + (e.message || 'غير معروف'));
+          }
         };
         actions.appendChild(btnLogout);
       } else {
@@ -1116,7 +1133,7 @@
     }
 
     // ============================================================
-    // ====== لوحة المعلم (مع قائمة الطلاب للخطة IEP) ======
+    // ====== لوحة المعلم ======
     // ============================================================
     function renderTeacherDashboard(app) {
       renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
@@ -1143,6 +1160,7 @@
         render();
       };
       actCard.querySelector('#btnIEPList').onclick = () => {
+        state.currentStudent = null;
         state.view = 'iep-session';
         render();
       };
@@ -1484,10 +1502,10 @@
           const letterId = 'diag_' + letter;
 
           card.innerHTML = `
-            <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
+            <div class="letter-circle" onclick="speakText('${letter}', true)">${letter}</div>
             <span class="letter-title">${titleStr}</span>
             <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:4px;">
-              <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
+              <button class="audio-btn" onclick="speakText('${letter}', true)">🔊</button>
               <button class="btn-record" id="recordBtn_${letter}" data-letter="${letter}">🎤 تسجيل</button>
             </div>
             <div id="feedback_${letter}" style="font-size:13px;min-height:20px;margin-bottom:4px;"></div>
@@ -1500,7 +1518,6 @@
           `;
           grid.appendChild(card);
 
-          // ربط أزرار التقييم
           const btns = card.querySelectorAll('.eval-btn');
           btns.forEach(btn => {
             btn.onclick = () => {
@@ -1511,7 +1528,6 @@
             };
           });
 
-          // ربط زر التسجيل الصوتي
           const recordBtn = card.querySelector(`#recordBtn_${letter}`);
           const feedbackEl = card.querySelector(`#feedback_${letter}`);
           if (recordBtn) {
@@ -1523,12 +1539,10 @@
                 }
                 if (isMatch) {
                   feedbackEl.innerHTML = `✅ صحيح! نطق (${letter}) بشكل صحيح. (النص: "${transcript}")`;
-                  // تحديث التقييم تلقائياً إلى "passed"
                   state.diagEval[letter] = 'passed';
                   renderDiagnosticSession(app);
                 } else {
                   feedbackEl.innerHTML = `❌ غير صحيح. حاول مرة أخرى. (النص: "${transcript}")`;
-                  // تحديث التقييم تلقائياً إلى "need"
                   state.diagEval[letter] = 'need';
                   renderDiagnosticSession(app);
                 }
@@ -1596,10 +1610,14 @@
     }
 
     // ============================================================
-    // ====== صفحة الطالب ======
+    // ====== صفحة الطالب (بدون تكرار) ======
     // ============================================================
     async function renderStudentMenu(app) {
       renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
+      
+      // استخدام الحاوية الرئيسية فقط، مع إفراغها قبل الإضافة
+      // app تم إفراغها بالفعل في render()
+      
       const uDoc = await getDoc(doc(db, "users", state.user.uid));
       const studentData = uDoc.data() || {};
       const diag = studentData.diagnostic || {};
@@ -1607,8 +1625,10 @@
       const passed = ALL_LETTERS.filter(l => diag[l] === 'passed');
       const need = ALL_LETTERS.filter(l => diag[l] === 'need' || diag[l] === 'unclear');
 
+      // ===== ملخص المستوى (مرة واحدة) =====
       const summary = document.createElement('div');
       summary.className = 'card';
+      summary.id = 'studentSummary';
       summary.innerHTML = `
         <h3>📊 ملخص مستوى الطالب والنطق</h3>
         <div><strong>الحروف المتقنة:</strong> ${passed.length ? passed.join(' - ') : 'لا يوجد'}</div>
@@ -1616,9 +1636,10 @@
       `;
       app.appendChild(summary);
 
-      // ===== عرض الخطة الفردية (IEP) للقراءة فقط =====
+      // ===== الخطة الفردية (مرة واحدة) =====
       const iepCard = document.createElement('div');
       iepCard.className = 'card';
+      iepCard.id = 'studentIEP';
       iepCard.innerHTML = `<h3>📋 الخطة الفردية (IEP)</h3>`;
       
       try {
@@ -1656,13 +1677,14 @@
         console.error('خطأ في جلب الخطة:', e);
         iepCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الخطة الفردية.</p>`;
       }
-      
       app.appendChild(iepCard);
 
-      // ===== سجل الجلسات =====
+      // ===== سجل الجلسات (مرة واحدة) =====
       const sessionsCard = document.createElement('div');
       sessionsCard.className = 'card';
+      sessionsCard.id = 'studentSessions';
       sessionsCard.innerHTML = '<h3>📂 سجل جلسات التدريب الخاصة بك</h3>';
+      
       try {
         const qS = query(collection(db, "sessions"), where("studentId", "==", state.user.uid));
         const snap = await getDocs(qS);
@@ -1728,7 +1750,7 @@
           <div>
             <label style="font-weight:bold;display:block;margin-bottom:4px;">📚 نوع الجلسة:</label>
             <select id="sessType">
-              <option value="1">🔊 الحرف مجرداً</option>
+              <option value="1">🔊 الحرف مجرداً (فتحة)</option>
               <option value="2">📖 الحرف مع الحركات</option>
               <option value="3">📝 الحرف في كلمات</option>
               <option value="4">✍️ الحرف في جمل</option>
@@ -1841,7 +1863,7 @@
     }
 
     // ============================================================
-    // ====== عرض جلسة واحدة (مع التسجيل الصوتي) ======
+    // ====== عرض جلسة واحدة (مع النطق حسب نوع الجلسة) ======
     // ============================================================
     function renderSingleSession(app) {
       const sess = state.currentSession;
@@ -1923,14 +1945,23 @@
       `;
       app.appendChild(infoCard);
 
-      // ===== محتوى التدريب مع زر التسجيل الصوتي =====
+      // ===== محتوى التدريب مع النطق حسب نوع الجلسة =====
       const trainCard = document.createElement('div');
       trainCard.className = 'card';
       trainCard.style.borderRadius = '24px';
       let content = '';
       const st = sess.sessionType || 1;
       
-      // إضافة زر تسجيل للحرف الأساسي
+      // دالة مساعدة للنطق حسب نوع الجلسة
+      const speakWithVowel = (text, vowelType) => {
+        let finalText = text;
+        if (vowelType === 'fatha') finalText = text + 'َ';
+        else if (vowelType === 'damma') finalText = text + 'ُ';
+        else if (vowelType === 'kasra') finalText = text + 'ِ';
+        else if (vowelType === 'sukoon') finalText = text + 'ْ';
+        speakText(finalText);
+      };
+
       const recordSection = `
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;justify-content:center;">
           <button class="btn-record" id="sessionRecordBtn" data-letter="${letter}">🎤 سجل نطقك للحرف</button>
@@ -1939,15 +1970,18 @@
       `;
 
       if (st === 1) {
+        // الجلسة الأولى: الحرف مجرداً (بالفتحة)
+        const vowelText = letter + 'َ';
         content = `
           <div style="text-align:center;padding:20px;">
-            <div style="font-size:80px;font-weight:bold;color:var(--mint-deep);cursor:pointer;padding:20px;background:white;border-radius:30px;display:inline-block;" onclick="speakText('${letter}')">${letter}</div>
-            <p style="font-size:18px;font-weight:bold;margin-top:15px;">🔊 اضغط على الحرف للاستماع</p>
-            <button class="btn btn-primary" style="border-radius:50px;padding:12px 30px;font-size:16px;margin-top:10px;" onclick="speakText('${letter}')">🔊 استمع للحرف</button>
+            <div style="font-size:80px;font-weight:bold;color:var(--mint-deep);cursor:pointer;padding:20px;background:white;border-radius:30px;display:inline-block;" onclick="speakText('${vowelText}')">${vowelText}</div>
+            <p style="font-size:18px;font-weight:bold;margin-top:15px;">🔊 اضغط على الحرف للاستماع (بالفتحة)</p>
+            <button class="btn btn-primary" style="border-radius:50px;padding:12px 30px;font-size:16px;margin-top:10px;" onclick="speakText('${vowelText}')">🔊 استمع للحرف</button>
             ${recordSection}
           </div>
         `;
       } else if (st === 2) {
+        // الجلسة الثانية: الحرف مع الحركات
         const v = letterData.vowels;
         content = `
           <h3>📖 تدريب الحرف مع الحركات</h3>
@@ -1960,6 +1994,7 @@
           ${recordSection}
         `;
       } else if (st === 3) {
+        // الجلسة الثالثة: الحرف في كلمات
         const w = letterData.words;
         content = `
           <h3>📝 تدريب الحرف في كلمات</h3>
@@ -1972,6 +2007,7 @@
           ${recordSection}
         `;
       } else if (st === 4) {
+        // الجلسة الرابعة: الجمل
         const sents = letterData.sentences;
         content = `
           <h3>✍️ تدريب الحرف في جمل</h3>
@@ -1982,7 +2018,7 @@
       trainCard.innerHTML = content;
       app.appendChild(trainCard);
 
-      // ربط زر التسجيل الصوتي في الجلسة
+      // ربط زر التسجيل الصوتي
       const recordBtn = document.getElementById('sessionRecordBtn');
       const feedbackEl = document.getElementById('sessionFeedback');
       if (recordBtn) {
@@ -1994,18 +2030,15 @@
             }
             if (isMatch) {
               feedbackEl.innerHTML = `✅ صحيح! نطق (${letter}) بشكل صحيح. (النص: "${transcript}")`;
-              // تحديث التقييم تلقائياً إلى "passed" في الجلسة
               updateSessionEval('passed');
             } else {
               feedbackEl.innerHTML = `❌ غير صحيح. حاول مرة أخرى. (النص: "${transcript}")`;
-              // تحديث التقييم تلقائياً إلى "need"
               updateSessionEval('need');
             }
           });
         };
       }
 
-      // دالة تحديث التقييم للجلسة
       async function updateSessionEval(val) {
         try {
           await updateDoc(doc(db, "sessions", sess.id), { evaluation: val });
@@ -2167,15 +2200,13 @@
     }
 
     // ============================================================
-    // ====== الخطة الفردية IEP (مع قائمة الطلاب) ======
+    // ====== الخطة الفردية IEP ======
     // ============================================================
     async function renderIEPSession(app) {
-      // إذا كان هناك طالب محدد مسبقاً، اعرض خطته
       if (state.currentStudent) {
         return renderIEPSingle(app, state.currentStudent);
       }
 
-      // وإلا عرض قائمة بجميع الطلاب
       renderTopbar(app, '📋 الخطة الفردية (IEP)', 'اختر طالباً لعرض خطته', () => {
         state.view = 'teacher-dashboard';
         render();
@@ -2198,7 +2229,6 @@
       `;
       app.appendChild(card);
 
-      // ربط الأحداث
       card.querySelectorAll('.iep-student-item').forEach(el => {
         el.onclick = () => {
           const id = el.dataset.id;
@@ -2211,7 +2241,6 @@
       });
     }
 
-    // عرض الخطة لطالب محدد
     async function renderIEPSingle(app, student) {
       renderTopbar(app, `الخطة الفردية (IEP): ${student.fullName || student.email}`, 'تفاصيل الخطة وتصدير PDF', () => {
         state.currentStudent = null;
@@ -2466,38 +2495,4 @@
             ${alphabetData.map(item => `
               <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:white;border-radius:16px;border:4px solid #E0F2FE;cursor:pointer;" onclick="speakText('${item.letter}')">
                 <div style="width:80px;height:80px;background:linear-gradient(135deg,#4FB6A8,#357E74);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:50px;color:white;font-weight:bold;box-shadow:0 4px 10px rgba(79,182,168,0.4);margin-bottom:12px;">${item.letter}</div>
-                <span style="font-size:18px;font-weight:bold;color:#1E2A47;">${item.title}</span>
-              </div>
-            `).join('')}
-          </div>
-          <div style="text-align:center;margin-top:20px;">
-            <button class="btn btn-soft" onclick="state.view='home';render();">رجوع للرئيسية</button>
-          </div>
-        </div>
-      `;
-    }
-
-    // ============================================================
-    // ====== مراقبة المصادقة ======
-    // ============================================================
-    onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        state.user = u;
-        await fetchUserData(u.uid);
-      } else {
-        state.user = null;
-        state.role = null;
-        if (state.view !== 'auth' && state.view !== 'register' && state.view !== 'reset-password') {
-          state.view = 'home';
-          render();
-        }
-      }
-    });
-
-    // ============================================================
-    // ====== بدء التطبيق ======
-    // ============================================================
-    render();
-  </script>
-</body>
-</html>
+                <span style="font-size:18px;font-weight:bold;color:#
