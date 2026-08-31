@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    /* ====== المتغيرات والأساسيات ====== */
+    /* ====== جميع الأنماط السابقة (نفسها) ====== */
     :root {
       --ink: #1E2A47;
       --paper: #EFF5FB;
@@ -48,36 +48,16 @@
       gap: 10px;
       cursor: pointer;
     }
-    .brand img {
-      width: 44px;
-      height: 44px;
+    .brand .mark {
+      width: 40px; height: 40px;
       border-radius: 12px;
-      object-fit: cover;
-      box-shadow: 0 4px 10px rgba(79,182,168,0.3);
-    }
-    .brand .mark-fallback {
-      display: none;
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #4FB6A8, #357E74);
+      background: linear-gradient(135deg, var(--mint), var(--mint-deep));
+      display: flex;
       align-items: center;
       justify-content: center;
       font-size: 20px;
-      color: white;
-      font-weight: bold;
+      color: #fff;
       box-shadow: 0 4px 10px rgba(79,182,168,0.35);
-    }
-    @media (max-width: 480px) {
-      .brand img {
-        width: 36px;
-        height: 36px;
-      }
-      .brand .mark-fallback {
-        width: 36px;
-        height: 36px;
-        font-size: 16px;
-      }
     }
     .brand h1 { font-size: 20px; font-weight: 700; }
     .brand span { display: block; font-size: 11px; color: #6B7A99; margin-top: -2px; }
@@ -816,7 +796,7 @@
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
 
-    // ====== شريط الأعلى (مع الشعار الجديد) ======
+    // ====== شريط الأعلى ======
     function renderTopbar(appContainer, title, sub, onBack) {
       const bar = document.createElement('div');
       bar.className = 'topbar';
@@ -826,8 +806,7 @@
 
       bar.innerHTML = `
         <div class="brand" id="brandHome">
-          <img src="https://i.ibb.co/DdWZYHP/1.jpg" alt="شعار منارة النطق" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-          <div class="mark-fallback">ن</div>
+          <div class="mark">🎙️</div>
           <div><h1>${title || 'منارة النطق'} ${userStatus}</h1><span>${sub || 'المنصة التدريبية المباشرة'}</span></div>
         </div>
         <div class="nav-btns" id="navActions"></div>
@@ -913,10 +892,8 @@
     }
 
     // ============================================================
-    // ====== باقي الدوال (نفس الكود السابق) ======
-    // ============================================================
-
     // ====== الصفحة الرئيسية ======
+    // ============================================================
     function renderHome(app) {
       renderTopbar(app, 'منارة النطق', 'المنصة التدريبية المباشرة');
 
@@ -983,7 +960,9 @@
       app.appendChild(grid);
     }
 
+    // ============================================================
     // ====== صفحة عرض قائمة المفردات ======
+    // ============================================================
     function renderVocabList(app) {
       const category = state.currentVocabCategory || 'الفاكهة';
       const items = VOCAB_LISTS[category] || [];
@@ -1010,7 +989,9 @@
       app.appendChild(card);
     }
 
+    // ============================================================
     // ====== دوال المصادقة ======
+    // ============================================================
     function renderAuth(app) {
       renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
       const card = document.createElement('div');
@@ -1142,7 +1123,9 @@
       } catch(e) { showToast('خطأ في تحميل بيانات الطلاب'); }
     }
 
+    // ============================================================
     // ====== لوحة المعلم ======
+    // ============================================================
     function renderTeacherDashboard(app) {
       renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
@@ -1254,7 +1237,9 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
+    // ============================================================
     // ====== التشخيص الشامل ======
+    // ============================================================
     function renderComprehensiveDiagnosis(container) {
       container.innerHTML = '';
       const card = document.createElement('div');
@@ -1403,7 +1388,9 @@
       if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
     }
 
+    // ============================================================
     // ====== صفحة التشخيص ======
+    // ============================================================
     function renderDiagnosticSession(app) {
       renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف', () => {
         state.view = 'teacher-dashboard';
@@ -1555,7 +1542,9 @@
       });
     }
 
+    // ============================================================
     // ====== دالة توليد الخطة الفردية ======
+    // ============================================================
     function generateIEP(passed, trained, need, unclear, student) {
       const studentName = student?.fullName || student?.email || 'الطالب';
       
@@ -1607,7 +1596,9 @@
       };
     }
 
+    // ============================================================
     // ====== صفحة الطالب (بدون تكرار) ======
+    // ============================================================
     async function renderStudentMenu(app) {
       renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
 
@@ -1725,7 +1716,9 @@
       container.appendChild(sessionsCard);
     }
 
+    // ============================================================
     // ====== إدارة الجلسات ======
+    // ============================================================
     async function renderSpeechSessions(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً للوصول للسجل');
@@ -1863,7 +1856,9 @@
       app.appendChild(listCard);
     }
 
+    // ============================================================
     // ====== عرض جلسة واحدة ======
+    // ============================================================
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -2183,7 +2178,9 @@
       }
     }
 
+    // ============================================================
     // ====== الخطة الفردية IEP ======
+    // ============================================================
     async function renderIEPSession(app) {
       if (state.currentStudent) {
         return renderIEPSingle(app, state.currentStudent);
@@ -2355,7 +2352,9 @@
       formCard.querySelector('#btnPrint').onclick = () => window.print();
     }
 
+    // ============================================================
     // ====== جدول سجل الجلسات ======
+    // ============================================================
     async function renderSessionsLog(app) {
       renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات المسجلة للطلاب', () => {
         state.view = 'teacher-dashboard';
@@ -2464,7 +2463,9 @@
       }
     }
 
+    // ============================================================
     // ====== الحروف الأبجدية ======
+    // ============================================================
     function renderLetterDisplay(app) {
       app.innerHTML = `
         <div style="padding:16px;background:#F8FAFC;min-height:100vh;">
@@ -2484,7 +2485,9 @@
       `;
     }
 
+    // ============================================================
     // ====== مراقبة المصادقة ======
+    // ============================================================
     onAuthStateChanged(auth, async (u) => {
       if (u) {
         state.user = u;
