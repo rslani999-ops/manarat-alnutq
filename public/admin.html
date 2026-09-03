@@ -1,1 +1,981 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>منصة تدريبات النطق والكلام - لوحة المدرب</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- html2pdf -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+  <style>
+    :root {
+      --primary: #6D28D9;
+      --primary-light: #8B5CF6;
+      --primary-dark: #4C1D95;
+      --bg: #F5F3FF;
+      --card-bg: #ffffff;
+      --text: #1E1B4B;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --danger: #DC2626;
+      --success: #16A34A;
+      --warning: #F59E0B;
+      --info: #3B82F6;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    #app { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    .btn-soft { background: #EDE9FE; color: var(--primary-dark); }
+    .btn-soft:hover { background: #DDD6FE; }
+    .btn-danger { background: #FEE2E2; color: var(--danger); }
+    .btn-danger:hover { background: #FECACA; }
+    .btn-sm { padding: 6px 12px; font-size: 14px; }
+
+    .sessions-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .sessions-table th { background: var(--primary-light); color: white; padding: 10px; text-align: right; }
+    .sessions-table td, .sessions-table th { border: 1px solid var(--border); padding: 8px; }
+    .sessions-table tr:nth-child(even) { background: #F9FAFB; }
+
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; }
+    .badge-passed { background: #DCFCE7; color: var(--success); }
+    .badge-trained { background: #FEF9C3; color: #854D0E; }
+    .badge-need { background: #FEE2E2; color: var(--danger); }
+    .badge-unclear { background: #E5E7EB; color: #4B5563; }
+
+    .alphabet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .letter-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+    }
+    .letter-card:hover { background: var(--primary-light); color: white; transform: scale(1.05); }
+    .letter-char { font-size: 3rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+
+    .text-center { text-align: center; }
+    .muted { color: var(--muted); }
+    .mt-20 { margin-top: 20px; }
+    .flex { display: flex; gap: 10px; flex-wrap: wrap; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    label { font-weight: 600; }
+
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      #app { padding: 10px; }
+      .alphabet-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+      .letter-char { font-size: 2rem; }
+      .sessions-table { font-size: 14px; }
+      .btn { padding: 8px 16px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // ====== إعداد Firebase (استبدلها ببيانات مشروعك) ======
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7QcGg4QpXvYqJw8Dz6n5sKfLk3Hh5Y1U",
+      authDomain: "speech-therapy-app.firebaseapp.com",
+      projectId: "speech-therapy-app",
+      storageBucket: "speech-therapy-app.appspot.com",
+      messagingSenderId: "123456789012",
+      appId: "1:123456789012:web:abcdef123456"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // ====== بيانات التطبيق ======
+    const SESSION_TYPES = [
+      { id: 'articulation', name: 'نطق الأصوات', icon: '🗣️' },
+      { id: 'word_practice', name: 'تدريب كلمات', icon: '📝' },
+      { id: 'sentence_practice', name: 'تدريب جمل', icon: '💬' },
+      { id: 'fluency', name: 'طلاقة الكلام', icon: '🌊' },
+      { id: 'voice', name: 'تدريب صوتي', icon: '🎵' },
+      { id: 'comprehension', name: 'فهم وتعبير', icon: '🧠' }
+    ];
+
+    const alphabetData = [
+      { letter: 'أ', title: 'صوت الألف', desc: 'تدريب على نطق حرف الألف' },
+      { letter: 'ب', title: 'صوت الباء', desc: 'تدريب على نطق حرف الباء' },
+      { letter: 'ت', title: 'صوت التاء', desc: 'تدريب على نطق حرف التاء' },
+      { letter: 'ث', title: 'صوت الثاء', desc: 'تدريب على نطق حرف الثاء' },
+      { letter: 'ج', title: 'صوت الجيم', desc: 'تدريب على نطق حرف الجيم' },
+      { letter: 'ح', title: 'صوت الحاء', desc: 'تدريب على نطق حرف الحاء' },
+      { letter: 'خ', title: 'صوت الخاء', desc: 'تدريب على نطق حرف الخاء' },
+      { letter: 'د', title: 'صوت الدال', desc: 'تدريب على نطق حرف الدال' },
+      { letter: 'ذ', title: 'صوت الذال', desc: 'تدريب على نطق حرف الذال' },
+      { letter: 'ر', title: 'صوت الراء', desc: 'تدريب على نطق حرف الراء' },
+      { letter: 'ز', title: 'صوت الزاي', desc: 'تدريب على نطق حرف الزاي' },
+      { letter: 'س', title: 'صوت السين', desc: 'تدريب على نطق حرف السين' },
+      { letter: 'ش', title: 'صوت الشين', desc: 'تدريب على نطق حرف الشين' },
+      { letter: 'ص', title: 'صوت الصاد', desc: 'تدريب على نطق حرف الصاد' },
+      { letter: 'ض', title: 'صوت الضاد', desc: 'تدريب على نطق حرف الضاد' },
+      { letter: 'ط', title: 'صوت الطاء', desc: 'تدريب على نطق حرف الطاء' },
+      { letter: 'ظ', title: 'صوت الظاء', desc: 'تدريب على نطق حرف الظاء' },
+      { letter: 'ع', title: 'صوت العين', desc: 'تدريب على نطق حرف العين' },
+      { letter: 'غ', title: 'صوت الغين', desc: 'تدريب على نطق حرف الغين' },
+      { letter: 'ف', title: 'صوت الفاء', desc: 'تدريب على نطق حرف الفاء' },
+      { letter: 'ق', title: 'صوت القاف', desc: 'تدريب على نطق حرف القاف' },
+      { letter: 'ك', title: 'صوت الكاف', desc: 'تدريب على نطق حرف الكاف' },
+      { letter: 'ل', title: 'صوت اللام', desc: 'تدريب على نطق حرف اللام' },
+      { letter: 'م', title: 'صوت الميم', desc: 'تدريب على نطق حرف الميم' },
+      { letter: 'ن', title: 'صوت النون', desc: 'تدريب على نطق حرف النون' },
+      { letter: 'ه', title: 'صوت الهاء', desc: 'تدريب على نطق حرف الهاء' },
+      { letter: 'و', title: 'صوت الواو', desc: 'تدريب على نطق حرف الواو' },
+      { letter: 'ي', title: 'صوت الياء', desc: 'تدريب على نطق حرف الياء' }
+    ];
+
+    // ====== حالة التطبيق ======
+    let state = {
+      user: null,
+      role: null,
+      view: 'home',
+      students: [],
+      selectedStudent: null,
+      sessions: [],
+      trainers: [],
+      selectedTrainer: null,
+      exercises: [
+        { id: 'ex1', title: 'تمارين التنفس', desc: 'تمارين لتحسين التحكم في التنفس أثناء الكلام' },
+        { id: 'ex2', title: 'تمارين اللسان', desc: 'تقوية عضلات اللسان لتحسين النطق' },
+        { id: 'ex3', title: 'تمارين الشفاه', desc: 'تحسين حركة الشفاه لنطق الأصوات المختلفة' },
+        { id: 'ex4', title: 'تمارين الفك', desc: 'تحسين حركة الفك لوضوح الكلام' }
+      ]
+    };
+
+    // ====== دالة النطق ======
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ar-SA';
+        utterance.rate = 0.8;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert('عذراً، المتصفح لا يدعم النطق الصوتي');
+      }
+    }
+
+    // ====== العرض الرئيسي ======
+    function render() {
+      const app = document.getElementById('app');
+
+      if (state.view === 'auth') {
+        renderAuth(app);
+      } else if (state.view === 'register') {
+        renderRegister(app);
+      } else if (state.view === 'reset-password') {
+        renderResetPassword(app);
+      } else if (state.view === 'home') {
+        renderHome(app);
+      } else if (state.view === 'students') {
+        renderStudents(app);
+      } else if (state.view === 'add-student') {
+        renderAddStudent(app);
+      } else if (state.view === 'session') {
+        renderSession(app);
+      } else if (state.view === 'sessions-log') {
+        renderSessionsLog(app);
+      } else if (state.view === 'letters') {
+        renderLetterDisplay(app);
+      } else if (state.view === 'trainers') {
+        renderTrainers(app);
+      } else if (state.view === 'add-trainer') {
+        renderAddTrainer(app);
+      } else if (state.view === 'exercises') {
+        renderExercises(app);
+      } else if (state.view === 'reports') {
+        renderReports(app);
+      } else {
+        renderHome(app);
+      }
+    }
+
+    // ====== واجهة المصادقة ======
+    function renderAuth(app) {
+      app.innerHTML = `
+        <div class="card" style="max-width:400px;margin:50px auto;">
+          <h2 style="text-align:center;margin-bottom:20px;">تسجيل الدخول</h2>
+          <form id="loginForm">
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="loginEmail" required>
+            <label>كلمة المرور</label>
+            <input type="password" id="loginPassword" required>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:15px;">دخول</button>
+          </form>
+          <div class="flex-between mt-20">
+            <a href="#" onclick="state.view='register';render();">إنشاء حساب</a>
+            <a href="#" onclick="state.view='reset-password';render();">نسيت كلمة المرور؟</a>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('loginForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        try {
+          await auth.signInWithEmailAndPassword(email, password);
+        } catch (error) {
+          alert('خطأ في تسجيل الدخول: ' + error.message);
+        }
+      };
+    }
+
+    // ====== إنشاء حساب ======
+    function renderRegister(app) {
+      app.innerHTML = `
+        <div class="card" style="max-width:400px;margin:50px auto;">
+          <h2 style="text-align:center;margin-bottom:20px;">إنشاء حساب جديد</h2>
+          <form id="registerForm">
+            <label>الاسم الكامل</label>
+            <input type="text" id="regName" required>
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="regEmail" required>
+            <label>كلمة المرور</label>
+            <input type="password" id="regPassword" required minlength="6">
+            <label>نوع الحساب</label>
+            <select id="regRole" required>
+              <option value="parent">ولي أمر</option>
+              <option value="trainer">مدرب نطق</option>
+            </select>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:15px;">إنشاء الحساب</button>
+          </form>
+          <div class="text-center mt-20">
+            <a href="#" onclick="state.view='auth';render();">العودة لتسجيل الدخول</a>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('registerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('regName').value;
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        const role = document.getElementById('regRole').value;
+
+        try {
+          const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+          await db.collection('users').doc(userCredential.user.uid).set({
+            name,
+            email,
+            role,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert('تم إنشاء الحساب بنجاح!');
+        } catch (error) {
+          alert('خطأ في إنشاء الحساب: ' + error.message);
+        }
+      };
+    }
+
+    // ====== استعادة كلمة المرور ======
+    function renderResetPassword(app) {
+      app.innerHTML = `
+        <div class="card" style="max-width:400px;margin:50px auto;">
+          <h2 style="text-align:center;margin-bottom:20px;">استعادة كلمة المرور</h2>
+          <form id="resetForm">
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="resetEmail" required>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:15px;">إرسال رابط الاستعادة</button>
+          </form>
+          <div class="text-center mt-20">
+            <a href="#" onclick="state.view='auth';render();">العودة لتسجيل الدخول</a>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('resetForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('resetEmail').value;
+        try {
+          await auth.sendPasswordResetEmail(email);
+          alert('تم إرسال رابط الاستعادة إلى بريدك الإلكتروني');
+        } catch (error) {
+          alert('خطأ: ' + error.message);
+        }
+      };
+    }
+
+    // ====== الصفحة الرئيسية ======
+    function renderHome(app) {
+      const userName = state.userData?.name || 'مستخدم';
+      app.innerHTML = `
+        <div class="card">
+          <div class="flex-between">
+            <h1>مرحباً، ${userName} 👋</h1>
+            <button class="btn btn-danger btn-sm" onclick="logout()">تسجيل الخروج</button>
+          </div>
+          <p class="muted">منصة تدريبات النطق والكلام الشاملة</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;">
+          ${state.role === 'trainer' ? `
+            <div class="card" onclick="state.view='students';render();">
+              <h3>👥 المتدربين</h3>
+              <p>إدارة قائمة المتدربين ومتابعة تقدمهم</p>
+            </div>
+            <div class="card" onclick="state.view='session';render();">
+              <h3>📝 جلسة جديدة</h3>
+              <p>بدء جلسة تدريب نطق جديدة</p>
+            </div>
+            <div class="card" onclick="state.view='sessions-log';render();">
+              <h3>📊 سجل الجلسات</h3>
+              <p>عرض جميع الجلسات المسجلة</p>
+            </div>
+          ` : `
+            <div class="card" onclick="state.view='letters';render();">
+              <h3>🔤 تدريبات النطق</h3>
+              <p>تدريبات على نطق الأصوات والحروف</p>
+            </div>
+            <div class="card" onclick="state.view='exercises';render();">
+              <h3>💪 تمارين النطق</h3>
+              <p>تمارين لتقوية عضلات النطق</p>
+            </div>
+            <div class="card" onclick="state.view='reports';render();">
+              <h3>📈 تقارير التقدم</h3>
+              <p>متابعة تقدم المتدرب</p>
+            </div>
+          `}
+
+          <div class="card" onclick="state.view='trainers';render();">
+            <h3>👨‍🏫 المدربون</h3>
+            <p>قائمة المدربين المتخصصين</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // ====== إدارة المتدربين ======
+    function renderStudents(app) {
+      app.innerHTML = `
+        <div class="card">
+          <div class="flex-between">
+            <h2>المتدربون</h2>
+            <button class="btn btn-primary" onclick="state.view='add-student';render();">+ إضافة متدرب</button>
+          </div>
+        </div>
+        <div id="studentsList">
+          <div class="loader"></div>
+        </div>
+      `;
+
+      loadStudents();
+    }
+
+    async function loadStudents() {
+      try {
+        const snapshot = await db.collection('students')
+          .where('trainerId', '==', state.user.uid)
+          .get();
+
+        state.students = [];
+        snapshot.forEach(doc => {
+          state.students.push({ id: doc.id, ...doc.data() });
+        });
+
+        const container = document.getElementById('studentsList');
+        if (state.students.length === 0) {
+          container.innerHTML = `<p class="muted text-center mt-20">لا يوجد متدربون مسجلون بعد</p>`;
+        } else {
+          container.innerHTML = state.students.map(s => `
+            <div class="card" onclick="selectStudent('${s.id}')">
+              <div class="flex-between">
+                <div>
+                  <h3>${s.name}</h3>
+                  <p class="muted">العمر: ${s.age || 'غير محدد'} - المستوى: ${s.level || 'مبتدئ'}</p>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteStudent('${s.id}')">حذف</button>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        console.error(error);
+        document.getElementById('studentsList').innerHTML = `<p class="muted">خطأ في تحميل المتدربين</p>`;
+      }
+    }
+
+    function selectStudent(id) {
+      state.selectedStudent = state.students.find(s => s.id === id);
+      state.view = 'session';
+      render();
+    }
+
+    async function deleteStudent(id) {
+      if (confirm('هل أنت متأكد من حذف هذا المتدرب؟')) {
+        try {
+          await db.collection('students').doc(id).delete();
+          loadStudents();
+        } catch (error) {
+          alert('خطأ في الحذف: ' + error.message);
+        }
+      }
+    }
+
+    // ====== إضافة متدرب ======
+    function renderAddStudent(app) {
+      app.innerHTML = `
+        <div class="card" style="max-width:500px;margin:auto;">
+          <h2>إضافة متدرب جديد</h2>
+          <form id="addStudentForm">
+            <label>اسم المتدرب</label>
+            <input type="text" id="studentName" required>
+            <label>العمر</label>
+            <input type="number" id="studentAge" min="3" max="100">
+            <label>المستوى</label>
+            <select id="studentLevel">
+              <option value="مبتدئ">مبتدئ</option>
+              <option value="متوسط">متوسط</option>
+              <option value="متقدم">متقدم</option>
+            </select>
+            <label>ملاحظات</label>
+            <textarea id="studentNotes" rows="3"></textarea>
+            <div class="flex mt-20">
+              <button type="submit" class="btn btn-primary">حفظ</button>
+              <button type="button" class="btn btn-soft" onclick="state.view='students';render();">إلغاء</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.getElementById('addStudentForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = {
+          name: document.getElementById('studentName').value,
+          age: document.getElementById('studentAge').value || null,
+          level: document.getElementById('studentLevel').value,
+          notes: document.getElementById('studentNotes').value,
+          trainerId: state.user.uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        try {
+          await db.collection('students').add(data);
+          state.view = 'students';
+          render();
+        } catch (error) {
+          alert('خطأ في الإضافة: ' + error.message);
+        }
+      };
+    }
+
+    // ====== جلسة التدريب ======
+    function renderSession(app) {
+      if (!state.selectedStudent && state.students.length > 0) {
+        state.selectedStudent = state.students[0];
+      }
+
+      app.innerHTML = `
+        <div class="card">
+          <h2>جلسة تدريب نطق جديدة</h2>
+          <form id="sessionForm">
+            <label>المتدرب</label>
+            <select id="sessionStudent" required>
+              <option value="">اختر متدرب</option>
+              ${state.students.map(s => `<option value="${s.id}" ${s.id === state.selectedStudent?.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+            </select>
+
+            <label>نوع التدريب</label>
+            <select id="sessionType" required>
+              ${SESSION_TYPES.map(t => `<option value="${t.id}">${t.icon} ${t.name}</option>`).join('')}
+            </select>
+
+            <label>الصوت/الحرف المستهدف</label>
+            <select id="sessionLetter">
+              <option value="">اختر صوت</option>
+              ${alphabetData.map(a => `<option value="${a.letter}">${a.letter} - ${a.title}</option>`).join('')}
+            </select>
+
+            <label>التاريخ</label>
+            <input type="date" id="sessionDate" required>
+
+            <label>ملاحظات الجلسة</label>
+            <textarea id="sessionNotes" rows="3" placeholder="ملاحظات حول أداء المتدرب..."></textarea>
+
+            <label>التقييم النهائي</label>
+            <select id="sessionEvaluation">
+              <option value="">غير مقيم بعد</option>
+              <option value="passed">✅ اجتاز</option>
+              <option value="trained">🔄 اجتاز بعد تدريب</option>
+              <option value="need">⚠️ يحتاج تدريب إضافي</option>
+              <option value="unclear">❌ غير واضح</option>
+            </select>
+
+            <label>التوصيات</label>
+            <textarea id="sessionRecommendations" rows="3" placeholder="توصيات للجلسة القادمة..."></textarea>
+
+            <div class="flex mt-20">
+              <button type="submit" class="btn btn-primary">حفظ الجلسة</button>
+              <button type="button" class="btn btn-soft" onclick="state.view='home';render();">إلغاء</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+
+      document.getElementById('sessionForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = {
+          studentId: document.getElementById('sessionStudent').value,
+          sessionType: document.getElementById('sessionType').value,
+          letter: document.getElementById('sessionLetter').value,
+          date: document.getElementById('sessionDate').value,
+          notes: document.getElementById('sessionNotes').value,
+          evaluation: document.getElementById('sessionEvaluation').value,
+          recommendations: document.getElementById('sessionRecommendations').value,
+          trainerId: state.user.uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        try {
+          await db.collection('sessions').add(data);
+          alert('تم حفظ الجلسة بنجاح');
+          state.view = 'sessions-log';
+          render();
+        } catch (error) {
+          alert('خطأ في حفظ الجلسة: ' + error.message);
+        }
+      };
+    }
+
+    // ====== سجل الجلسات ======
+    function renderSessionsLog(app) {
+      app.innerHTML = `
+        <div class="card" id="sessionsLogCard">
+          <div class="flex-between">
+            <h2>سجل جلسات التدريب</h2>
+            <div class="flex">
+              <button class="btn btn-soft btn-sm" id="printLogBtn">🖨️ طباعة</button>
+              <button class="btn btn-soft btn-sm" id="pdfLogBtn">📄 تصدير PDF</button>
+            </div>
+          </div>
+          <div id="logTableContainer">
+            <div class="loader"></div>
+          </div>
+        </div>
+        <button class="btn btn-soft" onclick="state.view='home';render();">رجوع</button>
+      `;
+
+      loadSessionsLog();
+    }
+
+    async function loadSessionsLog() {
+      try {
+        const snapshot = await db.collection('sessions')
+          .where('trainerId', '==', state.user.uid)
+          .get();
+
+        const sessions = [];
+        for (const doc of snapshot.docs) {
+          const sessionData = doc.data();
+          if (sessionData.studentId) {
+            try {
+              const studentDoc = await db.collection('students').doc(sessionData.studentId).get();
+              sessionData.studentName = studentDoc.data()?.name || 'محذوف';
+            } catch {
+              sessionData.studentName = 'غير معروف';
+            }
+          }
+          sessions.push({ id: doc.id, ...sessionData });
+        }
+
+        sessions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+        const container = document.getElementById('logTableContainer');
+        if (sessions.length === 0) {
+          container.innerHTML = `<p class="muted text-center mt-20">لا توجد جلسات مسجلة بعد</p>`;
+        } else {
+          const table = document.createElement('table');
+          table.className = 'sessions-table';
+          const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+
+          let html = `<thead><tr>
+            <th>#</th><th>اليوم</th><th>التاريخ</th><th>المتدرب</th><th>الصوت</th><th>نوع التدريب</th><th>التقييم</th><th>التوصيات</th>
+          </tr></thead><tbody>`;
+
+          sessions.forEach((s, index) => {
+            const dateObj = new Date(s.date + 'T00:00:00');
+            const dayName = days[dateObj.getDay()] || '';
+            const typeInfo = SESSION_TYPES.find(t => t.id === s.sessionType) || SESSION_TYPES[0];
+
+            let evalText = s.evaluation || 'غير مقيم';
+            let evalClass = 'badge-need';
+            if (s.evaluation === 'passed') { evalText = '✅ اجتاز'; evalClass = 'badge-passed'; }
+            else if (s.evaluation === 'trained') { evalText = '🔄 اجتاز بعد تدريب'; evalClass = 'badge-trained'; }
+            else if (s.evaluation === 'need') { evalText = '⚠️ يحتاج تدريب'; evalClass = 'badge-need'; }
+            else if (s.evaluation === 'unclear') { evalText = '❌ غير واضح'; evalClass = 'badge-unclear'; }
+
+            html += `<tr>
+              <td>${index + 1}</td>
+              <td>${dayName}</td>
+              <td>${s.date}</td>
+              <td><strong>${s.studentName}</strong></td>
+              <td>${s.letter || '-'}</td>
+              <td>${typeInfo.icon} ${typeInfo.name}</td>
+              <td><span class="badge ${evalClass}">${evalText}</span></td>
+              <td>${s.recommendations || '-'}</td>
+            </tr>`;
+          });
+
+          html += '</tbody>';
+          table.innerHTML = html;
+          container.innerHTML = '';
+          container.appendChild(table);
+        }
+
+        document.getElementById('printLogBtn').onclick = () => window.print();
+        document.getElementById('pdfLogBtn').onclick = () => {
+          const element = document.getElementById('sessionsLogCard');
+          const opt = {
+            margin: 10,
+            filename: 'سجل_جلسات_النطق.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          };
+          html2pdf().set(opt).from(element).save();
+        };
+
+      } catch (error) {
+        console.error(error);
+        document.getElementById('logTableContainer').innerHTML = `<p class="muted">خطأ في تحميل الجلسات: ${error.message}</p>`;
+      }
+    }
+
+    // ====== تدريبات النطق ======
+    function renderLetterDisplay(app) {
+      app.innerHTML = `
+        <div class="card">
+          <h1 style="text-align:center;margin-bottom:20px;">تدريبات نطق الأصوات</h1>
+          <p class="text-center muted">اضغط على أي حرف لسماع نطقه الصحيح</p>
+
+          <div class="alphabet-grid">
+            ${alphabetData.map(item => `
+              <div class="letter-card" onclick="speakText('${item.letter}')">
+                <div class="letter-char">${item.letter}</div>
+                <div><strong>${item.title}</strong></div>
+                <div style="font-size:12px;margin-top:5px;">${item.desc}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="text-center mt-20">
+            <button class="btn btn-soft" onclick="state.view='home';render();">رجوع للرئيسية</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ====== المدربون ======
+    function renderTrainers(app) {
+      app.innerHTML = `
+        <div class="card">
+          <div class="flex-between">
+            <h2>المدربون المتخصصون</h2>
+            ${state.role === 'trainer' ? `<button class="btn btn-primary" onclick="state.view='add-trainer';render();">+ إضافة مدرب</button>` : ''}
+          </div>
+          <div id="trainersList">
+            <div class="loader"></div>
+          </div>
+        </div>
+      `;
+
+      loadTrainers();
+    }
+
+    async function loadTrainers() {
+      try {
+        const snapshot = await db.collection('users')
+          .where('role', '==', 'trainer')
+          .get();
+
+        state.trainers = [];
+        snapshot.forEach(doc => {
+          state.trainers.push({ id: doc.id, ...doc.data() });
+        });
+
+        const container = document.getElementById('trainersList');
+        if (state.trainers.length === 0) {
+          container.innerHTML = `<p class="muted text-center mt-20">لا يوجد مدربون مسجلون</p>`;
+        } else {
+          container.innerHTML = state.trainers.map(t => `
+            <div class="card">
+              <h3>👨‍🏫 ${t.name || 'مدرب'}</h3>
+              <p class="muted">${t.email}</p>
+              <p>التخصص: ${t.specialization || 'نطق وكلام'}</p>
+              <p>الخبرة: ${t.experience || 'غير محدد'} سنوات</p>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        console.error(error);
+        document.getElementById('trainersList').innerHTML = `<p class="muted">خطأ في تحميل المدربين</p>`;
+      }
+    }
+
+    function renderAddTrainer(app) {
+      app.innerHTML = `
+        <div class="card" style="max-width:500px;margin:auto;">
+          <h2>إضافة مدرب جديد</h2>
+          <form id="addTrainerForm">
+            <label>اسم المدرب</label>
+            <input type="text" id="trainerName" required>
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="trainerEmail" required>
+            <label>التخصص</label>
+            <select id="trainerSpecialization">
+              <option value="نطق وكلام">نطق وكلام</option>
+              <option value="تخاطب">تخاطب</option>
+              <option value="صعوبات تعلم">صعوبات تعلم</option>
+              <option value="لغة عربية">لغة عربية</option>
+            </select>
+            <label>سنوات الخبرة</label>
+            <input type="number" id="trainerExperience" min="0">
+            <label>نبذة مختصرة</label>
+            <textarea id="trainerBio" rows="3"></textarea>
+            <div class="flex mt-20">
+              <button type="submit" class="btn btn-primary">حفظ</button>
+              <button type="button" class="btn btn-soft" onclick="state.view='trainers';render();">إلغاء</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.getElementById('addTrainerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = {
+          name: document.getElementById('trainerName').value,
+          email: document.getElementById('trainerEmail').value,
+          specialization: document.getElementById('trainerSpecialization').value,
+          experience: document.getElementById('trainerExperience').value,
+          bio: document.getElementById('trainerBio').value,
+          role: 'trainer',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        try {
+          await db.collection('users').add(data);
+          alert('تم إضافة المدرب بنجاح');
+          state.view = 'trainers';
+          render();
+        } catch (error) {
+          alert('خطأ في الإضافة: ' + error.message);
+        }
+      };
+    }
+
+    // ====== التمارين ======
+    function renderExercises(app) {
+      app.innerHTML = `
+        <div class="card">
+          <h1 style="text-align:center;margin-bottom:20px;">تمارين النطق والكلام</h1>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
+            ${state.exercises.map(ex => `
+              <div class="card">
+                <h3>${ex.title}</h3>
+                <p>${ex.desc}</p>
+                <button class="btn btn-soft btn-sm" onclick="speakText('${ex.desc}')">🔊 استمع للتعليمات</button>
+              </div>
+            `).join('')}
+          </div>
+          <div class="text-center mt-20">
+            <button class="btn btn-soft" onclick="state.view='home';render();">رجوع</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ====== التقارير ======
+    function renderReports(app) {
+      app.innerHTML = `
+        <div class="card">
+          <h2>تقارير التقدم</h2>
+          <p class="muted">هنا يمكنك متابعة تقدم المتدربين عبر الوقت</p>
+          <div id="reportsContent">
+            <div class="loader"></div>
+          </div>
+        </div>
+      `;
+
+      loadReports();
+    }
+
+    async function loadReports() {
+      try {
+        const snapshot = await db.collection('sessions')
+          .where('trainerId', '==', state.user.uid)
+          .orderBy('date', 'asc')
+          .get();
+
+        const reports = {};
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (!reports[data.studentId]) {
+            reports[data.studentId] = {
+              name: 'متدرب',
+              total: 0,
+              passed: 0,
+              need: 0
+            };
+          }
+          reports[data.studentId].total++;
+          if (data.evaluation === 'passed') reports[data.studentId].passed++;
+          if (data.evaluation === 'need') reports[data.studentId].need++;
+        });
+
+        for (const studentId in reports) {
+          try {
+            const studentDoc = await db.collection('students').doc(studentId).get();
+            reports[studentId].name = studentDoc.data()?.name || 'متدرب';
+          } catch {}
+        }
+
+        const container = document.getElementById('reportsContent');
+        if (Object.keys(reports).length === 0) {
+          container.innerHTML = `<p class="muted text-center">لا توجد بيانات لعرضها</p>`;
+        } else {
+          container.innerHTML = Object.values(reports).map(r => `
+            <div class="card">
+              <h3>${r.name}</h3>
+              <p>إجمالي الجلسات: ${r.total}</p>
+              <p>✅ اجتاز: ${r.passed}</p>
+              <p>⚠️ يحتاج تدريب: ${r.need}</p>
+              <div style="background:#E5E7EB;border-radius:10px;height:20px;margin-top:10px;">
+                <div style="background:var(--success);width:${(r.passed/r.total)*100}%;height:100%;border-radius:10px;"></div>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        console.error(error);
+        document.getElementById('reportsContent').innerHTML = `<p class="muted">خطأ في تحميل التقارير</p>`;
+      }
+    }
+
+    // ====== جلب بيانات المستخدم ======
+    async function fetchUserData(uid) {
+      try {
+        const doc = await db.collection('users').doc(uid).get();
+        if (doc.exists) {
+          state.userData = doc.data();
+          state.role = doc.data().role || 'parent';
+        } else {
+          state.role = 'parent';
+        }
+
+        if (state.role === 'trainer') {
+          await loadStudents();
+        }
+
+        render();
+      } catch (error) {
+        console.error(error);
+        render();
+      }
+    }
+
+    // ====== تسجيل الخروج ======
+    function logout() {
+      auth.signOut();
+      state.user = null;
+      state.role = null;
+      state.userData = null;
+      state.students = [];
+      state.view = 'auth';
+      render();
+    }
+
+    // ====== مراقبة المصادقة ======
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        state.user = user;
+        await fetchUserData(user.uid);
+      } else {
+        state.user = null;
+        state.role = null;
+        state.userData = null;
+        state.students = [];
+        state.view = 'auth';
+        render();
+      }
+    });
+
+    // ====== بدء التطبيق ======
+    if (!auth.currentUser) {
+      state.view = 'auth';
+    }
+    render();
+  </script>
+</body>
+</html>
