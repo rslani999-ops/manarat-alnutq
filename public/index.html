@@ -662,6 +662,37 @@
       { id: 4, name: 'الحرف في جمل', icon: '✍️' }
     ];
 
+    // ====== خيارات الأدوات ======
+    const TOOLS_OPTIONS = [
+      'بطاقات تعليمية',
+      'مرآة',
+      'ألعاب تفاعلية',
+      'تطبيق إلكتروني',
+      'أقلام وأوراق',
+      'صور ومجسمات',
+      'لوحة الكتابة',
+      'أخرى'
+    ];
+
+    // ====== خيارات مخرج الحرف ======
+    const PLACE_OPTIONS = [
+      'شفوي (ب، م، و، ف)',
+      'أسناني لثوي (ت، ث، د، ذ، ر، ز، س، ش، ص، ض، ط، ظ، ل، ن)',
+      'لهوي (ج، ك، ق، ي)',
+      'حلقي (أ، هـ، ع، ح، خ، غ)'
+    ];
+
+    // ====== خيارات الطريقة ======
+    const METHOD_OPTIONS = [
+      'التكرار والمحاكاة',
+      'التدريب بالمرآة',
+      'الأنشطة الحركية',
+      'الاستماع والتكرار',
+      'التمييز السمعي',
+      'الألعاب التعليمية',
+      'القصص والصور'
+    ];
+
     const LETTER_DATABASE = {
       'ر': {
         place: 'طرف اللسان مع اللثة العليا',
@@ -1694,7 +1725,7 @@
     }
 
     // ============================================================
-    // ====== إدارة الجلسات (مع تصفية الحروف واقتراح النوع التالي) ======
+    // ====== إدارة الجلسات (مع إضافة الأدوات، مخرج الحرف، الطريقة) ======
     // ============================================================
     async function renderSpeechSessions(app) {
       if (!state.currentStudent) {
@@ -1741,7 +1772,7 @@
       const defaultLetter = needLetters.length > 0 ? needLetters[0] : ALL_LETTERS[0];
       const defaultSessionType = defaultLetter ? getSuggestedSessionType(defaultLetter) : 1;
 
-      // ===== واجهة إضافة الجلسة =====
+      // ===== واجهة إضافة الجلسة (مع الحقول الجديدة) =====
       const addCard = document.createElement('div');
       addCard.className = 'card';
       addCard.style.borderRadius = '20px';
@@ -1777,9 +1808,27 @@
             <label style="font-weight:bold;display:block;margin-bottom:4px;">⏱️ المدة:</label>
             <input type="text" id="sessDuration" value="30 دقيقة">
           </div>
+          <div>
+            <label style="font-weight:bold;display:block;margin-bottom:4px;">🛠️ الأدوات المستخدمة:</label>
+            <select id="sessTools">
+              ${TOOLS_OPTIONS.map(t => `<option value="${t}">${t}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-weight:bold;display:block;margin-bottom:4px;">📍 مخرج الحرف:</label>
+            <select id="sessPlace">
+              ${PLACE_OPTIONS.map(p => `<option value="${p}">${p}</option>`).join('')}
+            </select>
+          </div>
           <div style="grid-column:1/-1;">
             <label style="font-weight:bold;display:block;margin-bottom:4px;">🎯 الهدف التعليمي:</label>
             <input type="text" id="sessGoal" placeholder="مثال: نطق الحرف بالفتحة">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-weight:bold;display:block;margin-bottom:4px;">📋 الطريقة المتبعة:</label>
+            <select id="sessMethod">
+              ${METHOD_OPTIONS.map(m => `<option value="${m}">${m}</option>`).join('')}
+            </select>
           </div>
         </div>
         <button class="btn btn-primary" id="createSessBtn" style="border-radius:50px;padding:10px 30px;margin-top:12px;">🚀 إنشاء الجلسة</button>
@@ -1806,6 +1855,9 @@
         const date = document.getElementById('sessDate').value;
         const duration = document.getElementById('sessDuration').value.trim() || '30 دقيقة';
         const goal = document.getElementById('sessGoal').value.trim() || getDefaultGoal(letter, sessionType);
+        const tools = document.getElementById('sessTools').value;
+        const place = document.getElementById('sessPlace').value;
+        const method = document.getElementById('sessMethod').value;
 
         if (!letter || !date) {
           showToast('يرجى اختيار حرف وتاريخ الجلسة');
@@ -1826,8 +1878,9 @@
             date,
             duration,
             goal,
-            tools: '',
-            method: '',
+            tools,
+            place,
+            method,
             evaluation: 'none',
             successRate: 0,
             notes: '',
@@ -1880,7 +1933,8 @@
                 <div>
                   <span class="badge badge-assigned">${typeInfo.icon} ${typeInfo.name}</span>
                   <strong>#${sess.sessionNumber || '?'}</strong> - ${sess.date}
-                  <div style="font-size:12px;color:#6B7A99;">${sess.goal}</div>
+                  <div style="font-size:12px;color:#6B7A99;">🎯 ${sess.goal}</div>
+                  <div style="font-size:11px;color:#6B7A99;">🛠️ ${sess.tools || 'غير محدد'} | 📍 ${sess.place || 'غير محدد'} | 📋 ${sess.method || 'غير محددة'}</div>
                   <div>التقييم: ${sess.evaluation || 'غير مقيم'} ${sess.successRate ? `| نسبة النجاح: ${sess.successRate}%` : ''}</div>
                 </div>
                 <button class="btn btn-soft btn-sm" id="viewSess_${sess.id}">📖 فتح الجلسة</button>
@@ -1903,7 +1957,7 @@
     }
 
     // ============================================================
-    // ====== عرض جلسة واحدة ======
+    // ====== عرض جلسة واحدة (مع عرض الأدوات، المخرج، الطريقة) ======
     // ============================================================
     function renderSingleSession(app) {
       const sess = state.currentSession;
@@ -1946,7 +2000,7 @@
         </div>
         <div><strong>🎯 الهدف:</strong> ${sess.goal}</div>
         <div><strong>🛠️ الأدوات:</strong> ${sess.tools || 'غير محدد'}</div>
-        <div><strong>📍 مخرج الحرف:</strong> ${letterData.place}</div>
+        <div><strong>📍 مخرج الحرف:</strong> ${sess.place || 'غير محدد'}</div>
         <div><strong>📋 الطريقة:</strong> ${sess.method || 'غير محددة'}</div>
 
         <div style="margin-top:12px;">
@@ -1985,7 +2039,7 @@
       `;
       app.appendChild(infoCard);
 
-      // محتوى التدريب
+      // محتوى التدريب (نفسه مع زر التسجيل)
       const trainCard = document.createElement('div');
       trainCard.className = 'card';
       trainCard.style.borderRadius = '24px';
@@ -2043,7 +2097,7 @@
       trainCard.innerHTML = content;
       app.appendChild(trainCard);
 
-      // ربط زر التسجيل الصوتي
+      // ربط زر التسجيل الصوتي (نفس الكود السابق)
       const recordBtn = document.getElementById('sessionRecordBtn');
       const feedbackEl = document.getElementById('sessionFeedback');
       if (recordBtn) {
@@ -2082,7 +2136,7 @@
         }
       }
 
-      // ربط بقية الأحداث
+      // ربط بقية الأحداث (نفس الكود السابق)
       if (state.role === 'teacher' || state.role === 'admin') {
         document.querySelectorAll('.btn-eval').forEach(btn => {
           btn.onclick = async () => {
@@ -2170,8 +2224,9 @@
                 date: today,
                 duration: '30 دقيقة',
                 goal: newGoal,
-                tools: '',
-                method: '',
+                tools: sess.tools || '',
+                place: sess.place || '',
+                method: sess.method || '',
                 evaluation: 'none',
                 successRate: 0,
                 notes: '',
@@ -2225,10 +2280,10 @@
     }
 
     // ============================================================
-    // ====== الخطة الفردية IEP (مع إصلاح التراكم) ======
+    // ====== الخطة الفردية IEP ======
     // ============================================================
+    // (نفس الكود السابق مع إصلاح التراكم)
     async function renderIEPSession(app) {
-      // إزالة أي خطة سابقة معروضة
       const oldIEPContent = document.getElementById('iepContent');
       if (oldIEPContent) oldIEPContent.remove();
 
@@ -2277,11 +2332,9 @@
         render();
       });
 
-      // إزالة المحتوى القديم للخطة
       const oldContent = document.getElementById('iepContent');
       if (oldContent) oldContent.remove();
 
-      // إنشاء حاوية جديدة للخطة
       const contentContainer = document.createElement('div');
       contentContainer.id = 'iepContent';
       app.appendChild(contentContainer);
