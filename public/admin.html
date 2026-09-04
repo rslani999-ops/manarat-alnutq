@@ -2373,10 +2373,6 @@ async function renderSpeechSessions(app) {
 
 
 
-
-    
-    
-
     // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
@@ -2536,6 +2532,8 @@ async function renderSpeechSessions(app) {
               await addDoc(collection(db, "sessions"), {
                 studentId: sess.studentId,
                 teacherId: state.user.uid,
+                studentName: sess.studentName || 'غير محدد',
+                studentEmail: sess.studentEmail || '',
                 letter: sess.letter,
                 sessionType: nextType,
                 sessionNumber,
@@ -2787,7 +2785,7 @@ async function renderSpeechSessions(app) {
             </thead>
             <tbody>
               ${allSessions.map(sess => {
-                const studentName = sess.studentName || sess.studentId || 'غير محدد';
+                const studentName = sess.studentName || 'غير محدد';
                 const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
                 const evalMap = { 'passed': '✅ اجتاز', 'trained': '🔄 تدريب', 'need': '⚠️ يحتاج تدريب', 'unclear': '❌ غير واضح', 'none': '⏳ قيد التقييم' };
                 const evalText = evalMap[sess.evaluation] || 'غير مقيم';
@@ -2990,4 +2988,3 @@ async function renderSpeechSessions(app) {
   </script>
 </body>
 </html>
-   
