@@ -2377,7 +2377,6 @@ async function renderSpeechSessions(app) {
     
     
 
-
     // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
@@ -2459,7 +2458,6 @@ async function renderSpeechSessions(app) {
       `;
       app.appendChild(infoCard);
 
-      // ربط أزرار التقييم (للمعلم)
       if (state.role === 'teacher' || state.role === 'admin') {
         let selectedEval = currentEval;
         let selectedRate = sess.successRate || 0;
@@ -2579,7 +2577,6 @@ async function renderSpeechSessions(app) {
         };
       }
 
-      // ===== محتوى التدريب حسب نوع الجلسة =====
       const trainCard = document.createElement('div');
       trainCard.className = 'card';
       trainCard.style.borderRadius = '24px';
@@ -2697,13 +2694,12 @@ async function renderSpeechSessions(app) {
       trainCard.innerHTML = content;
       app.appendChild(trainCard);
 
-      // ربط زر التسجيل الخاص بالجلسة
       const sessionRecordBtn = trainCard.querySelector('#sessionRecordBtn');
       if (sessionRecordBtn) {
         sessionRecordBtn.onclick = function() {
           const l = this.dataset.letter;
           const feedbackEl = trainCard.querySelector('#sessionFeedback');
-          startRecording(l, (transcript, analysis) => {
+          startRecording(l, (transcript, analysis, audioUrl) => {
             if (transcript === null || analysis === null) {
               if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التعرف على الصوت. حاول مرة أخرى.';
               return;
@@ -2720,7 +2716,7 @@ async function renderSpeechSessions(app) {
       }
     }
 
-    // ====== سجل الجلسات (جدول) ======
+    // ====== سجل الجلسات (جدول) مع إمكانية حذف الجلسات غير المعروفة ======
     async function renderSessionsLog(app) {
       renderTopbar(app, '📊 جدول سجل الجلسات', 'عرض جميع الجلسات المسجلة', () => {
         state.view = 'teacher-dashboard';
@@ -2729,12 +2725,40 @@ async function renderSpeechSessions(app) {
 
       const card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = '<h3>📋 جميع الجلسات</h3>';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <h3 style="margin:0;">📋 جميع الجلسات</h3>
+          <button class="btn btn-danger btn-sm" id="cleanUnknownSessionsBtn" style="border-radius:50px;padding:6px 16px;">🧹 مسح الجلسات غير المعروفة</button>
+        </div>
+      `;
       app.appendChild(card);
 
       const tableContainer = document.createElement('div');
       tableContainer.className = 'table-container';
       card.appendChild(tableContainer);
+
+      const cleanBtn = card.querySelector('#cleanUnknownSessionsBtn');
+      if (cleanBtn) {
+        cleanBtn.onclick = async () => {
+          if (!confirm('سيتم حذف جميع الجلسات التي لا تنتمي لطلابك الحاليين. هل أنت متأكد؟')) return;
+          try {
+            const allSessionsSnap = await getDocs(collection(db, "sessions"));
+            const myStudentIds = new Set(state.myStudents.map(s => s.id));
+            let deletedCount = 0;
+            for (const d of allSessionsSnap.docs) {
+              const data = d.data();
+              if (!myStudentIds.has(data.studentId)) {
+                await deleteDoc(doc(db, "sessions", d.id));
+                deletedCount++;
+              }
+            }
+            showToast(`تم حذف ${deletedCount} جلسة غير معروفة`);
+            renderSessionsLog(app);
+          } catch(e) {
+            showToast('خطأ في مسح الجلسات: ' + e.message);
+          }
+        };
+      }
 
       try {
         const allSessions = [];
@@ -2758,6 +2782,7 @@ async function renderSpeechSessions(app) {
                 <th>التاريخ</th>
                 <th>التقييم</th>
                 <th>النسبة</th>
+                <th>حذف</th>
               </tr>
             </thead>
             <tbody>
@@ -2775,12 +2800,28 @@ async function renderSpeechSessions(app) {
                     <td>${sess.date}</td>
                     <td>${evalText}</td>
                     <td>${sess.successRate || 0}%</td>
+                    <td><button class="btn btn-danger btn-sm delete-session-btn" data-id="${sess.id}">🗑️</button></td>
                   </tr>
                 `;
               }).join('')}
             </tbody>
           `;
           tableContainer.appendChild(table);
+
+          const deleteButtons = tableContainer.querySelectorAll('.delete-session-btn');
+          deleteButtons.forEach(btn => {
+            btn.onclick = async () => {
+              if (confirm('حذف هذه الجلسة؟')) {
+                try {
+                  await deleteDoc(doc(db, "sessions", btn.dataset.id));
+                  showToast('تم حذف الجلسة');
+                  renderSessionsLog(app);
+                } catch(e) {
+                  showToast('خطأ في حذف الجلسة: ' + e.message);
+                }
+              }
+            };
+          });
         }
       } catch(e) {
         tableContainer.innerHTML = `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
@@ -2949,5 +2990,4 @@ async function renderSpeechSessions(app) {
   </script>
 </body>
 </html>
-
-
+   
