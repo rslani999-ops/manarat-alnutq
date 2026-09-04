@@ -2373,6 +2373,8 @@ async function renderSpeechSessions(app) {
 
 
 
+    
+
     // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
@@ -2758,6 +2760,13 @@ async function renderSpeechSessions(app) {
         };
       }
 
+      // دالة مساعدة لجلب اسم الطالب من القوائم المتاحة
+      function getStudentNameById(studentId) {
+        const allStudents = [...state.myStudents, ...state.freeStudents];
+        const found = allStudents.find(s => s.id === studentId);
+        return found ? (found.fullName || found.email || 'غير محدد') : null;
+      }
+
       try {
         const allSessions = [];
         const qS = collection(db, "sessions");
@@ -2785,7 +2794,10 @@ async function renderSpeechSessions(app) {
             </thead>
             <tbody>
               ${allSessions.map(sess => {
-                const studentName = sess.studentName || 'غير محدد';
+                let studentName = sess.studentName;
+                if (!studentName) {
+                  studentName = getStudentNameById(sess.studentId) || 'غير محدد';
+                }
                 const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
                 const evalMap = { 'passed': '✅ اجتاز', 'trained': '🔄 تدريب', 'need': '⚠️ يحتاج تدريب', 'unclear': '❌ غير واضح', 'none': '⏳ قيد التقييم' };
                 const evalText = evalMap[sess.evaluation] || 'غير مقيم';
