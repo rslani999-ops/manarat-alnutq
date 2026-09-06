@@ -696,6 +696,7 @@
   </footer>
 
   <script type="module">
+    // ====== استيرادات Firebase ======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
     import {
       getAuth,
@@ -716,7 +717,6 @@
       getDocs,
       query,
       where,
-      orderBy,
       deleteDoc
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
@@ -735,7 +735,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ====== بيانات أساسية ======
+    // ====== البيانات الأساسية ======
     const LETTER_GROUPS = [
       { name: 'حروف شفوية', letters: ['ب','م','و','ف'] },
       { name: 'حروف أسنانية لثوية', letters: ['ت','ث','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ل','ن'] },
@@ -915,7 +915,7 @@
     // ====== دالة النطق الصوتي ======
     function speakText(text) {
       if (!('speechSynthesis' in window)) {
-        showToast('❌ المتصفح لا يدعم خاصية النطق الصوتي.');
+        showToast('❌ المتصفح لا يدعم النطق الصوتي.');
         return;
       }
       try {
@@ -926,28 +926,19 @@
         window.speechSynthesis.speak(utterance);
       } catch (e) {
         console.error('خطأ في النطق:', e);
-        showToast('❌ حدث خطأ أثناء محاولة النطق.');
+        showToast('❌ حدث خطأ أثناء النطق.');
       }
     }
     window.speakText = speakText;
 
-    // ====== دالة التسجيل الصوتي (مع دعم الاستماع) ======
+    // ====== دالة التسجيل (مبسطة ومتوافقة مع أندرويد) ======
     async function startRecording(targetText, callback, maxSeconds = 5) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        showToast('❌ المتصفح لا يدعم خاصية التعرف على الصوت. استخدم Chrome.');
+        showToast('❌ التعرف الصوتي غير مدعوم في هذا المتصفح. استخدم Chrome.');
         if (callback) callback(null, null, null);
         return;
       }
-
-      let mediaRecorder = null;
-      let audioChunks = [];
-      let stream = null;
-      let audioUrl = null;
-      let transcript = null;
-      let analysis = null;
-      let recognitionFinished = false;
-      let callbackCalled = false;
 
       // إنشاء مؤقت مرئي
       let timerDisplay = document.getElementById('recordingTimer');
@@ -967,44 +958,18 @@
         }
         if (secondsLeft <= 0) {
           clearInterval(timerInterval);
-          if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-          else recognition.stop();
+          recognition.stop();
         }
       }, 1000);
 
-      function finishRecording() {
-        if (callbackCalled) return;
-        callbackCalled = true;
+      let finished = false;
+
+      function finish(result, analysis, audioUrl) {
+        if (finished) return;
+        finished = true;
         clearInterval(timerInterval);
         if (timerDisplay) timerDisplay.remove();
-        if (callback) callback(transcript, analysis, audioUrl);
-      }
-
-      // محاولة الوصول للميكروفون وتسجيل الصوت
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if (window.MediaRecorder) {
-          mediaRecorder = new MediaRecorder(stream);
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) audioChunks.push(e.data);
-          };
-          mediaRecorder.onstop = () => {
-            try {
-              const blob = new Blob(audioChunks, { type: 'audio/webm' });
-              audioUrl = URL.createObjectURL(blob);
-            } catch(e) {
-              console.warn('فشل إنشاء رابط صوتي:', e);
-              audioUrl = null;
-            }
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            if (recognitionFinished) finishRecording();
-          };
-          mediaRecorder.start();
-        }
-      } catch(e) {
-        console.warn('تعذر الوصول للميكروفون للتسجيل الصوتي، سيتم الاعتماد على التعرف فقط:', e);
-        mediaRecorder = null;
-        stream = null;
+        if (callback) callback(result, analysis, audioUrl);
       }
 
       const recognition = new SpeechRecognition();
@@ -1013,45 +978,30 @@
       recognition.interimResults = false;
 
       recognition.onresult = (event) => {
-        transcript = event.results[0][0].transcript.trim();
-        analysis = analyzePronunciation(targetText, transcript);
-        recognitionFinished = true;
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        } else {
-          finishRecording();
-        }
+        const transcript = event.results[0][0].transcript.trim();
+        const analysis = analyzePronunciation(targetText, transcript);
+        finish(transcript, analysis, null); // بدون audioUrl
       };
 
       recognition.onerror = (event) => {
-        let msg = '❌ خطأ في التسجيل: ';
+        let msg = '❌ خطأ: ';
         if (event.error === 'not-allowed') msg += 'لم تمنح صلاحية الميكروفون.';
-        else if (event.error === 'no-speech') msg += 'لم يتم التقاط أي صوت. حاول مرة أخرى.';
+        else if (event.error === 'no-speech') msg += 'لم يتم التقاط صوت. حاول مرة أخرى.';
         else msg += event.error;
         showToast(msg);
-        recognitionFinished = true;
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        } else {
-          finishRecording();
-        }
+        finish(null, null, null);
       };
 
       recognition.onend = () => {
-        recognitionFinished = true;
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        } else {
-          finishRecording();
-        }
+        finish(null, null, null);
       };
 
       try {
         recognition.start();
         showToast('🎤 جاري الاستماع... تحدث الآن');
-      } catch(e) {
+      } catch (e) {
         showToast('❌ تعذر بدء التسجيل: ' + e.message);
-        finishRecording();
+        finish(null, null, null);
       }
     }
     window.startRecording = startRecording;
