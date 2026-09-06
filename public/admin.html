@@ -1206,6 +1206,85 @@
 
 
 
+                            evaluation: 'none',
+        successRate: 0,
+        notes: '',
+        recommendations: '',
+        createdAt: new Date().toISOString()
+      });
+      showToast(`✅ تمت إضافة الجلسة رقم (${sessionNumber}) بنجاح!`);
+      renderSpeechSessions(app);
+    } catch(e) {
+      console.error(e);
+      showToast('❌ فشل في إضافة الجلسة: ' + (e.message || 'خطأ غير معروف'));
+    }
+  };
+
+  const listCard = document.createElement('div');
+  listCard.className = 'card';
+  listCard.innerHTML = '<h3>📋 الجلسات المسجلة للطالب</h3>';
+  try {
+    const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+    const snap = await getDocs(qS);
+    if (snap.empty) {
+      listCard.innerHTML += '<p class="muted">لا توجد جلسات سابقة.</p>';
+    } else {
+      const allS = [];
+      snap.forEach(d => allS.push({ id: d.id, ...d.data() }));
+      allS.sort((a,b) => (a.sessionNumber||0) - (b.sessionNumber||0));
+      const sessionsByLetter = {};
+      allS.forEach(sess => {
+        if (!sessionsByLetter[sess.letter]) sessionsByLetter[sess.letter] = [];
+        sessionsByLetter[sess.letter].push(sess);
+      });
+      Object.keys(sessionsByLetter).forEach(letter => {
+        const sessions = sessionsByLetter[letter].sort((a,b) => (a.sessionType||0) - (b.sessionType||0));
+        const header = document.createElement('div');
+        header.style.cssText = 'font-size:16px;font-weight:bold;color:var(--mint-deep);margin:12px 0 8px 0;padding:4px 12px;background:#EAF6F4;border-radius:30px;display:inline-block;';
+        header.textContent = `🔤 حرف (${letter}) - ${letterTitleMap[letter] || ''}`;
+        listCard.appendChild(header);
+        sessions.forEach(sess => {
+          const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
+          const row = document.createElement('div');
+          row.className = 'session-card';
+          row.style.borderRight = `4px solid ${sess.evaluation === 'passed' ? '#2E7D32' : sess.evaluation === 'trained' ? '#0288D1' : '#F57F17'}`;
+          row.innerHTML = `
+            <div>
+              <span class="badge badge-assigned">${typeInfo.icon} ${typeInfo.name}</span>
+              <strong>#${sess.sessionNumber || '?'}</strong> - ${sess.date}
+              <div style="font-size:12px;color:#6B7A99;">🎯 ${sess.goal}</div>
+              <div style="font-size:11px;color:#6B7A99;">🛠️ ${sess.tools || 'غير محدد'} | 📍 ${sess.place || 'غير محدد'} | 📋 ${sess.method || 'غير محددة'}</div>
+              <div>التقييم: ${sess.evaluation || 'غير مقيم'} ${sess.successRate ? `| نسبة النجاح: ${sess.successRate}%` : ''}</div>
+            </div>
+            <button class="btn btn-soft btn-sm" id="viewSess_${sess.id}">📖 فتح الجلسة</button>
+          `;
+          listCard.appendChild(row);
+          setTimeout(() => {
+            const viewBtn = document.getElementById(`viewSess_${sess.id}`);
+            if (viewBtn) viewBtn.onclick = () => {
+              state.currentSession = sess;
+              state.view = 'single-session';
+              render();
+            };
+          }, 0);
+        });
+      });
+    }
+  } catch(e) {
+    listCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
+  }
+  app.appendChild(listCard);
+}
+
+
+
+
+
+
+
+
+
+
 
 
 // ====== التصيير الرئيسي ======
@@ -1470,7 +1549,12 @@ function renderTeacherDashboard(app) {
   const btnSessions = actCard.querySelector('#btnSessions');
   if (btnSessions) btnSessions.onclick = () => {
     if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
-    state.view = 'speech-sessions';
+    if (state.currentStudent) {
+      state.diagEval = state.currentStudent.diagnostic || {};
+      state.view = 'speech-sessions';
+    } else {
+      showToast('لا يوجد طلاب مضافون');
+    }
     render();
   };
   const btnSessionsLog = actCard.querySelector('#btnSessionsLog');
@@ -1514,6 +1598,7 @@ function renderTeacherDashboard(app) {
         const profBtn = document.getElementById(`prof_${st.id}`);
         if (profBtn) profBtn.onclick = () => {
           state.currentStudent = st;
+          state.diagEval = st.diagnostic || {};
           state.view = 'speech-sessions';
           render();
         };
@@ -1718,7 +1803,6 @@ function renderComprehensiveDiagnosis(container) {
 // ====== صفحة التشخيص المتقدمة مع تغذية راجعة محسنة ======
 let diagnosticAudio = { letters: {}, words: {} };
 
-// دالة مساعدة لشرح نوع الخطأ
 function getDisorderFeedback(disorderType) {
   const messages = {
     'طبيعي': '✅ ممتاز! النطق سليم.',
@@ -2272,7 +2356,9 @@ async function renderSpeechSessions(app) {
     render();
   });
 
-  const diag = state.diagEval || state.currentStudent?.diagnostic || {};
+  // الحصول على التشخيص من بيانات الطالب أولاً، ثم من state.diagEval
+  const diag = (state.currentStudent && state.currentStudent.diagnostic) ? state.currentStudent.diagnostic : (state.diagEval || {});
+
   const needLetters = ALL_LETTERS.filter(letter => {
     const status = diag[letter]?.status || diag[letter];
     return status === 'need' || status === 'unclear';
@@ -2494,7 +2580,7 @@ async function renderSpeechSessions(app) {
 
 
 
-
+    
 
 
 
