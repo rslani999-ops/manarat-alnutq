@@ -557,11 +557,6 @@
 
 
 
-
-  
-
-
-
 <body>
   <div id="app"></div>
   <footer>
@@ -813,8 +808,8 @@
     }
     window.speakText = speakText;
 
-    // ====== دالة التسجيل الصوتي مع التشخيص التلقائي وتسجيل الصوت الفعلي ======
-    async function startRecording(targetText, callback) {
+    // ====== دالة التسجيل الصوتي مع مؤقّت تلقائي ======
+    async function startRecording(targetText, callback, maxSeconds = 5) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         showToast('❌ المتصفح لا يدعم خاصية التعرف على الصوت. يرجى استخدام Chrome.');
@@ -829,6 +824,54 @@
       let analysis = null;
       let recognitionFinished = false;
       let callbackCalled = false;
+      let timerInterval = null;
+      let timeoutId = null;
+
+      // إنشاء عنصر المؤقّت المرئي
+      let timerDisplay = document.getElementById('recordingTimer');
+      if (!timerDisplay) {
+        timerDisplay = document.createElement('div');
+        timerDisplay.id = 'recordingTimer';
+        timerDisplay.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--ink);color:white;padding:10px 20px;border-radius:50px;font-size:18px;font-weight:bold;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 8px 20px rgba(0,0,0,0.3);';
+        document.body.appendChild(timerDisplay);
+      }
+
+      function stopTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        if (timeoutId) clearTimeout(timeoutId);
+        if (timerDisplay) timerDisplay.remove();
+      }
+
+      function finishRecording() {
+        if (callbackCalled) return;
+        callbackCalled = true;
+        stopTimer();
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        } else {
+          if (callback) callback(transcript, analysis, audioUrl);
+        }
+      }
+
+      // بدء المؤقّت المرئي
+      let secondsLeft = maxSeconds;
+      timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
+      timerInterval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft >= 0) {
+          timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
+        }
+        if (secondsLeft <= 0) {
+          clearInterval(timerInterval);
+          showToast('⏱️ انتهى وقت التسجيل');
+          finishRecording();
+        }
+      }, 1000);
+
+      // إيقاف تلقائي بعد المدة المحددة
+      timeoutId = setTimeout(() => {
+        finishRecording();
+      }, maxSeconds * 1000);
 
       // محاولة تشغيل تسجيل الصوت باستخدام MediaRecorder
       try {
@@ -846,8 +889,9 @@
             audioUrl = null;
           }
           if (stream) stream.getTracks().forEach(track => track.stop());
-          if (recognitionFinished && !callbackCalled) {
+          if (!callbackCalled) {
             callbackCalled = true;
+            stopTimer();
             if (callback) callback(transcript, analysis, audioUrl);
           }
         };
@@ -868,6 +912,8 @@
         transcript = event.results[0][0].transcript.trim();
         analysis = analyzePronunciation(targetText, transcript);
         recognition.stop();
+        // إيقاف التسجيل فور الانتهاء من النطق
+        finishRecording();
       };
 
       recognition.onerror = (event) => {
@@ -876,7 +922,7 @@
         else if (event.error === 'no-speech') msg += 'لم يتم التقاط أي صوت. حاول مرة أخرى.';
         else msg += event.error;
         showToast(msg);
-        recognition.stop();
+        finishRecording();
       };
 
       recognition.onend = () => {
@@ -884,10 +930,7 @@
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
           mediaRecorder.stop();
         } else {
-          if (!callbackCalled) {
-            callbackCalled = true;
-            if (callback) callback(transcript, analysis, audioUrl);
-          }
+          finishRecording();
         }
       };
 
@@ -895,13 +938,7 @@
         recognition.start();
       } catch (e) {
         showToast('❌ تعذر بدء التسجيل: ' + e.message);
-        if (!callbackCalled) {
-          callbackCalled = true;
-          if (callback) callback(null, null, null);
-        }
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        }
+        finishRecording();
       }
     }
     window.startRecording = startRecording;
@@ -1094,6 +1131,11 @@
       }
       appContainer.appendChild(bar);
     }
+  
+
+
+
+
 
 
 
