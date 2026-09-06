@@ -931,7 +931,7 @@
     }
     window.speakText = speakText;
 
-    // ====== دالة التسجيل الصوتي (مبسطة وموثوقة) ======
+    // ====== دالة التسجيل الصوتي (مع دعم الاستماع) ======
     async function startRecording(targetText, callback, maxSeconds = 5) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -939,6 +939,15 @@
         if (callback) callback(null, null, null);
         return;
       }
+
+      let mediaRecorder = null;
+      let audioChunks = [];
+      let stream = null;
+      let audioUrl = null;
+      let transcript = null;
+      let analysis = null;
+      let recognitionFinished = false;
+      let callbackCalled = false;
 
       // إنشاء مؤقت مرئي
       let timerDisplay = document.getElementById('recordingTimer');
@@ -958,29 +967,60 @@
         }
         if (secondsLeft <= 0) {
           clearInterval(timerInterval);
-          recognition.stop();
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+          else recognition.stop();
         }
       }, 1000);
+
+      function finishRecording() {
+        if (callbackCalled) return;
+        callbackCalled = true;
+        clearInterval(timerInterval);
+        if (timerDisplay) timerDisplay.remove();
+        if (callback) callback(transcript, analysis, audioUrl);
+      }
+
+      // محاولة الوصول للميكروفون وتسجيل الصوت
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (window.MediaRecorder) {
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+          mediaRecorder.onstop = () => {
+            try {
+              const blob = new Blob(audioChunks, { type: 'audio/webm' });
+              audioUrl = URL.createObjectURL(blob);
+            } catch(e) {
+              console.warn('فشل إنشاء رابط صوتي:', e);
+              audioUrl = null;
+            }
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            if (recognitionFinished) finishRecording();
+          };
+          mediaRecorder.start();
+        }
+      } catch(e) {
+        console.warn('تعذر الوصول للميكروفون للتسجيل الصوتي، سيتم الاعتماد على التعرف فقط:', e);
+        mediaRecorder = null;
+        stream = null;
+      }
 
       const recognition = new SpeechRecognition();
       recognition.lang = 'ar-SA';
       recognition.continuous = false;
       recognition.interimResults = false;
 
-      let finished = false;
-
-      function finish(result, analysis, audioUrl) {
-        if (finished) return;
-        finished = true;
-        clearInterval(timerInterval);
-        if (timerDisplay) timerDisplay.remove();
-        if (callback) callback(result, analysis, audioUrl);
-      }
-
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.trim();
-        const analysis = analyzePronunciation(targetText, transcript);
-        finish(transcript, analysis, null);
+        transcript = event.results[0][0].transcript.trim();
+        analysis = analyzePronunciation(targetText, transcript);
+        recognitionFinished = true;
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        } else {
+          finishRecording();
+        }
       };
 
       recognition.onerror = (event) => {
@@ -989,21 +1029,29 @@
         else if (event.error === 'no-speech') msg += 'لم يتم التقاط أي صوت. حاول مرة أخرى.';
         else msg += event.error;
         showToast(msg);
-        finish(null, null, null);
+        recognitionFinished = true;
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        } else {
+          finishRecording();
+        }
       };
 
       recognition.onend = () => {
-        if (!finished) {
-          finish(null, null, null);
+        recognitionFinished = true;
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        } else {
+          finishRecording();
         }
       };
 
       try {
         recognition.start();
         showToast('🎤 جاري الاستماع... تحدث الآن');
-      } catch (e) {
+      } catch(e) {
         showToast('❌ تعذر بدء التسجيل: ' + e.message);
-        finish(null, null, null);
+        finishRecording();
       }
     }
     window.startRecording = startRecording;
@@ -1258,7 +1306,6 @@
       if (textBtn) textBtn.onclick = toggleLargerText;
       updateAccessibilityButtons();
     }
-
 
 
 
