@@ -696,7 +696,6 @@
   </footer>
 
   <script type="module">
-    // ====== استيرادات Firebase ======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
     import {
       getAuth,
@@ -719,6 +718,12 @@
       where,
       deleteDoc
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+    import {
+      getStorage,
+      ref as storageRef,
+      uploadBytes,
+      getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
@@ -734,8 +739,25 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
-    // ====== البيانات الأساسية ======
+    // ====== دالة رفع ملف إلى Firebase Storage ======
+    async function uploadTeacherFile(teacherId, standardId, file) {
+      try {
+        const path = `teacher-files/${teacherId}/${standardId}/${Date.now()}_${file.name}`;
+        const fileRef = storageRef(storage, path);
+        await uploadBytes(fileRef, file);
+        const downloadURL = await getDownloadURL(fileRef);
+        return { name: file.name, url: downloadURL, type: file.type, uploadedAt: new Date().toISOString() };
+      } catch (e) {
+        console.error('خطأ في رفع الملف:', e);
+        return null;
+      }
+    }
+
+    window.uploadTeacherFile = uploadTeacherFile;
+
+    // ====== بيانات أساسية ======
     const LETTER_GROUPS = [
       { name: 'حروف شفوية', letters: ['ب','م','و','ف'] },
       { name: 'حروف أسنانية لثوية', letters: ['ت','ث','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ل','ن'] },
@@ -756,7 +778,7 @@
     const letterTitleMap = {};
     alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
 
-    // ====== قوائم المفردات ======
+    // ====== قوائم المفردات (كما هي سابقاً) ======
     const VOCAB_LISTS = {
       'الأشكال': [
         { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
@@ -839,13 +861,11 @@
       { id: 4, name: 'الحرف في جمل', icon: '✍️' }
     ];
 
-    // ====== خيارات الأدوات ======
     const TOOLS_OPTIONS = [
       'بطاقات تعليمية', 'مرآة', 'ألعاب تفاعلية', 'تطبيق إلكتروني',
       'أقلام وأوراق', 'صور ومجسمات', 'لوحة الكتابة', 'أخرى'
     ];
 
-    // ====== خيارات مخرج الحرف ======
     const PLACE_OPTIONS = [
       'شفوي (ب، م، و، ف)',
       'أسناني لثوي (ت، ث، د، ذ، ر، ز، س، ش، ص، ض، ط، ظ، ل، ن)',
@@ -853,13 +873,11 @@
       'حلقي (أ، هـ، ع، ح، خ، غ)'
     ];
 
-    // ====== خيارات الطريقة ======
     const METHOD_OPTIONS = [
       'التكرار والمحاكاة', 'التدريب بالمرآة', 'الأنشطة الحركية',
       'الاستماع والتكرار', 'التمييز السمعي', 'الألعاب التعليمية', 'القصص والصور'
     ];
 
-    // ====== خيارات اضطرابات النطق ======
     const DISORDER_TYPES = [
       'طبيعي', 'إبدال', 'تشويه', 'حذف', 'إضافة', 'قلب', 'خنف',
       'لجلجة', 'تأتأة / تلعثم', 'حبسة', 'بحة صوتية',
@@ -867,7 +885,6 @@
       'سرعة في الكلام', 'كلام طفولي'
     ];
 
-    // ====== تعريفات أنواع العيوب ======
     const DISORDER_DEFINITIONS = {
       'طبيعي': 'النطق سليم وصحيح.',
       'إبدال': 'استبدال حرف بحرف آخر، مثل نطق (س) بدلاً من (ث).',
@@ -912,10 +929,9 @@
       return names[type] || `تدريب حرف (${letter})`;
     }
 
-    // ====== دالة النطق الصوتي ======
     function speakText(text) {
       if (!('speechSynthesis' in window)) {
-        showToast('❌ المتصفح لا يدعم النطق الصوتي.');
+        showToast('❌ المتصفح لا يدعم خاصية النطق الصوتي.');
         return;
       }
       try {
@@ -926,12 +942,11 @@
         window.speechSynthesis.speak(utterance);
       } catch (e) {
         console.error('خطأ في النطق:', e);
-        showToast('❌ حدث خطأ أثناء النطق.');
+        showToast('❌ حدث خطأ أثناء محاولة النطق.');
       }
     }
     window.speakText = speakText;
 
-    // ====== دالة التسجيل (مبسطة ومتوافقة مع أندرويد) ======
     async function startRecording(targetText, callback, maxSeconds = 5) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -940,7 +955,6 @@
         return;
       }
 
-      // إنشاء مؤقت مرئي
       let timerDisplay = document.getElementById('recordingTimer');
       if (!timerDisplay) {
         timerDisplay = document.createElement('div');
@@ -953,9 +967,7 @@
       timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
       const timerInterval = setInterval(() => {
         secondsLeft--;
-        if (secondsLeft >= 0) {
-          timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
-        }
+        if (secondsLeft >= 0) timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
         if (secondsLeft <= 0) {
           clearInterval(timerInterval);
           recognition.stop();
@@ -963,7 +975,6 @@
       }, 1000);
 
       let finished = false;
-
       function finish(result, analysis, audioUrl) {
         if (finished) return;
         finished = true;
@@ -980,7 +991,7 @@
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript.trim();
         const analysis = analyzePronunciation(targetText, transcript);
-        finish(transcript, analysis, null); // بدون audioUrl
+        finish(transcript, analysis, null);
       };
 
       recognition.onerror = (event) => {
@@ -992,9 +1003,7 @@
         finish(null, null, null);
       };
 
-      recognition.onend = () => {
-        finish(null, null, null);
-      };
+      recognition.onend = () => finish(null, null, null);
 
       try {
         recognition.start();
@@ -1006,7 +1015,6 @@
     }
     window.startRecording = startRecording;
 
-    // ====== تحليل النطق ======
     function levenshteinDistance(a, b) {
       const matrix = [];
       for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -1014,11 +1022,7 @@
       for (let i = 1; i <= b.length; i++) {
         for (let j = 1; j <= a.length; j++) {
           const cost = a[j-1] === b[i-1] ? 0 : 1;
-          matrix[i][j] = Math.min(
-            matrix[i-1][j] + 1,
-            matrix[i][j-1] + 1,
-            matrix[i-1][j-1] + cost
-          );
+          matrix[i][j] = Math.min(matrix[i-1][j] + 1, matrix[i][j-1] + 1, matrix[i-1][j-1] + cost);
         }
       }
       return matrix[b.length][a.length];
@@ -1029,56 +1033,27 @@
       const target = normalize(targetText);
       const spoken = normalize(transcript);
 
-      if (!target || !spoken) {
-        return { isMatch: false, disorderType: 'غير واضح', detail: 'الصوت غير واضح أو لم يتم التعرف عليه.' };
-      }
-
-      if (target === spoken) {
-        return { isMatch: true, disorderType: 'طبيعي', detail: '' };
-      }
+      if (!target || !spoken) return { isMatch: false, disorderType: 'غير واضح', detail: 'الصوت غير واضح أو لم يتم التعرف عليه.' };
+      if (target === spoken) return { isMatch: true, disorderType: 'طبيعي', detail: '' };
 
       const distance = levenshteinDistance(target, spoken);
       const maxLen = Math.max(target.length, spoken.length);
       const similarity = 1 - distance / maxLen;
 
-      if (similarity < 0.5) {
-        return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير واضح أو مشوه بشكل كبير' };
-      }
-
-      if (spoken.length > target.length) {
-        return { isMatch: false, disorderType: 'إضافة', detail: `تمت إضافة حروف: ${spoken.slice(target.length)}` };
-      } else if (spoken.length < target.length) {
-        return { isMatch: false, disorderType: 'حذف', detail: `تم حذف حروف: ${target.slice(spoken.length)}` };
-      }
+      if (similarity < 0.5) return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير واضح أو مشوه بشكل كبير' };
+      if (spoken.length > target.length) return { isMatch: false, disorderType: 'إضافة', detail: `تمت إضافة حروف: ${spoken.slice(target.length)}` };
+      if (spoken.length < target.length) return { isMatch: false, disorderType: 'حذف', detail: `تم حذف حروف: ${target.slice(spoken.length)}` };
 
       const similarLetters = {
-        'ر': ['ل', 'ز', 'ذ'],
-        'ب': ['م', 'ف', 'و'],
-        'ت': ['ث', 'د', 'ذ'],
-        'ث': ['ت', 'س', 'ذ'],
-        'ج': ['ح', 'خ', 'ق'],
-        'ح': ['خ', 'ج', 'ه'],
-        'خ': ['ح', 'ج', 'غ'],
-        'د': ['ذ', 'ت', 'ظ'],
-        'ذ': ['د', 'ز', 'ظ'],
-        'ز': ['ر', 'ذ', 'س'],
-        'س': ['ش', 'ص', 'ز'],
-        'ش': ['س', 'ص', 'ج'],
-        'ص': ['س', 'ض', 'ش'],
-        'ض': ['ص', 'ظ', 'د'],
-        'ط': ['ظ', 'ت', 'ض'],
-        'ظ': ['ط', 'ض', 'ذ'],
-        'ع': ['أ', 'غ', 'ح'],
-        'غ': ['ع', 'خ', 'ق'],
-        'ف': ['ب', 'ق', 'م'],
-        'ق': ['ك', 'غ', 'ف'],
-        'ك': ['ق', 'ج', 'ل'],
-        'ل': ['ر', 'ن', 'ك'],
-        'م': ['ن', 'ب', 'و'],
-        'ن': ['م', 'ل', 'ر'],
-        'هـ': ['ح', 'أ', 'ع'],
-        'و': ['ي', 'ب', 'م'],
-        'ي': ['و', 'ل', 'ن']
+        'ر': ['ل', 'ز', 'ذ'], 'ب': ['م', 'ف', 'و'], 'ت': ['ث', 'د', 'ذ'],
+        'ث': ['ت', 'س', 'ذ'], 'ج': ['ح', 'خ', 'ق'], 'ح': ['خ', 'ج', 'ه'],
+        'خ': ['ح', 'ج', 'غ'], 'د': ['ذ', 'ت', 'ظ'], 'ذ': ['د', 'ز', 'ظ'],
+        'ز': ['ر', 'ذ', 'س'], 'س': ['ش', 'ص', 'ز'], 'ش': ['س', 'ص', 'ج'],
+        'ص': ['س', 'ض', 'ش'], 'ض': ['ص', 'ظ', 'د'], 'ط': ['ظ', 'ت', 'ض'],
+        'ظ': ['ط', 'ض', 'ذ'], 'ع': ['أ', 'غ', 'ح'], 'غ': ['ع', 'خ', 'ق'],
+        'ف': ['ب', 'ق', 'م'], 'ق': ['ك', 'غ', 'ف'], 'ك': ['ق', 'ج', 'ل'],
+        'ل': ['ر', 'ن', 'ك'], 'م': ['ن', 'ب', 'و'], 'ن': ['م', 'ل', 'ر'],
+        'هـ': ['ح', 'أ', 'ع'], 'و': ['ي', 'ب', 'م'], 'ي': ['و', 'ل', 'ن']
       };
 
       for (let i = 0; i < target.length; i++) {
@@ -1086,18 +1061,14 @@
         const sChar = spoken[i];
         if (tChar !== sChar) {
           const possible = similarLetters[tChar] || [];
-          if (possible.includes(sChar)) {
-            return { isMatch: false, disorderType: 'إبدال', detail: `إبدال حرف (${tChar}) بـ (${sChar})` };
-          } else {
-            return { isMatch: false, disorderType: 'إبدال', detail: `إبدال غير نمطي: (${tChar}) -> (${sChar})` };
-          }
+          if (possible.includes(sChar)) return { isMatch: false, disorderType: 'إبدال', detail: `إبدال حرف (${tChar}) بـ (${sChar})` };
+          else return { isMatch: false, disorderType: 'إبدال', detail: `إبدال غير نمطي: (${tChar}) -> (${sChar})` };
         }
       }
 
       return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير دقيق' };
     }
 
-    // ====== الحالة العامة ======
     let state = {
       view: 'home',
       user: null,
@@ -1128,57 +1099,37 @@
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
 
-    // ====== دوال الوصول ======
     function toggleHighContrast() {
       document.body.classList.toggle('high-contrast');
-      const isActive = document.body.classList.contains('high-contrast');
-      localStorage.setItem('highContrast', isActive ? 'on' : 'off');
+      localStorage.setItem('highContrast', document.body.classList.contains('high-contrast') ? 'on' : 'off');
       updateAccessibilityButtons();
     }
 
     function toggleLargerText() {
       document.body.classList.toggle('larger-text');
-      const isActive = document.body.classList.contains('larger-text');
-      localStorage.setItem('largerText', isActive ? 'on' : 'off');
+      localStorage.setItem('largerText', document.body.classList.contains('larger-text') ? 'on' : 'off');
       updateAccessibilityButtons();
     }
 
     function updateAccessibilityButtons() {
       const contrastBtn = document.getElementById('contrastToggleBtn');
       if (contrastBtn) {
-        if (document.body.classList.contains('high-contrast')) {
-          contrastBtn.style.background = '#00ffcc';
-          contrastBtn.style.color = '#000';
-        } else {
-          contrastBtn.style.background = '';
-          contrastBtn.style.color = '';
-        }
+        contrastBtn.style.background = document.body.classList.contains('high-contrast') ? '#00ffcc' : '';
+        contrastBtn.style.color = document.body.classList.contains('high-contrast') ? '#000' : '';
       }
       const textBtn = document.getElementById('textToggleBtn');
       if (textBtn) {
-        if (document.body.classList.contains('larger-text')) {
-          textBtn.style.background = '#FFD700';
-          textBtn.style.color = '#000';
-        } else {
-          textBtn.style.background = '';
-          textBtn.style.color = '';
-        }
+        textBtn.style.background = document.body.classList.contains('larger-text') ? '#FFD700' : '';
+        textBtn.style.color = document.body.classList.contains('larger-text') ? '#000' : '';
       }
     }
 
     function initAccessibility() {
-      const savedContrast = localStorage.getItem('highContrast');
-      const savedText = localStorage.getItem('largerText');
-      if (savedContrast === 'on') {
-        document.body.classList.add('high-contrast');
-      }
-      if (savedText === 'on') {
-        document.body.classList.add('larger-text');
-      }
+      if (localStorage.getItem('highContrast') === 'on') document.body.classList.add('high-contrast');
+      if (localStorage.getItem('largerText') === 'on') document.body.classList.add('larger-text');
       updateAccessibilityButtons();
     }
 
-    // ====== شريط الأعلى ======
     function renderTopbar(appContainer, title, sub, onBack) {
       const bar = document.createElement('div');
       bar.className = 'topbar';
@@ -1289,7 +1240,7 @@
 
 
 
-    // ====== التصيير الرئيسي ======
+       // ====== التصيير الرئيسي ======
     function render() {
       const app = document.getElementById('app');
       app.innerHTML = '';
@@ -1307,6 +1258,7 @@
       if (state.view === 'sessions-log') return renderSessionsLog(app);
       if (state.view === 'vocab-list') return renderVocabList(app);
       if (state.view === 'achievement') return renderAchievement(app);
+      if (state.view === 'teacher-achievement') return renderTeacherAchievement(app);
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
     }
@@ -1546,7 +1498,8 @@
           <button class="btn btn-primary btn-sm" id="btnSessions">📋 سجل الجلسات السحابي</button>
           <button class="btn btn-success btn-sm" id="btnSessionsLog">📊 جدول سجل الجلسات</button>
           <button class="btn btn-soft btn-sm" id="btnIEPList">📋 الخطة الفردية (IEP)</button>
-          <button class="btn btn-soft btn-sm" id="btnAchievement">🏆 ملف الإنجاز</button>
+          <button class="btn btn-soft btn-sm" id="btnAchievement">🏆 ملف إنجاز الطالب</button>
+          <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
         </div>
       `;
       app.appendChild(actCard);
@@ -1575,6 +1528,11 @@
       if (btnAchievement) btnAchievement.onclick = () => {
         if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
         state.view = 'achievement';
+        render();
+      };
+      const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
+      if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => {
+        state.view = 'teacher-achievement';
         render();
       };
 
@@ -1672,7 +1630,131 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
-    // ====== ملف الإنجاز الرقمي ======
+    // ====== صفحة ملف إنجاز المعلم ======
+    const TEACHER_STANDARDS = [
+      { id: 1, title: 'أداء الواجبات الوظيفية', evidences: 'سجل الدوام، سجل المناوبة والإشراف، سجل الانتظار، خطة توزيع المنهج.' },
+      { id: 2, title: 'التفاعل مع المجتمع المحلي', evidences: 'سجل مجتمعات التعلم، سجل تبادل الزيارات، تقرير درس تطبيقي، شهادات حضور.' },
+      { id: 3, title: 'التفاعل مع أولياء الأمور', evidences: 'صور من الجمعية العمومية، تقرير اجتماع مع ولي الأمر، نسخة من الخطة الأسبوعية.' },
+      { id: 4, title: 'التنويع في استراتيجيات التدريس', evidences: 'تقرير عن تطبيق استراتيجية، ملف إنجاز المعلم.' },
+      { id: 5, title: 'تحسين نتائج المتعلمين', evidences: 'نتائج الاختبارات القبلية والبعدية، كشف متابعة الطلاب.' },
+      { id: 6, title: 'إعداد وتنفيذ خطة التعلم', evidences: 'خطة توزيع المنهج، نماذج من إعداد الدروس، نماذج من الواجبات والاختبارات.' },
+      { id: 7, title: 'توظيف تقنيات ووسائل التعلم', evidences: 'صور من الوسائل التعليمية، تقرير عن برنامج تقني.' },
+      { id: 8, title: 'تهيئة البيئة التعليمية', evidences: 'تقرير تصنيف الطلاب حسب أنماط التعلم، نماذج من التحفيز المادي والمعنوي.' },
+      { id: 9, title: 'الإدارة الصفية', evidences: 'كشف المتابعة، تطبيق إدارة الصف.' },
+      { id: 10, title: 'تحليل نتائج المتعلمين', evidences: 'تقرير تحليل نتائج الطلاب، سجل معالجة الفاقد التعليمي.' },
+      { id: 11, title: 'تنوع أساليب التقويم', evidences: 'نماذج من الاختبارات، ملفات إنجاز الطلاب، نماذج من المهام الأدائية والمشاريع.' }
+    ];
+
+    async function renderTeacherAchievement(app) {
+      renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
+        state.view = 'teacher-dashboard';
+        render();
+      });
+
+      if (!state.user) {
+        showToast('يجب تسجيل الدخول');
+        state.view = 'auth';
+        return render();
+      }
+
+      const teacherId = state.user.uid;
+
+      let teacherData = {};
+      try {
+        const teacherDoc = await getDoc(doc(db, "users", teacherId));
+        if (teacherDoc.exists()) teacherData = teacherDoc.data();
+      } catch(e) { console.error('خطأ في جلب بيانات المعلم:', e); }
+
+      const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
+
+      let existingFiles = {};
+      try {
+        const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
+        const filesSnap = await getDocs(filesQuery);
+        filesSnap.forEach(d => {
+          const data = d.data();
+          const standardId = data.standardId;
+          if (!existingFiles[standardId]) existingFiles[standardId] = [];
+          existingFiles[standardId].push({ id: d.id, ...data });
+        });
+      } catch(e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
+
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep);">
+          <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
+          <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
+        </div>
+      `;
+      app.appendChild(container);
+
+      TEACHER_STANDARDS.forEach(standard => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.marginBottom = '12px';
+        card.innerHTML = `
+          <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
+          <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+            <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
+            <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
+            <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
+          </div>
+          <div id="filesList_${standard.id}" style="margin-top:8px;">
+            ${(existingFiles[standard.id] || []).map(file => `
+              <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
+                <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
+                <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        app.appendChild(card);
+
+        const fileInput = card.querySelector(`#fileInput_${standard.id}`);
+        const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
+        const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
+
+        if (uploadBtn && fileInput) {
+          uploadBtn.onclick = () => fileInput.click();
+          fileInput.onchange = async () => {
+            if (!fileInput.files || fileInput.files.length === 0) return;
+            fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
+
+            const uploadPromises = Array.from(fileInput.files).map(file => {
+              return uploadTeacherFile(teacherId, standard.id, file);
+            });
+            const results = await Promise.all(uploadPromises);
+            const success = results.filter(r => r !== null);
+            const failed = results.length - success.length;
+
+            if (success.length > 0) {
+              for (const fileInfo of success) {
+                try {
+                  await addDoc(collection(db, "teacher_files"), {
+                    teacherId,
+                    standardId: standard.id,
+                    name: fileInfo.name,
+                    url: fileInfo.url,
+                    type: fileInfo.type,
+                    uploadedAt: fileInfo.uploadedAt
+                  });
+                } catch(e) { console.error('خطأ في حفظ الملف:', e); }
+              }
+              showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
+              fileStatus.textContent = `✅ تم رفع ${success.length} ملف`;
+              renderTeacherAchievement(app);
+            } else {
+              showToast('❌ فشل رفع الملفات');
+              fileStatus.textContent = '❌ فشل الرفع';
+            }
+            fileInput.value = '';
+          };
+        }
+      });
+    }
+
+    // ====== ملف الإنجاز الرقمي للطالب ======
     async function renderAchievement(app) {
       if (!state.currentStudent) {
         showToast('اختر طالباً أولاً');
@@ -1686,18 +1768,15 @@
       });
 
       try {
-        // جلب بيانات الطالب
         const studentRef = doc(db, "users", state.currentStudent.id);
         const studentDoc = await getDoc(studentRef);
         const studentData = studentDoc.exists() ? studentDoc.data() : {};
         const diag = studentData.diagnostic || {};
 
-        // حساب الحروف المتقنة والتي تحتاج تدريب
         const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
         const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
         const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
 
-        // جلب الجلسات
         const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
         const sessionsSnap = await getDocs(sessionsQuery);
         const sessions = [];
@@ -1710,10 +1789,8 @@
           ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length) 
           : 0;
 
-        // حساب نسبة الإتقان
         const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
 
-        // تحديد مستوى الإنجاز
         let achievementLevel = '';
         let achievementIcon = '';
         if (masteryPercentage >= 80) {
@@ -1998,7 +2075,7 @@
       if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
     }
 
-    // ====== صفحة التشخيص المتقدمة مع تغذية راجعة محسنة ======
+    // ====== صفحة التشخيص المتقدمة ======
     let diagnosticAudio = { letters: {}, words: {} };
 
     function getDisorderFeedback(disorderType) {
@@ -2692,7 +2769,6 @@
       }
       app.appendChild(listCard);
     }
-
 
 
 
