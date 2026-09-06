@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -606,6 +605,9 @@
 
 
 
+
+
+  
 <body>
   <div id="app"></div>
   <footer>
@@ -1180,7 +1182,16 @@
       }
       appContainer.appendChild(bar);
     }
-  
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1192,344 +1203,6 @@
 
 
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          
-                const defDiv = document.getElementById(`disorderDefinition_${l}`);
-                if (defDiv) defDiv.textContent = DISORDER_DEFINITIONS['طبيعي'] || '';
-              }
-              renderDiagnosticSession(app);
-            } else {
-              if (feedbackEl) feedbackEl.innerHTML = `❌ غير صحيح. (النص: "${transcript}") - تشخيص: ${analysis.disorderType}`;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              state.diagEval[l].status = 'need';
-              state.diagEval[l].disorderType = analysis.disorderType;
-              const select = document.getElementById(`disorderSelect_${l}`);
-              if (select) {
-                select.value = analysis.disorderType;
-                const defDiv = document.getElementById(`disorderDefinition_${l}`);
-                if (defDiv) defDiv.textContent = DISORDER_DEFINITIONS[analysis.disorderType] || '';
-              }
-              renderDiagnosticSession(app);
-            }
-          });
-        };
-      }
-
-      const recordWordBtn = card.querySelector(`#recordWordBtn_${letter}`);
-      if (recordWordBtn) {
-        recordWordBtn.onclick = function() {
-          const word = this.dataset.word;
-          const l = letter;
-          const feedbackEl = document.getElementById(`feedback_${l}`);
-          startRecording(word, (transcript, analysis, audioUrl) => {
-            if (audioUrl) {
-              diagnosticAudio.words[l] = audioUrl;
-              const playBtn = document.getElementById(`playWordBtn_${l}`);
-              if (playBtn) {
-                playBtn.style.display = 'inline-block';
-                playBtn.dataset.audio = audioUrl;
-                playBtn.onclick = () => { new Audio(audioUrl).play(); };
-              }
-            }
-            if (!transcript) {
-              if (audioUrl) {
-                if (feedbackEl) feedbackEl.innerHTML = '🎤 تم تسجيل الصوت، لكن لم يتم التعرف على النص تلقائياً.';
-                showToast('تم تسجيل الصوت، يمكنك الاستماع له.');
-              } else {
-                if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
-              }
-              return;
-            }
-            if (analysis.isMatch) {
-              if (feedbackEl) feedbackEl.innerHTML = `✅ صحيح! نطق كلمة (${word}) بشكل صحيح. (النص: "${transcript}")`;
-              showToast(`✅ نطق كلمة ${word} صحيح`);
-            } else {
-              if (feedbackEl) feedbackEl.innerHTML = `❌ كلمة (${word}) غير صحيحة. (النص: "${transcript}") - تشخيص: ${analysis.disorderType}`;
-              showToast(`⚠️ نطق كلمة ${word}: ${analysis.disorderType}`);
-            }
-          });
-        };
-      }
-
-      const playLetterBtn = card.querySelector(`#playLetterBtn_${letter}`);
-      if (playLetterBtn) {
-        playLetterBtn.onclick = () => {
-          const audioUrl = playLetterBtn.dataset.audio;
-          if (audioUrl) new Audio(audioUrl).play();
-        };
-      }
-      const playWordBtn = card.querySelector(`#playWordBtn_${letter}`);
-      if (playWordBtn) {
-        playWordBtn.onclick = () => {
-          const audioUrl = playWordBtn.dataset.audio;
-          if (audioUrl) new Audio(audioUrl).play();
-        };
-      }
-
-      const toggleBtn = card.querySelector('.letter-details-toggle');
-      const detailsDiv = card.querySelector(`#details_${letter}`);
-      if (toggleBtn && detailsDiv) {
-        toggleBtn.onclick = function() {
-          detailsDiv.classList.toggle('open');
-          this.textContent = detailsDiv.classList.contains('open') ? '📌 تفاصيل متقدمة ▲' : '📌 تفاصيل متقدمة ▼';
-        };
-        if (Object.keys(letterData).length > 0) {
-          detailsDiv.classList.add('open');
-          toggleBtn.textContent = '📌 تفاصيل متقدمة ▲';
-        }
-      }
-
-      detailsDiv.querySelectorAll('input[type="checkbox"][data-pos]').forEach(cb => {
-        cb.onchange = function() {
-          const l = this.dataset.letter;
-          const pos = this.dataset.pos;
-          if (!state.diagEval[l]) state.diagEval[l] = {};
-          if (!state.diagEval[l].positions) state.diagEval[l].positions = { start: false, middle: false, end: false };
-          state.diagEval[l].positions[pos] = this.checked;
-        };
-      });
-      detailsDiv.querySelectorAll('input[type="checkbox"][data-vowel]').forEach(cb => {
-        cb.onchange = function() {
-          const l = this.dataset.letter;
-          const vowel = this.dataset.vowel;
-          if (!state.diagEval[l]) state.diagEval[l] = {};
-          if (!state.diagEval[l].vowels) state.diagEval[l].vowels = { fatha: false, damma: false, kasra: false, sukoon: false };
-          state.diagEval[l].vowels[vowel] = this.checked;
-        };
-      });
-      detailsDiv.querySelectorAll('select[data-field="disorderType"]').forEach(sel => {
-        sel.onchange = function() {
-          const l = this.dataset.letter;
-          if (!state.diagEval[l]) state.diagEval[l] = {};
-          state.diagEval[l].disorderType = this.value;
-          const defDiv = document.getElementById(`disorderDefinition_${l}`);
-          if (defDiv) defDiv.textContent = DISORDER_DEFINITIONS[this.value] || '';
-        };
-      });
-      detailsDiv.querySelectorAll('input[type="radio"][data-field="isOrganic"]').forEach(radio => {
-        radio.onchange = function() {
-          const l = this.dataset.letter;
-          if (!state.diagEval[l]) state.diagEval[l] = {};
-          state.diagEval[l].isOrganic = this.value === 'true' ? true : this.value === 'false' ? false : null;
-        };
-      });
-      detailsDiv.querySelectorAll('textarea[data-field="notes"]').forEach(ta => {
-        ta.oninput = function() {
-          const l = this.dataset.letter;
-          if (!state.diagEval[l]) state.diagEval[l] = {};
-          state.diagEval[l].notes = this.value;
-        };
-      });
-    });
-
-    container.appendChild(grid);
-  });
-}
-
-// ====== دالة توليد الخطة الفردية ======
-function generateIEP(passed, trained, need, unclear, student) {
-  const studentName = student?.fullName || student?.email || 'الطالب';
-  let diagnosisText = `الطالب: ${studentName}\n\n`;
-  if (passed.length > 0) diagnosisText += `✅ الحروف المتقنة: ${passed.join('، ')}\n`;
-  if (trained.length > 0) diagnosisText += `🔄 الحروف التي اجتازها بعد تدريب: ${trained.join('، ')}\n`;
-  if (need.length > 0) diagnosisText += `⚠️ الحروف التي تحتاج إلى تدريب: ${need.join('، ')}\n`;
-  if (unclear.length > 0) diagnosisText += `❌ الحروف غير الواضحة في النطق: ${unclear.join('، ')}\n`;
-  if (need.length === 0 && unclear.length === 0 && trained.length === 0) {
-    diagnosisText += `\n🎉 الطالب أتقن جميع الحروف بشكل ممتاز.`;
-  } else {
-    diagnosisText += `\n📋 ملخص: يعاني الطالب من صعوبات في نطق بعض الحروف، ويحتاج إلى برنامج تدريبي مكثف.`;
-  }
-  let disorderDetails = '';
-  const diag = state.diagEval || {};
-  Object.keys(diag).forEach(letter => {
-    const data = diag[letter];
-    if (data.disorderType && data.disorderType !== 'طبيعي') {
-      disorderDetails += `- حرف (${letter}): ${data.disorderType}`;
-      if (data.isOrganic !== null) disorderDetails += ` - ${data.isOrganic ? 'عضوي' : 'غير عضوي'}`;
-      if (data.notes) disorderDetails += ` - ملاحظات: ${data.notes}`;
-      disorderDetails += '\n';
-    }
-  });
-  if (disorderDetails) {
-    diagnosisText += `\n📌 تفاصيل العيوب:\n${disorderDetails}`;
-  }
-
-  const targetLetters = [...need, ...unclear, ...trained];
-  const targetLettersStr = targetLetters.length > 0 ? targetLetters.join('، ') : 'جميع الحروف';
-  let longGoal = '';
-  if (targetLetters.length === 0) {
-    longGoal = `تعزيز مهارات النطق لدى الطالب والحفاظ على المكتسبات اللغوية.`;
-  } else {
-    longGoal = `تمكين الطالب من نطق الحروف المستهدفة (${targetLettersStr}) بشكل صحيح في جميع مواضع الكلمة.`;
-  }
-  let shortGoals = '';
-  if (targetLetters.length === 0) {
-    shortGoals = `1. تعزيز النطق الصحيح للحروف المتقنة.\n2. تطوير مهارات الاستماع والتمييز السمعي.\n3. تحسين الطلاقة اللغوية.`;
-  } else {
-    shortGoals = `1. أن ينطق الطالب الحروف المستهدفة (${targetLettersStr}) بشكل مفرد وصحيح.\n2. أن ينطق الطالب الحروف المستهدفة في بداية الكلمة ووسطها ونهايتها.\n3. أن يستخدم الطالب الحروف المستهدفة في جمل بسيطة بشكل صحيح.\n4. أن يميز الطالب سمعياً بين الحروف المتشابهة.`;
-  }
-  let notes = '';
-  if (targetLetters.length === 0) {
-    notes = `- الاستمرار في تدريبات النطق اليومية.\n- تشجيع الطالب على القراءة والمحادثة.\n- متابعة تقدم الطالب بشكل دوري.`;
-  } else {
-    notes = `- تخصيص 10-15 دقيقة يومياً للتدريب على الحروف المستهدفة.\n- استخدام المرآة لتدريب الطالب على مخارج الحروف.\n- تدريبات سمعية للتمييز بين الحروف المتشابهة.\n- متابعة مع أخصائي النطق بشكل دوري.`;
-  }
-  return {
-    diagnosis: diagnosisText,
-    longGoal: longGoal,
-    shortGoals: shortGoals,
-    notes: notes,
-    updatedAt: new Date().toISOString(),
-    passed: passed,
-    trained: trained,
-    need: need,
-    unclear: unclear
-  };
-}
-
-// ====== صفحة الطالب ======
-async function renderStudentMenu(app) {
-  renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
-  let container = document.getElementById('studentContent');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'studentContent';
-    app.appendChild(container);
-  } else {
-    container.innerHTML = '';
-  }
-  const uDoc = await getDoc(doc(db, "users", state.user.uid));
-  const studentData = uDoc.data() || {};
-  const diag = studentData.diagnostic || {};
-  const passed = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-  const need = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-  const summary = document.createElement('div');
-  summary.className = 'card';
-  summary.innerHTML = `
-    <h3>📊 ملخص مستوى الطالب والنطق</h3>
-    <div><strong>الحروف المتقنة:</strong> ${passed.length ? passed.join(' - ') : 'لا يوجد'}</div>
-    <div><strong>حروف تحتاج تدريب:</strong> ${need.length ? need.join(' - ') : 'لا يوجد'}</div>
-  `;
-  container.appendChild(summary);
-
-  const iepCard = document.createElement('div');
-  iepCard.className = 'card';
-  iepCard.innerHTML = `<h3>📋 الخطة الفردية (IEP)</h3>`;
-  try {
-    const iepDoc = await getDoc(doc(db, "iep", state.user.uid));
-    if (iepDoc.exists()) {
-      const iepData = iepDoc.data();
-      iepCard.innerHTML += `
-        <div style="background:#f9f9f9;padding:16px;border-radius:12px;border-right:4px solid var(--mint-deep);">
-          <div style="margin-bottom:12px;">
-            <strong style="color:var(--mint-deep);">📝 تشخيص الحالة:</strong>
-            <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.diagnosis || 'لا يوجد تشخيص'}</div>
-          </div>
-          <div style="margin-bottom:12px;">
-            <strong style="color:var(--mint-deep);">🎯 الهدف العام:</strong>
-            <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.longGoal || 'لا يوجد هدف عام'}</div>
-          </div>
-          <div style="margin-bottom:12px;">
-            <strong style="color:var(--mint-deep);">📌 الأهداف القصيرة:</strong>
-            <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.shortGoals || 'لا توجد أهداف قصيرة'}</div>
-          </div>
-          <div>
-            <strong style="color:var(--mint-deep);">💡 التوصيات:</strong>
-            <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.notes || 'لا توجد توصيات'}</div>
-          </div>
-          <div style="margin-top:12px;font-size:12px;color:#6B7A99;">
-            آخر تحديث: ${iepData.updatedAt ? new Date(iepData.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}
-          </div>
-        </div>
-        <p class="muted" style="margin-top:8px;">ℹ️ هذه الخطة للقراءة فقط، يمكنك مناقشتها مع معلمك.</p>
-      `;
-    } else {
-      iepCard.innerHTML += `<p class="muted">⚠️ لا توجد خطة فردية مسجلة حتى الآن. يرجى التواصل مع معلمك لإجراء التشخيص.</p>`;
-    }
-  } catch(e) {
-    console.error('خطأ في جلب الخطة:', e);
-    iepCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الخطة الفردية.</p>`;
-  }
-  container.appendChild(iepCard);
-
-  const sessionsCard = document.createElement('div');
-  sessionsCard.className = 'card';
-  sessionsCard.innerHTML = '<h3>📂 سجل جلسات التدريب الخاصة بك</h3>';
-  try {
-    const qS = query(collection(db, "sessions"), where("studentId", "==", state.user.uid));
-    const snap = await getDocs(qS);
-    if (snap.empty) {
-      sessionsCard.innerHTML += '<p class="muted">لا توجد جلسات مسجلة.</p>';
-    } else {
-      const allS = [];
-      snap.forEach(d => allS.push({ id: d.id, ...d.data() }));
-      allS.sort((a,b) => (a.sessionNumber||0) - (b.sessionNumber||0));
-      allS.forEach(sess => {
-        const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
-        const sItem = document.createElement('div');
-        sItem.className = 'session-card';
-        sItem.innerHTML = `
-          <div>
-            <span class="badge badge-assigned">${typeInfo.icon} ${typeInfo.name}</span>
-            <strong>حرف ${sess.letter}</strong> - #${sess.sessionNumber || '?'} - ${sess.date}
-            <div style="font-size:12px;color:#6B7A99;">${sess.goal}</div>
-          </div>
-          <button class="btn btn-primary btn-sm" id="openSess_${sess.id}">فتح الجلسة</button>
-        `;
-        sessionsCard.appendChild(sItem);
-        setTimeout(() => {
-          const openBtn = document.getElementById(`openSess_${sess.id}`);
-          if (openBtn) openBtn.onclick = () => {
-            state.currentSession = { id: sess.id, ...sess };
-            state.view = 'single-session';
-            render();
-          };
-        }, 0);
-      });
-    }
-  } catch(e) {
-    sessionsCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
-  }
-  container.appendChild(sessionsCard);
-}
-
-// ====== إدارة الجلسات (كاملة) ======
-async function renderSpeechSessions(app) {
-  if (!state.currentStudent) {
-    showToast('اختر طالباً أولاً للوصول للسجل');
-    state.view = 'teacher-dashboard';
-    return render();
-  }
-
-  renderTopbar(app, `سجل جلسات: ${state.currentStudent.fullName || state.currentStudent.email}`, 'إضافة وتدريب ورصد التقييم', () => {
-    state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu';
-    render();
-  });
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2812,9 +2485,6 @@ async function renderSpeechSessions(app) {
 
 
 
-  
-
-  
 
 
 
@@ -2824,10 +2494,13 @@ async function renderSpeechSessions(app) {
 
 
 
-    
 
-                            
-    // ====== عرض جلسة واحدة ======
+
+
+
+
+
+        // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -3477,4 +3150,10 @@ async function renderSpeechSessions(app) {
 
   </script>
 </body>
-</html>            
+</html>
+
+
+
+
+
+  
