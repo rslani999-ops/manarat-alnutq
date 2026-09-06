@@ -1240,7 +1240,7 @@
 
 
 
-       // ====== التصيير الرئيسي ======
+     // ====== التصيير الرئيسي ======
     function render() {
       const app = document.getElementById('app');
       app.innerHTML = '';
@@ -1258,6 +1258,7 @@
       if (state.view === 'sessions-log') return renderSessionsLog(app);
       if (state.view === 'vocab-list') return renderVocabList(app);
       if (state.view === 'achievement') return renderAchievement(app);
+      if (state.view === 'student-achievement-list') return renderStudentAchievementList(app);
       if (state.view === 'teacher-achievement') return renderTeacherAchievement(app);
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
@@ -1498,7 +1499,7 @@
           <button class="btn btn-primary btn-sm" id="btnSessions">📋 سجل الجلسات السحابي</button>
           <button class="btn btn-success btn-sm" id="btnSessionsLog">📊 جدول سجل الجلسات</button>
           <button class="btn btn-soft btn-sm" id="btnIEPList">📋 الخطة الفردية (IEP)</button>
-          <button class="btn btn-soft btn-sm" id="btnAchievement">🏆 ملف إنجاز الطالب</button>
+          <button class="btn btn-soft btn-sm" id="btnAchievementList">🏆 ملف إنجاز الطلاب</button>
           <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
         </div>
       `;
@@ -1524,10 +1525,9 @@
         state.view = 'iep-session';
         render();
       };
-      const btnAchievement = actCard.querySelector('#btnAchievement');
-      if (btnAchievement) btnAchievement.onclick = () => {
-        if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
-        state.view = 'achievement';
+      const btnAchievementList = actCard.querySelector('#btnAchievementList');
+      if (btnAchievementList) btnAchievementList.onclick = () => {
+        state.view = 'student-achievement-list';
         render();
       };
       const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
@@ -1630,6 +1630,44 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
+    // ====== صفحة قائمة الطلاب لملفات الإنجاز ======
+    async function renderStudentAchievementList(app) {
+      renderTopbar(app, '🏆 ملفات إنجاز الطلاب', 'اختر طالباً لعرض ملف إنجازه', () => {
+        state.view = 'teacher-dashboard';
+        render();
+      });
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<h3>👥 الطلاب</h3>';
+      app.appendChild(card);
+
+      if (!state.myStudents.length) {
+        card.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
+        return;
+      }
+
+      const list = document.createElement('div');
+      list.className = 'iep-student-list';
+      card.appendChild(list);
+
+      state.myStudents.forEach(st => {
+        const item = document.createElement('div');
+        item.className = 'iep-student-item';
+        item.innerHTML = `
+          <div style="font-size:40px;">🧒</div>
+          <div class="student-name">${st.fullName || st.email}</div>
+          <div class="student-email">${st.email}</div>
+        `;
+        item.onclick = () => {
+          state.currentStudent = st;
+          state.view = 'achievement';
+          render();
+        };
+        list.appendChild(item);
+      });
+    }
+
     // ====== صفحة ملف إنجاز المعلم ======
     const TEACHER_STANDARDS = [
       { id: 1, title: 'أداء الواجبات الوظيفية', evidences: 'سجل الدوام، سجل المناوبة والإشراف، سجل الانتظار، خطة توزيع المنهج.' },
@@ -1679,14 +1717,32 @@
         });
       } catch(e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
 
-      const container = document.createElement('div');
-      container.innerHTML = `
-        <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep);">
-          <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
-          <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
+      const headerCard = document.createElement('div');
+      headerCard.className = 'card';
+      headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+      headerCard.style.border = '2px solid var(--mint-deep)';
+      headerCard.innerHTML = `
+        <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
+        <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+          <button class="btn btn-primary btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">🖨️ طباعة / حفظ PDF</button>
+          <button class="btn btn-soft btn-sm" id="shareTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">📤 إرسال / مشاركة</button>
         </div>
       `;
-      app.appendChild(container);
+      app.appendChild(headerCard);
+
+      const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
+      if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
+
+      const shareBtn = headerCard.querySelector('#shareTeacherAchievementBtn');
+      if (shareBtn) shareBtn.onclick = () => {
+        const text = `ملف إنجاز المعلم: ${teacherName}\n${TEACHER_STANDARDS.map(s => `${s.id}. ${s.title}`).join('\n')}`;
+        if (navigator.share) {
+          navigator.share({ title: 'ملف إنجاز المعلم', text }).catch(() => {});
+        } else {
+          navigator.clipboard.writeText(text).then(() => showToast('تم نسخ الملخص')).catch(() => showToast('تعذر النسخ'));
+        }
+      };
 
       TEACHER_STANDARDS.forEach(standard => {
         const card = document.createElement('div');
@@ -1726,7 +1782,6 @@
             });
             const results = await Promise.all(uploadPromises);
             const success = results.filter(r => r !== null);
-            const failed = results.length - success.length;
 
             if (success.length > 0) {
               for (const fileInfo of success) {
@@ -1742,16 +1797,54 @@
                 } catch(e) { console.error('خطأ في حفظ الملف:', e); }
               }
               showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
-              fileStatus.textContent = `✅ تم رفع ${success.length} ملف`;
               renderTeacherAchievement(app);
             } else {
               showToast('❌ فشل رفع الملفات');
-              fileStatus.textContent = '❌ فشل الرفع';
             }
             fileInput.value = '';
           };
         }
       });
+    }
+
+    function printTeacherAchievement(teacherName, existingFiles) {
+      let printArea = document.getElementById('iep-print-area');
+      if (!printArea) {
+        printArea = document.createElement('div');
+        printArea.id = 'iep-print-area';
+        document.body.appendChild(printArea);
+      }
+
+      printArea.innerHTML = `
+        <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+            <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز المعلم</p>
+            <hr style="border:1px solid #ddd;margin:10px 0;">
+          </div>
+          <div style="margin-bottom:15px;text-align:center;">
+            <strong>اسم المعلم:</strong> ${teacherName}
+          </div>
+          ${TEACHER_STANDARDS.map(standard => `
+            <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
+              <strong>${standard.id}. ${standard.title}</strong>
+              <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
+              ${(existingFiles[standard.id] || []).map(file => `
+                <div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>
+              `).join('')}
+            </div>
+          `).join('')}
+          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
+            تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
+          </div>
+        </div>
+      `;
+
+      window.print();
+
+      setTimeout(() => {
+        if (printArea) printArea.remove();
+      }, 1000);
     }
 
     // ====== ملف الإنجاز الرقمي للطالب ======
@@ -1763,7 +1856,7 @@
       }
 
       renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
-        state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu';
+        state.view = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
         render();
       });
 
@@ -2768,7 +2861,7 @@
         listCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
       }
       app.appendChild(listCard);
-    }
+    }  }
 
 
 
