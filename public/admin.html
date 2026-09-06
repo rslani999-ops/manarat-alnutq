@@ -931,25 +931,16 @@
     }
     window.speakText = speakText;
 
-    // ====== دالة التسجيل الصوتي مع مؤقّت تلقائي ======
+    // ====== دالة التسجيل الصوتي (مبسطة وموثوقة) ======
     async function startRecording(targetText, callback, maxSeconds = 5) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        showToast('❌ المتصفح لا يدعم خاصية التعرف على الصوت. يرجى استخدام Chrome.');
+        showToast('❌ المتصفح لا يدعم خاصية التعرف على الصوت. استخدم Chrome.');
+        if (callback) callback(null, null, null);
         return;
       }
 
-      let mediaRecorder = null;
-      let audioChunks = [];
-      let stream = null;
-      let audioUrl = null;
-      let transcript = null;
-      let analysis = null;
-      let recognitionFinished = false;
-      let callbackCalled = false;
-      let timerInterval = null;
-      let timeoutId = null;
-
+      // إنشاء مؤقت مرئي
       let timerDisplay = document.getElementById('recordingTimer');
       if (!timerDisplay) {
         timerDisplay = document.createElement('div');
@@ -958,80 +949,38 @@
         document.body.appendChild(timerDisplay);
       }
 
-      function stopTimer() {
-        if (timerInterval) clearInterval(timerInterval);
-        if (timeoutId) clearTimeout(timeoutId);
-        if (timerDisplay) timerDisplay.remove();
-      }
-
-      function finishRecording() {
-        if (callbackCalled) return;
-        callbackCalled = true;
-        stopTimer();
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        } else {
-          if (callback) callback(transcript, analysis, audioUrl);
-        }
-      }
-
       let secondsLeft = maxSeconds;
       timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
-      timerInterval = setInterval(() => {
+      const timerInterval = setInterval(() => {
         secondsLeft--;
         if (secondsLeft >= 0) {
           timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
         }
         if (secondsLeft <= 0) {
           clearInterval(timerInterval);
-          showToast('⏱️ انتهى وقت التسجيل');
-          finishRecording();
+          recognition.stop();
         }
       }, 1000);
-
-      timeoutId = setTimeout(() => {
-        finishRecording();
-      }, maxSeconds * 1000);
-
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunks.push(e.data);
-        };
-        mediaRecorder.onstop = () => {
-          try {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            audioUrl = URL.createObjectURL(blob);
-          } catch(e) {
-            console.warn('فشل إنشاء رابط صوتي:', e);
-            audioUrl = null;
-          }
-          if (stream) stream.getTracks().forEach(track => track.stop());
-          if (!callbackCalled) {
-            callbackCalled = true;
-            stopTimer();
-            if (callback) callback(transcript, analysis, audioUrl);
-          }
-        };
-        mediaRecorder.start();
-      } catch (e) {
-        console.warn('MediaRecorder غير متاح:', e);
-        mediaRecorder = null;
-        stream = null;
-      }
 
       const recognition = new SpeechRecognition();
       recognition.lang = 'ar-SA';
       recognition.continuous = false;
       recognition.interimResults = false;
-      showToast('🎤 جاري الاستماع... تحدث الآن');
+
+      let finished = false;
+
+      function finish(result, analysis, audioUrl) {
+        if (finished) return;
+        finished = true;
+        clearInterval(timerInterval);
+        if (timerDisplay) timerDisplay.remove();
+        if (callback) callback(result, analysis, audioUrl);
+      }
 
       recognition.onresult = (event) => {
-        transcript = event.results[0][0].transcript.trim();
-        analysis = analyzePronunciation(targetText, transcript);
-        recognition.stop();
-        finishRecording();
+        const transcript = event.results[0][0].transcript.trim();
+        const analysis = analyzePronunciation(targetText, transcript);
+        finish(transcript, analysis, null);
       };
 
       recognition.onerror = (event) => {
@@ -1040,23 +989,21 @@
         else if (event.error === 'no-speech') msg += 'لم يتم التقاط أي صوت. حاول مرة أخرى.';
         else msg += event.error;
         showToast(msg);
-        finishRecording();
+        finish(null, null, null);
       };
 
       recognition.onend = () => {
-        recognitionFinished = true;
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        } else {
-          finishRecording();
+        if (!finished) {
+          finish(null, null, null);
         }
       };
 
       try {
         recognition.start();
+        showToast('🎤 جاري الاستماع... تحدث الآن');
       } catch (e) {
         showToast('❌ تعذر بدء التسجيل: ' + e.message);
-        finishRecording();
+        finish(null, null, null);
       }
     }
     window.startRecording = startRecording;
@@ -1183,7 +1130,7 @@
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
 
-    // ====== دوال الوصول (التباين وتكبير الخط) ======
+    // ====== دوال الوصول ======
     function toggleHighContrast() {
       document.body.classList.toggle('high-contrast');
       const isActive = document.body.classList.contains('high-contrast');
@@ -1305,7 +1252,6 @@
       }
       appContainer.appendChild(bar);
 
-      // ربط أزرار الوصول
       const contrastBtn = bar.querySelector('#contrastToggleBtn');
       if (contrastBtn) contrastBtn.onclick = toggleHighContrast;
       const textBtn = bar.querySelector('#textToggleBtn');
