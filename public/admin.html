@@ -43,94 +43,22 @@
       flex: 1;
       width: 100%;
     }
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      padding: 10px 4px 24px;
-      gap: 10px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-    }
-    .brand .mark {
-      width: 40px; height: 40px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--mint), var(--mint-deep));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      color: #fff;
-      box-shadow: var(--shadow);
-    }
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 4px 24px; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .brand .mark { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; box-shadow: var(--shadow); }
     .brand h1 { font-size: 20px; font-weight: 700; }
     .brand span { display: block; font-size: 11px; color: var(--muted); margin-top: -2px; }
     .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .btn-nav {
-      border: none;
-      background: var(--btn-bg);
-      padding: 8px 14px;
-      border-radius: 10px;
-      font-family: 'Tajawal', sans-serif;
-      font-weight: 700;
-      cursor: pointer;
-      border: 1px solid var(--btn-border);
-      font-size: 13px;
-      color: var(--btn-text);
-      transition: 0.15s;
-    }
+    .btn-nav { border: none; background: var(--btn-bg); padding: 8px 14px; border-radius: 10px; font-family: 'Tajawal', sans-serif; font-weight: 700; cursor: pointer; border: 1px solid var(--btn-border); font-size: 13px; color: var(--btn-text); transition: 0.15s; }
     .btn-nav:hover { background: #F5F8FC; }
-    .accessibility-btns {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-    .btn-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      border: 1px solid var(--btn-border);
-      background: var(--btn-bg);
-      color: var(--btn-text);
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: 0.15s;
-    }
+    .accessibility-btns { display: flex; gap: 6px; align-items: center; }
+    .btn-icon { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--btn-text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
     .btn-icon:hover { background: #F5F8FC; }
-    .card {
-      background: var(--card-bg);
-      border-radius: 18px;
-      border: 1px solid var(--line);
-      padding: 20px;
-      margin-bottom: 16px;
-      overflow-x: auto;
-      color: var(--text);
-    }
+    .card { background: var(--card-bg); border-radius: 18px; border: 1px solid var(--line); padding: 20px; margin-bottom: 16px; overflow-x: auto; color: var(--text); }
     .card h2, .card h3 { font-family: 'Baloo Bhaijaan 2', sans-serif; }
     .card h3 { font-size: 17px; margin-bottom: 8px; }
     .muted { color: var(--muted); font-size: 13px; }
-    .btn {
-      border: none;
-      border-radius: 12px;
-      padding: 10px 18px;
-      font-family: 'Tajawal', sans-serif;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 14px;
-      transition: 0.15s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
+    .btn { border: none; border-radius: 12px; padding: 10px 18px; font-family: 'Tajawal', sans-serif; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
     .btn:active { transform: scale(0.97); }
     .btn-primary { background: var(--mint-deep); color: white; }
     .btn-primary:hover { filter: brightness(1.08); }
@@ -140,666 +68,181 @@
     .btn-danger { background: var(--coral); color: white; }
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn-block { width: 100%; }
-    .btn-record {
-      background: #E8F0FE;
-      color: #1A73E8;
-      border: 2px solid #1A73E8;
-      border-radius: 50px;
-      padding: 6px 14px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.2s;
-      font-size: 12px;
-    }
+    .btn-record { background: #E8F0FE; color: #1A73E8; border: 2px solid #1A73E8; border-radius: 50px; padding: 6px 14px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 12px; }
     .btn-record:hover { background: #D2E3FC; }
-    .btn-record.recording {
-      background: #FEE8E8;
-      color: #D93025;
-      border-color: #D93025;
-      animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
+    .btn-record.recording { background: #FEE8E8; color: #D93025; border-color: #D93025; animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     .feedback-correct { color: var(--success); font-weight: bold; }
     .feedback-wrong { color: var(--fail); font-weight: bold; }
-    input, select, textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1.5px solid var(--line);
-      font-family: 'Tajawal', sans-serif;
-      font-size: 15px;
-      background: var(--input-bg);
-      margin-bottom: 12px;
-      color: var(--text);
-    }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--mint);
-    }
-    .auth-form {
-      max-width: 400px;
-      margin: 20px auto;
-      background: var(--card-bg);
-      padding: 30px;
-      border-radius: 20px;
-      border: 1px solid var(--line);
-    }
+    input, select, textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); font-family: 'Tajawal', sans-serif; font-size: 15px; background: var(--input-bg); margin-bottom: 12px; color: var(--text); }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--mint); }
+    .auth-form { max-width: 400px; margin: 20px auto; background: var(--card-bg); padding: 30px; border-radius: 20px; border: 1px solid var(--line); }
     .auth-form h2 { text-align: center; margin-bottom: 20px; }
-    .auth-toggle {
-      text-align: center;
-      margin-top: 15px;
-      font-size: 13px;
-      color: #5B6A88;
-    }
-    .auth-toggle span {
-      color: var(--mint-deep);
-      cursor: pointer;
-      font-weight: 700;
-      text-decoration: underline;
-    }
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--text);
-      color: var(--bg);
-      padding: 12px 22px;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 14px;
-      z-index: 999;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.2);
-    }
-    .student-row {
-      padding: 12px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .badge {
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-      display: inline-block;
-      margin: 2px;
-    }
+    .auth-toggle { text-align: center; margin-top: 15px; font-size: 13px; color: #5B6A88; }
+    .auth-toggle span { color: var(--mint-deep); cursor: pointer; font-weight: 700; text-decoration: underline; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 22px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 999; box-shadow: 0 10px 24px rgba(0,0,0,0.2); }
+    .student-row { padding: 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block; margin: 2px; }
     .badge-assigned { background: #E1F5FE; color: #0288D1; }
     .badge-free { background: #E8F5E9; color: #388E3C; }
     .badge-passed { background: #E8F5E9; color: #2E7D32; }
     .badge-trained { background: #E0F2FE; color: #0288D1; border:1px solid #0288D1; }
     .badge-need { background: #FFF8E1; color: #F57F17; }
     .badge-unclear { background: #FFEBEE; color: #C62828; }
-    .group-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--mint-deep);
-      margin: 20px 0 10px 0;
-      padding: 8px 16px;
-      background: #EAF6F4;
-      border-radius: 30px;
-      display: inline-block;
-      border-right: 4px solid var(--mint-deep);
-    }
-    .diag-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 12px;
-      margin-top: 15px;
-    }
-    .letter-card {
-      background: #F8FAFC;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      text-align: center;
-      transition: 0.2s;
-    }
-    .letter-card .letter-circle {
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #4FB6A8, #357E74);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 4px auto;
-      font-size: 30px;
-      font-weight: bold;
-      color: white;
-      box-shadow: 0 4px 10px rgba(79,182,168,0.3);
-      border: 2px solid white;
-      cursor: pointer;
-    }
-    .letter-title {
-      font-size: 13px;
-      font-weight: bold;
-      color: var(--mint-deep);
-      display: block;
-      margin-bottom: 4px;
-    }
-    .audio-btn {
-      background: var(--mint);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      cursor: pointer;
-      margin-bottom: 6px;
-      font-size: 14px;
-    }
-    .eval-btns {
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 6px;
-    }
-    .eval-btn {
-      font-size: 10px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
+    .group-title { font-size: 18px; font-weight: 700; color: var(--mint-deep); margin: 20px 0 10px 0; padding: 8px 16px; background: #EAF6F4; border-radius: 30px; display: inline-block; border-right: 4px solid var(--mint-deep); }
+    .diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 15px; }
+    .letter-card { background: #F8FAFC; border: 1px solid var(--line); border-radius: 14px; padding: 12px; text-align: center; transition: 0.2s; }
+    .letter-card .letter-circle { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #4FB6A8, #357E74); display: flex; align-items: center; justify-content: center; margin: 0 auto 4px auto; font-size: 30px; font-weight: bold; color: white; box-shadow: 0 4px 10px rgba(79,182,168,0.3); border: 2px solid white; cursor: pointer; }
+    .letter-title { font-size: 13px; font-weight: bold; color: var(--mint-deep); display: block; margin-bottom: 4px; }
+    .audio-btn { background: var(--mint); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; margin-bottom: 6px; font-size: 14px; }
+    .eval-btns { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+    .eval-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
     .eval-btn.passed { background: #E8F5E9; color: #2E7D32; }
     .eval-btn.trained { background: #E0F2FE; color: #0288D1; }
     .eval-btn.need { background: #FFF8E1; color: #F57F17; }
     .eval-btn.unclear { background: #FFEBEE; color: #C62828; }
     .eval-btn.active { outline: 2px solid var(--text); box-shadow: 0 0 4px rgba(0,0,0,0.3); }
-    .letter-details-toggle {
-      background: none;
-      border: none;
-      color: var(--mint-deep);
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 12px;
-      margin-top: 6px;
-    }
+    .letter-details-toggle { background: none; border: none; color: var(--mint-deep); font-weight: bold; cursor: pointer; font-size: 12px; margin-top: 6px; }
     .letter-details-toggle:hover { text-decoration: underline; }
-    .letter-details {
-      display: none;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px dashed var(--line);
-      text-align: right;
-      font-size: 13px;
-    }
+    .letter-details { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); text-align: right; font-size: 13px; }
     .letter-details.open { display: block; }
-    .detail-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 12px;
-      margin-bottom: 6px;
-    }
+    .detail-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 6px; }
     .detail-row .label { font-weight: bold; color: var(--text); }
-    .detail-row select, .detail-row input, .detail-row textarea {
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      font-family: 'Tajawal', sans-serif;
-      font-size: 13px;
-      background: white;
-      width: 100%;
-      color: var(--text);
-    }
+    .detail-row select, .detail-row input, .detail-row textarea { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); font-family: 'Tajawal', sans-serif; font-size: 13px; background: white; width: 100%; color: var(--text); }
     .detail-row textarea { resize: vertical; min-height: 40px; }
-    .detail-row .radio-group {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .detail-row .radio-group label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-weight: normal;
-    }
-    .session-card {
-      background: #FAFDFC;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .vowel-box {
-      background: #F4F9F8;
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-      border: 1px solid var(--line);
-    }
-    footer {
-      background: var(--card-bg);
-      border-top: 1px solid var(--line);
-      text-align: center;
-      padding: 16px;
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-    footer .footer-main {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 8px 16px;
-    }
+    .detail-row .radio-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .detail-row .radio-group label { display: flex; align-items: center; gap: 4px; font-weight: normal; }
+    .session-card { background: #FAFDFC; border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .vowel-box { background: #F4F9F8; padding: 10px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; cursor: pointer; border: 1px solid var(--line); }
+    footer { background: var(--card-bg); border-top: 1px solid var(--line); text-align: center; padding: 16px; font-size: 13px; color: var(--muted); margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    footer .footer-main { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 16px; }
     footer .footer-main .sep { color: var(--line); }
-    footer .footer-links {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px 20px;
-    }
-    footer a {
-      color: var(--mint-deep);
-      text-decoration: none;
-      font-weight: 700;
-      transition: 0.2s;
-    }
+    footer .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 20px; }
+    footer a { color: var(--mint-deep); text-decoration: none; font-weight: 700; transition: 0.2s; }
     footer a:hover { text-decoration: underline; }
-    footer .school-info {
-      font-size: 12px;
-      color: #888;
-      margin-top: 2px;
-    }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 15px;
-    }
-    .diag-option-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 6px;
-      margin-bottom: 12px;
-    }
-    .diag-option {
-      padding: 6px 16px;
-      border-radius: 30px;
-      border: 2px solid #ddd;
-      background: #f9f9f9;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: 0.2s;
-      color: #555;
-      user-select: none;
-    }
+    footer .school-info { font-size: 12px; color: #888; margin-top: 2px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+    .diag-option-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; margin-bottom: 12px; }
+    .diag-option { padding: 6px 16px; border-radius: 30px; border: 2px solid #ddd; background: #f9f9f9; cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; color: #555; user-select: none; }
     .diag-option:hover { transform: scale(1.02); }
     .diag-option.selected-green { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
     .diag-option.selected-red { background: #FFEBEE; border-color: #C62828; color: #C62828; }
     .diag-option.selected-gray { background: #F5F5F5; border-color: #aaa; color: #616161; }
-    .diag-section-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      margin-top: 6px;
-      margin-bottom: 2px;
-      display: block;
-    }
-    .input-sm {
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      font-size: 14px;
-      width: 100%;
-      max-width: 300px;
-      margin-top: 4px;
-      background: var(--input-bg);
-      color: var(--text);
-    }
+    .diag-section-title { font-size: 14px; font-weight: 700; color: var(--text); margin-top: 6px; margin-bottom: 2px; display: block; }
+    .input-sm { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); font-size: 14px; width: 100%; max-width: 300px; margin-top: 4px; background: var(--input-bg); color: var(--text); }
     #comprehensiveContainer .card { border-right: 6px solid var(--mint-deep); }
     #iep-print-area { display: none; }
-    .sessions-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-    .sessions-table th, .sessions-table td {
-      border: 1px solid var(--line);
-      padding: 10px 8px;
-      text-align: center;
-      white-space: nowrap;
-    }
-    .sessions-table th {
-      background: #EAF6F4;
-      color: var(--mint-deep);
-      font-weight: 700;
-    }
+    .sessions-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+    .sessions-table th, .sessions-table td { border: 1px solid var(--line); padding: 10px 8px; text-align: center; white-space: nowrap; }
+    .sessions-table th { background: #EAF6F4; color: var(--mint-deep); font-weight: 700; }
     .sessions-table tr:nth-child(even) { background: #F8FAFC; }
     .table-container { overflow-x: auto; }
-    .vocab-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-    }
-    .vocab-item {
-      background: #F8FAFC;
-      border: 2px solid var(--line);
-      border-radius: 20px;
-      padding: 20px 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.25s ease;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      min-height: 150px;
-      justify-content: center;
-    }
-    .vocab-item:hover {
-      transform: translateY(-5px) scale(1.02);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-      border-color: var(--mint);
-    }
+    .vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin-top: 16px; }
+    .vocab-item { background: #F8FAFC; border: 2px solid var(--line); border-radius: 20px; padding: 20px 12px; text-align: center; cursor: pointer; transition: 0.25s ease; display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 150px; justify-content: center; }
+    .vocab-item:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-color: var(--mint); }
     .vocab-item .icon { font-size: 56px; line-height: 1.2; }
     .vocab-item .word { font-size: 18px; font-weight: 700; color: var(--text); }
-    .iep-student-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-    .iep-student-item {
-      background: #F8FAFC;
-      border: 2px solid var(--line);
-      border-radius: 16px;
-      padding: 16px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .iep-student-item:hover {
-      transform: translateY(-4px);
-      border-color: var(--mint-deep);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
+    .iep-student-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+    .iep-student-item { background: #F8FAFC; border: 2px solid var(--line); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .iep-student-item:hover { transform: translateY(-4px); border-color: var(--mint-deep); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     .iep-student-item .student-name { font-size: 16px; font-weight: 700; color: var(--text); }
     .iep-student-item .student-email { font-size: 12px; color: var(--muted); margin-top: 4px; }
-    .record-buttons {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
-    .record-buttons .btn-record {
-      font-size: 11px;
-      padding: 4px 12px;
-    }
+    .record-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+    .record-buttons .btn-record { font-size: 11px; padding: 4px 12px; }
 
-    /* ====== تنسيقات الألعاب ====== */
-    .game-container {
-      background: #ffffff;
-      border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 16px;
-      border: 2px solid var(--mint);
-    }
-    .game-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .game-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--mint-deep);
-    }
-    .game-score {
-      font-size: 18px;
-      font-weight: bold;
-      color: var(--gold);
-    }
-    .game-question {
-      font-size: 28px;
-      font-weight: bold;
-      text-align: center;
-      margin: 20px 0;
-    }
-    .game-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .game-option {
-      padding: 15px;
-      border-radius: 14px;
-      border: 2px solid #ddd;
-      background: #f9f9f9;
-      cursor: pointer;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      transition: 0.2s;
-    }
-    .game-option:hover {
-      transform: scale(1.05);
-      border-color: var(--mint);
-    }
-    .game-option.correct {
-      background: #E8F5E9;
-      border-color: #2E7D32;
-      color: #2E7D32;
-    }
-    .game-option.wrong {
-      background: #FFEBEE;
-      border-color: #C62828;
-      color: #C62828;
-    }
-    .game-feedback {
-      text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-      min-height: 30px;
-    }
+    /* تنسيقات الألعاب */
+    .game-container { background: #ffffff; border-radius: 20px; padding: 20px; margin-bottom: 16px; border: 2px solid var(--mint); }
+    .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .game-title { font-size: 20px; font-weight: 700; color: var(--mint-deep); }
+    .game-score { font-size: 18px; font-weight: bold; color: var(--gold); }
+    .game-question { font-size: 28px; font-weight: bold; text-align: center; margin: 20px 0; }
+    .game-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .game-option { padding: 15px; border-radius: 14px; border: 2px solid #ddd; background: #f9f9f9; cursor: pointer; text-align: center; font-size: 22px; font-weight: bold; transition: 0.2s; }
+    .game-option:hover { transform: scale(1.05); border-color: var(--mint); }
+    .game-option.correct { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
+    .game-option.wrong { background: #FFEBEE; border-color: #C62828; color: #C62828; }
+    .game-feedback { text-align: center; font-size: 18px; font-weight: bold; min-height: 30px; }
 
-    /* ====== شريط التقدم ====== */
-    .progress-bar-container {
-      width: 100%;
-      background: #e0e0e0;
-      border-radius: 20px;
-      height: 20px;
-      overflow: hidden;
-      margin: 8px 0;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4FB6A8, #357E74);
-      border-radius: 20px;
-      transition: width 0.5s ease;
-      text-align: center;
-      color: white;
-      font-size: 12px;
-      font-weight: bold;
-      line-height: 20px;
-      min-width: 30px;
-    }
+    /* شريط التقدم */
+    .progress-bar-container { width: 100%; background: #e0e0e0; border-radius: 20px; height: 20px; overflow: hidden; margin: 8px 0; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #4FB6A8, #357E74); border-radius: 20px; transition: width 0.5s ease; text-align: center; color: white; font-size: 12px; font-weight: bold; line-height: 20px; min-width: 30px; }
 
-    /* ====== الإشعارات الداخلية ====== */
-    .notification-container {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-width: 320px;
-    }
-    .notification-item {
-      background: white;
-      border-right: 4px solid var(--mint-deep);
-      border-radius: 10px;
-      padding: 12px 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      animation: slideIn 0.3s ease;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-    }
+    /* الإشعارات */
+    .notification-container { position: fixed; top: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
+    .notification-item { background: white; border-right: 4px solid var(--mint-deep); border-radius: 10px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease; font-size: 14px; font-weight: 600; color: var(--text); }
     .notification-item.success { border-right-color: #2E7D32; }
     .notification-item.info { border-right-color: #0288D1; }
     .notification-item.warning { border-right-color: #F57F17; }
-    @keyframes slideIn {
-      from { transform: translateX(-100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+    @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-    /* ====== وضع التباين العالي ====== */
+    /* تنسيقات لوحة الملخص */
+    .summary-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .summary-item { background: #ffffff; border-radius: 16px; padding: 15px; text-align: center; border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .summary-item .number { font-size: 32px; font-weight: bold; color: var(--mint-deep); }
+    .summary-item .label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    /* تنسيقات صفحة توجيهات أولياء الأمور */
+    .parent-guide-section { margin-bottom: 25px; }
+    .parent-guide-title { font-size: 20px; font-weight: 700; color: var(--mint-deep); margin-bottom: 10px; border-bottom: 2px solid var(--mint); padding-bottom: 5px; }
+    .parent-guide-tip { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; font-size: 15px; line-height: 1.8; }
+    .parent-guide-tip .icon { font-size: 24px; }
+    .exercise-box { background: #F0FDFA; border: 1px solid var(--mint); border-radius: 12px; padding: 15px; margin-bottom: 12px; }
+    .exercise-box h4 { margin: 0 0 8px 0; color: var(--mint-deep); }
+    .exercise-box ul { list-style: disc; padding-right: 20px; }
+    .exercise-box li { margin-bottom: 6px; font-size: 14px; line-height: 1.7; }
+    .print-btn-guide { text-align: center; margin-top: 20px; }
+
+    /* التباين العالي */
     body.high-contrast {
-      --bg: #000000;
-      --card-bg: #1a1a1a;
-      --text: #ffffff;
-      --muted: #cccccc;
-      --line: #ffffff;
-      --mint: #00ffcc;
-      --mint-deep: #00cc99;
-      --btn-bg: #000000;
-      --btn-border: #ffffff;
-      --btn-text: #ffffff;
-      --input-bg: #000000;
-      --shadow: 0 0 10px #00ffcc;
+      --bg: #000000; --card-bg: #1a1a1a; --text: #ffffff; --muted: #cccccc;
+      --line: #ffffff; --mint: #00ffcc; --mint-deep: #00cc99; --btn-bg: #000000;
+      --btn-border: #ffffff; --btn-text: #ffffff; --input-bg: #000000; --shadow: 0 0 10px #00ffcc;
     }
-    body.high-contrast .btn-primary {
-      background: #ffffff;
-      color: #000000;
-    }
-    body.high-contrast .btn-soft {
-      background: #000000;
-      color: #00ffcc;
-      border: 1px solid #00ffcc;
-    }
-    body.high-contrast .letter-circle {
-      background: #ffffff;
-      color: #000000;
-    }
-    body.high-contrast .audio-btn {
-      background: #00ffcc;
-      color: #000000;
-    }
+    body.high-contrast .btn-primary { background: #ffffff; color: #000000; }
+    body.high-contrast .btn-soft { background: #000000; color: #00ffcc; border: 1px solid #00ffcc; }
+    body.high-contrast .letter-circle { background: #ffffff; color: #000000; }
+    body.high-contrast .audio-btn { background: #00ffcc; color: #000000; }
     body.high-contrast .eval-btn.passed,
     body.high-contrast .eval-btn.trained,
     body.high-contrast .eval-btn.need,
-    body.high-contrast .eval-btn.unclear {
-      background: #000000;
-      border: 1px solid #ffffff;
-    }
+    body.high-contrast .eval-btn.unclear { background: #000000; border: 1px solid #ffffff; }
     body.high-contrast .eval-btn.passed { color: #00ff00; }
     body.high-contrast .eval-btn.trained { color: #00ccff; }
     body.high-contrast .eval-btn.need { color: #ffcc00; }
     body.high-contrast .eval-btn.unclear { color: #ff6666; }
     body.high-contrast .group-title,
-    body.high-contrast .sessions-table th {
-      background: #000000;
-      color: #00ffcc;
-      border: 1px solid #00ffcc;
-    }
-    body.high-contrast .game-container {
-      background: #000000;
-      border-color: #00ffcc;
-    }
-    body.high-contrast .game-option {
-      background: #000000;
-      border-color: #ffffff;
-      color: #ffffff;
-    }
-    body.high-contrast .progress-bar-container {
-      background: #333;
-    }
+    body.high-contrast .sessions-table th { background: #000000; color: #00ffcc; border: 1px solid #00ffcc; }
+    body.high-contrast .game-container { background: #000000; border-color: #00ffcc; }
+    body.high-contrast .game-option { background: #000000; border-color: #ffffff; color: #ffffff; }
+    body.high-contrast .progress-bar-container { background: #333; }
+    body.high-contrast .summary-item { background: #000000; border-color: #ffffff; color: #ffffff; }
+    body.high-contrast .exercise-box { background: #000000; border-color: #00ffcc; color: #ffffff; }
 
-    /* ====== وضع تكبير الخط ====== */
-    body.larger-text {
-      font-size: 18px;
-    }
+    /* تكبير الخط */
+    body.larger-text { font-size: 18px; }
     body.larger-text .btn,
     body.larger-text .btn-nav,
     body.larger-text input,
     body.larger-text select,
-    body.larger-text textarea {
-      font-size: 16px;
-    }
-    body.larger-text .card h3 {
-      font-size: 22px;
-    }
-    body.larger-text .brand h1 {
-      font-size: 26px;
-    }
-    body.larger-text .letter-circle {
-      width: 80px;
-      height: 80px;
-      font-size: 40px;
-    }
-    body.larger-text .letter-title {
-      font-size: 16px;
-    }
-    body.larger-text .eval-btn {
-      font-size: 12px;
-    }
-    body.larger-text .vocab-item .word {
-      font-size: 22px;
-    }
-    body.larger-text .muted {
-      font-size: 15px;
-    }
-    body.larger-text .game-question {
-      font-size: 32px;
-    }
-    body.larger-text .game-option {
-      font-size: 26px;
-    }
+    body.larger-text textarea { font-size: 16px; }
+    body.larger-text .card h3 { font-size: 22px; }
+    body.larger-text .brand h1 { font-size: 26px; }
+    body.larger-text .letter-circle { width: 80px; height: 80px; font-size: 40px; }
+    body.larger-text .letter-title { font-size: 16px; }
+    body.larger-text .eval-btn { font-size: 12px; }
+    body.larger-text .vocab-item .word { font-size: 22px; }
+    body.larger-text .muted { font-size: 15px; }
+    body.larger-text .game-question { font-size: 32px; }
+    body.larger-text .game-option { font-size: 26px; }
+    body.larger-text .parent-guide-title { font-size: 24px; }
+    body.larger-text .parent-guide-tip { font-size: 18px; }
+    body.larger-text .exercise-box li { font-size: 17px; }
 
     @media print {
-      body * {
-        visibility: hidden;
-      }
-      #iep-print-area, #iep-print-area * {
-        visibility: visible;
-      }
-      #iep-print-area {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 100%;
-        background: white;
-        padding: 20px;
-        display: block !important;
-      }
-      .topbar, .btn, .nav-btns, footer, .no-print, #app {
-        display: none !important;
-      }
+      body * { visibility: hidden; }
+      #iep-print-area, #iep-print-area * { visibility: visible; }
+      #iep-print-area { position: absolute; top: 0; right: 0; width: 100%; background: white; padding: 20px; display: block !important; }
+      .topbar, .btn, .nav-btns, footer, .no-print, #app { display: none !important; }
     }
   </style>
 </head>
@@ -822,9 +265,7 @@
 
 
 
-
-
-  <body>
+<body>
   <div id="app"></div>
   <footer>
     <div class="footer-main">
@@ -885,7 +326,6 @@
     const db = getFirestore(app);
     const storage = getStorage(app);
 
-    // ====== دالة رفع ملف إلى Firebase Storage ======
     async function uploadTeacherFile(teacherId, standardId, file) {
       try {
         const path = `teacher-files/${teacherId}/${standardId}/${Date.now()}_${file.name}`;
@@ -900,7 +340,6 @@
     }
     window.uploadTeacherFile = uploadTeacherFile;
 
-    // ====== بيانات أساسية ======
     const LETTER_GROUPS = [
       { name: 'حروف شفوية', letters: ['ب','م','و','ف'] },
       { name: 'حروف أسنانية لثوية', letters: ['ت','ث','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ل','ن'] },
@@ -921,7 +360,6 @@
     const letterTitleMap = {};
     alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
 
-    // ====== قوائم المفردات ======
     const VOCAB_LISTS = {
       'الأشكال': [
         { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
@@ -1071,7 +509,6 @@
       return names[type] || `تدريب حرف (${letter})`;
     }
 
-    // ====== دالة النطق ======
     function speakText(text) {
       if (!('speechSynthesis' in window)) {
         showToast('❌ المتصفح لا يدعم خاصية النطق الصوتي.');
@@ -1090,7 +527,6 @@
     }
     window.speakText = speakText;
 
-    // ====== دالة التسجيل ======
     async function startRecording(targetText, callback, maxSeconds = 5) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -1159,7 +595,6 @@
     }
     window.startRecording = startRecording;
 
-    // ====== تحسين تحليل النطق ======
     function levenshteinDistance(a, b) {
       const matrix = [];
       for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -1229,7 +664,6 @@
       return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير دقيق', similarityPercent };
     }
 
-    // ====== الحالة العامة ======
     let state = {
       view: 'home',
       user: null,
@@ -1260,7 +694,6 @@
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
 
-    // ====== الإشعارات الداخلية ======
     function showNotification(message, type = 'info') {
       let container = document.getElementById('notificationContainer');
       if (!container) {
@@ -1281,7 +714,6 @@
     }
     window.showNotification = showNotification;
 
-    // ====== دوال الوصول ======
     function toggleHighContrast() {
       document.body.classList.toggle('high-contrast');
       localStorage.setItem('highContrast', document.body.classList.contains('high-contrast') ? 'on' : 'off');
@@ -1313,7 +745,6 @@
       updateAccessibilityButtons();
     }
 
-    // ====== نظام النقاط التحفيزي ======
     function calculateStudentPoints(studentData) {
       const diag = studentData?.diagnostic || {};
       let points = 0;
@@ -1324,10 +755,37 @@
       });
       return points;
     }
-
     window.calculateStudentPoints = calculateStudentPoints;
 
-    // ====== شريط الأعلى ======
+    function getWeeklyStats(sessions) {
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay() + 1);
+      startOfWeek.setHours(0,0,0,0);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+      const thisWeek = sessions.filter(s => {
+        const sessionDate = new Date(s.date + 'T00:00:00');
+        return sessionDate >= startOfWeek && sessionDate < endOfWeek;
+      });
+
+      const totalThisWeek = thisWeek.length;
+      const evaluatedThisWeek = thisWeek.filter(s => s.evaluation && s.evaluation !== 'none');
+      const avgSuccess = evaluatedThisWeek.length > 0
+        ? Math.round(evaluatedThisWeek.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedThisWeek.length)
+        : 0;
+
+      const lettersTrained = {};
+      thisWeek.forEach(s => {
+        if (!lettersTrained[s.letter]) lettersTrained[s.letter] = 0;
+        lettersTrained[s.letter]++;
+      });
+
+      return { totalThisWeek, evaluatedThisWeek: evaluatedThisWeek.length, avgSuccess, lettersTrained, startOfWeek, endOfWeek };
+    }
+    window.getWeeklyStats = getWeeklyStats;
+
     function renderTopbar(appContainer, title, sub, onBack) {
       const bar = document.createElement('div');
       bar.className = 'topbar';
@@ -1406,7 +864,6 @@
       updateAccessibilityButtons();
     }
 
-    // ====== ربط رابط سياسة الخصوصية ======
     document.addEventListener('click', (e) => {
       if (e.target && e.target.id === 'privacyPolicyLink') {
         e.preventDefault();
@@ -1450,7 +907,7 @@
       const closeBtn = modal.querySelector('#closePrivacyBtn');
       if (closeBtn) closeBtn.onclick = () => modal.remove();
       modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-    }
+    }  
 
 
 
@@ -1469,9 +926,7 @@
 
 
 
-
-
-    // ====== التصيير الرئيسي ======
+       // ====== التصيير الرئيسي ======
     function render() {
       const app = document.getElementById('app');
       app.innerHTML = '';
@@ -1493,6 +948,7 @@
       if (state.view === 'teacher-achievement') return renderTeacherAchievement(app);
       if (state.view === 'weekly-plan') return renderWeeklyPlan(app);
       if (state.view === 'games') return renderGames(app);
+      if (state.view === 'parent-guide') return renderParentGuide(app);
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
     }
@@ -1568,6 +1024,19 @@
       `;
       gamesCard.onclick = () => { state.view = 'games'; render(); };
       grid.appendChild(gamesCard);
+      const parentGuideCard = document.createElement('div');
+      parentGuideCard.className = 'card';
+      parentGuideCard.style.cursor = 'pointer';
+      parentGuideCard.style.transition = '0.2s';
+      parentGuideCard.onmouseover = () => { parentGuideCard.style.transform = 'translateY(-4px)'; };
+      parentGuideCard.onmouseout = () => { parentGuideCard.style.transform = 'translateY(0)'; };
+      parentGuideCard.innerHTML = `
+        <h3>👨‍👩‍👧 توجيهات أولياء الأمور</h3>
+        <p class="muted">نصائح وتمارين منزلية لتحسين النطق</p>
+        <button class="btn btn-soft btn-sm">عرض التوجيهات</button>
+      `;
+      parentGuideCard.onclick = () => { state.view = 'parent-guide'; render(); };
+      grid.appendChild(parentGuideCard);
       app.appendChild(grid);
     }
 
@@ -1737,6 +1206,20 @@
     // ====== لوحة المعلم ======
     function renderTeacherDashboard(app) {
       renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
+
+      // لوحة الملخص السريع
+      const summaryDashboard = document.createElement('div');
+      summaryDashboard.className = 'summary-dashboard';
+      const activeStudents = state.myStudents.length;
+      const totalSessionsCount = state.myStudents.reduce((sum, st) => sum + (st.sessionCount || 0), 0);
+      summaryDashboard.innerHTML = `
+        <div class="summary-item"><div class="number">${activeStudents}</div><div class="label">طلاب نشطون</div></div>
+        <div class="summary-item"><div class="number">${totalSessionsCount}</div><div class="label">إجمالي الجلسات</div></div>
+        <div class="summary-item"><div class="number">${state.myStudents.filter(s => s.diagnostic && Object.keys(s.diagnostic).length > 0).length}</div><div class="label">طالب مشخص</div></div>
+        <div class="summary-item"><div class="number">${state.myStudents.filter(s => !s.diagnostic || Object.keys(s.diagnostic).length === 0).length}</div><div class="label">بحاجة تشخيص</div></div>
+      `;
+      app.appendChild(summaryDashboard);
+
       const actCard = document.createElement('div');
       actCard.className = 'card no-print';
       actCard.innerHTML = `
@@ -1748,9 +1231,11 @@
           <button class="btn btn-soft btn-sm" id="btnAchievementList">🏆 ملف إنجاز الطلاب</button>
           <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
           <button class="btn btn-soft btn-sm" id="btnWeeklyPlan">📅 الخطة الأسبوعية</button>
+          <button class="btn btn-soft btn-sm" id="btnParentGuide">👨‍👩‍👧 توجيهات أولياء الأمور</button>
         </div>
       `;
       app.appendChild(actCard);
+
       const btnSessions = actCard.querySelector('#btnSessions');
       if (btnSessions) btnSessions.onclick = () => {
         if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
@@ -1772,6 +1257,8 @@
       if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
       const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
       if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
+      const btnParentGuide = actCard.querySelector('#btnParentGuide');
+      if (btnParentGuide) btnParentGuide.onclick = () => { state.view = 'parent-guide'; render(); };
 
       const myCard = document.createElement('div');
       myCard.className = 'card no-print';
@@ -1991,6 +1478,181 @@
         });
       }
       if (startMatchBtn) startMatchBtn.onclick = generateMatchQuestion;
+    }
+
+    // ====== صفحة توجيهات أولياء الأمور ======
+    function renderParentGuide(app) {
+      renderTopbar(app, '👨‍👩‍👧 توجيهات أولياء الأمور', 'دليل شامل لتدريب النطق في المنزل', () => {
+        state.view = 'home';
+        render();
+      });
+
+      const container = document.createElement('div');
+
+      const introCard = document.createElement('div');
+      introCard.className = 'card';
+      introCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+      introCard.style.border = '2px solid var(--mint-deep)';
+      introCard.innerHTML = `
+        <h3 style="margin:0;color:var(--mint-deep);text-align:center;">دليل ولي الأمر لتدريب النطق</h3>
+        <p style="font-size:14px;line-height:1.8;margin-top:10px;">
+          عزيزي ولي الأمر، دورك أساسي في تحسين نطق طفلك. التدريب المنزلي المنتظم (حتى 10-15 دقيقة يومياً) يضاعف نتائج جلسات المعلم. هذا الدليل يقدم لك نصائح وتمارين بسيطة يمكن تطبيقها بسهولة.
+        </p>
+      `;
+      container.appendChild(introCard);
+
+      const tipsSection = document.createElement('div');
+      tipsSection.className = 'parent-guide-section';
+      tipsSection.innerHTML = `<div class="parent-guide-title">💡 نصائح عامة</div>`;
+      const tips = [
+        { icon: '🗣️', text: 'تحدث مع طفلك بوضوح وبطء، وانطق الحروف بشكل صحيح أمامه.' },
+        { icon: '🪞', text: 'استخدم المرآة أثناء التدريب ليرى طفلك حركة فمه ولسانه.' },
+        { icon: '🔁', text: 'كرر الكلمات الصعبة بهدوء دون إجبار الطفل.' },
+        { icon: '🎮', text: 'حوّل التدريب إلى لعبة ممتعة، مثل "من يستطيع نطق الحرف أولاً؟".' },
+        { icon: '⭐', text: 'كافئ طفلك عند المحاولة الصحيحة، وكافئ المحاولة وليس الكمال.' },
+        { icon: '📅', text: 'حدد وقتاً ثابتاً يومياً للتدريب، واجعله قصيراً وممتعاً.' },
+        { icon: '👂', text: 'استمع لطفلك دون مقاطعته، ثم أعد نطق الكلمة الصحيحة بلطف.' },
+        { icon: '📚', text: 'اقرأ لطفلك قصصاً قصيرة يومياً، وناقشه في الصور والأحداث.' }
+      ];
+      tips.forEach(tip => {
+        const tipDiv = document.createElement('div');
+        tipDiv.className = 'parent-guide-tip';
+        tipDiv.innerHTML = `<span class="icon">${tip.icon}</span><span>${tip.text}</span>`;
+        tipsSection.appendChild(tipDiv);
+      });
+      container.appendChild(tipsSection);
+
+      const exercisesSection = document.createElement('div');
+      exercisesSection.className = 'parent-guide-section';
+      exercisesSection.innerHTML = `<div class="parent-guide-title">🏋️ تمارين منزلية بسيطة</div>`;
+
+      const exercises = [
+        {
+          title: 'تمارين اللسان',
+          items: [
+            'أخرج اللسان ثم أدخله ببطء (10 مرات).',
+            'حرك اللسان يميناً ويساراً (10 مرات).',
+            'المس طرف الأنف باللسان (5 مرات).',
+            'المس الذقن باللسان (5 مرات).'
+          ]
+        },
+        {
+          title: 'تمارين الشفاه',
+          items: [
+            'ضم الشفاه وانفخ خديك (5 ثوانٍ).',
+            'ابتسم ابتسامة عريضة (5 ثوانٍ).',
+            'قل "ووو" مع ضم الشفاه بقوة.',
+            'قل "إييي" مع توسيع الفم.'
+          ]
+        },
+        {
+          title: 'تمارين التنفس',
+          items: [
+            'نفخ بالونات أو ريشة خفيفة.',
+            'شم زهرة (شهيق عميق) ثم إطفاء شمعة (زفير بطيء).',
+            'نفخ فقاعات صابون.',
+            'تكرار أصوات الحروف مع الزفير مثل: سسسس، شششش، فففف.'
+          ]
+        },
+        {
+          title: 'تمارين التمييز السمعي',
+          items: [
+            'لعبة "اسمع وكرر": قل كلمة واطلب من طفلك تكرارها.',
+            'لعبة "من يجد الصورة؟": اعرض صوراً واطلب تحديد الصورة التي تبدأ بحرف معين.',
+            'لعبة "صوت الحيوان": قلد صوت حيوان واطلب من الطفل تخمينه.',
+            'استمع لأغاني أطفال تحتوي على تكرار الحروف.'
+          ]
+        }
+      ];
+
+      exercises.forEach(ex => {
+        const box = document.createElement('div');
+        box.className = 'exercise-box';
+        box.innerHTML = `
+          <h4>${ex.title}</h4>
+          <ul>
+            ${ex.items.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        `;
+        exercisesSection.appendChild(box);
+      });
+      container.appendChild(exercisesSection);
+
+      const weeklyTableSection = document.createElement('div');
+      weeklyTableSection.className = 'parent-guide-section';
+      weeklyTableSection.innerHTML = `<div class="parent-guide-title">📅 جدول متابعة أسبوعي مقترح</div>`;
+      const weeklyTable = document.createElement('div');
+      weeklyTable.className = 'card';
+      weeklyTable.innerHTML = `
+        <table class="sessions-table" style="font-size:13px;">
+          <thead>
+            <tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>السبت</td><td>تمارين اللسان + تكرار الحرف المستهدف</td><td>10 دقائق</td></tr>
+            <tr><td>الأحد</td><td>قراءة قصة + مناقشة الصور</td><td>10 دقائق</td></tr>
+            <tr><td>الإثنين</td><td>تمارين الشفاه + لعبة التمييز السمعي</td><td>10 دقائق</td></tr>
+            <tr><td>الثلاثاء</td><td>نفخ وتنفس + تكرار كلمات بالحرف المستهدف</td><td>10 دقائق</td></tr>
+            <tr><td>الأربعاء</td><td>لعبة "اختر الصورة" أو "اختر الحرف"</td><td>10 دقائق</td></tr>
+            <tr><td>الخميس</td><td>مراجعة شاملة + مكافأة</td><td>10 دقائق</td></tr>
+          </tbody>
+        </table>
+      `;
+      weeklyTableSection.appendChild(weeklyTable);
+      container.appendChild(weeklyTableSection);
+
+      const frustrationSection = document.createElement('div');
+      frustrationSection.className = 'parent-guide-section';
+      frustrationSection.innerHTML = `<div class="parent-guide-title">💪 عند شعور الطفل بالإحباط</div>`;
+      const frustrationCard = document.createElement('div');
+      frustrationCard.className = 'card';
+      frustrationCard.innerHTML = `
+        <ul style="list-style:disc;padding-right:20px;font-size:14px;line-height:1.8;">
+          <li>لا تظهر الغضب أو الاستعجال.</li>
+          <li>قلل صعوبة التمرين وارجع خطوة للخلف.</li>
+          <li>استخدم التشجيع اللفظي: "أحسنت المحاولة، أنا فخور بك".</li>
+          <li>خذ استراحة قصيرة وعد للتدريب لاحقاً.</li>
+          <li>احتفل بالإنجازات الصغيرة مهما كانت.</li>
+        </ul>
+      `;
+      frustrationSection.appendChild(frustrationCard);
+      container.appendChild(frustrationSection);
+
+      const printDiv = document.createElement('div');
+      printDiv.className = 'print-btn-guide';
+      printDiv.innerHTML = `<button class="btn btn-primary" id="printGuideBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>`;
+      container.appendChild(printDiv);
+
+      app.appendChild(container);
+
+      const printBtn = container.querySelector('#printGuideBtn');
+      if (printBtn) {
+        printBtn.onclick = () => {
+          printParentGuide(container.innerHTML);
+        };
+      }
+    }
+
+    function printParentGuide(contentHTML) {
+      let printArea = document.getElementById('iep-print-area');
+      if (!printArea) {
+        printArea = document.createElement('div');
+        printArea.id = 'iep-print-area';
+        document.body.appendChild(printArea);
+      }
+      printArea.innerHTML = `
+        <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+            <p style="margin:5px 0 0;font-size:14px;color:#555;">توجيهات أولياء الأمور</p>
+            <hr style="border:1px solid #ddd;margin:10px 0;">
+          </div>
+          ${contentHTML}
+          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الدليل بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+        </div>
+      `;
+      window.print();
+      setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
     }
 
     // ====== صفحة الخطة الأسبوعية الذكية ======
@@ -2442,6 +2104,8 @@
         else if (masteryPercentage >= 30) { achievementLevel = 'جيد'; achievementIcon = '👍'; }
         else { achievementLevel = 'يحتاج متابعة'; achievementIcon = '💪'; }
 
+        const weeklyStats = getWeeklyStats(sessions);
+
         const card = document.createElement('div');
         card.className = 'card';
         card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
@@ -2483,6 +2147,12 @@
             <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${masteryPercentage}%;">${masteryPercentage}%</div></div>
           </div>
           <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+            <strong>📅 ملخص هذا الأسبوع:</strong><br>
+            الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
+            متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
+            الحروف المتدرب عليها: ${Object.keys(weeklyStats.lettersTrained).length ? Object.keys(weeklyStats.lettersTrained).join(' - ') : 'لا يوجد'}
+          </div>
+          <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
             <strong>الحروف المتقنة:</strong> ${passedLetters.length ? passedLetters.join(' - ') : 'لا يوجد'}
           </div>
           <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
@@ -2504,7 +2174,7 @@
           printBtn.onclick = () => {
             printAchievement(state.currentStudent, {
               passedLetters, needLetters, trainedLetters, totalSessions, averageSuccess,
-              masteryPercentage, achievementLevel, achievementIcon, points
+              masteryPercentage, achievementLevel, achievementIcon, points, weeklyStats
             });
           };
         }
@@ -2539,6 +2209,7 @@
             <div><strong>نسبة الإتقان:</strong> ${data.masteryPercentage}%</div>
             <div><strong>النقاط:</strong> ${data.points}</div>
           </div>
+          <div style="margin-bottom:10px;"><strong>ملخص هذا الأسبوع:</strong><br>الجلسات: ${data.weeklyStats.totalThisWeek} | متوسط النجاح: ${data.weeklyStats.avgSuccess}%</div>
           <div style="margin-bottom:10px;"><strong>الحروف المتقنة:</strong> ${data.passedLetters.length ? data.passedLetters.join('، ') : 'لا يوجد'}</div>
           <div style="margin-bottom:10px;"><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length ? data.needLetters.join('، ') : 'لا يوجد'}</div>
           <div style="margin-bottom:10px;"><strong>الحروف التي أتقنها بعد تدريب:</strong> ${data.trainedLetters.length ? data.trainedLetters.join('، ') : 'لا يوجد'}</div>
@@ -3393,7 +3064,7 @@
         listCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
       }
       app.appendChild(listCard);
-    }     
+    } 
 
 
 
@@ -3413,7 +3084,7 @@
 
 
 
-        // ====== عرض جلسة واحدة ======
+      // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -3952,10 +3623,7 @@
       const closeBtn = modal.querySelector('#closeModalBtn');
       if (closeBtn) closeBtn.onclick = () => modal.remove();
       const printBtn = modal.querySelector('#printIEPBtn');
-      if (printBtn) printBtn.onclick = () => {
-        printIEP(student, iepData);
-        modal.remove();
-      };
+      if (printBtn) printBtn.onclick = () => { printIEP(student, iepData); modal.remove(); };
       modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     }
 
@@ -4024,4 +3692,4 @@
 
   </script>
 </body>
-</html>
+</html>  
