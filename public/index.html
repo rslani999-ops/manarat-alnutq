@@ -45,43 +45,51 @@
     }
     .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 4px 24px; gap: 10px; }
     .brand { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-    .brand .mark { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; box-shadow: var(--shadow); }
+    .brand .mark { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; box-shadow: var(--shadow); animation: float 3s ease-in-out infinite; }
     .brand h1 { font-size: 20px; font-weight: 700; }
     .brand span { display: block; font-size: 11px; color: var(--muted); margin-top: -2px; }
     .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .btn-nav { border: none; background: var(--btn-bg); padding: 8px 14px; border-radius: 10px; font-family: 'Tajawal', sans-serif; font-weight: 700; cursor: pointer; border: 1px solid var(--btn-border); font-size: 13px; color: var(--btn-text); transition: 0.15s; }
-    .btn-nav:hover { background: #F5F8FC; }
+    .btn-nav { border: none; background: var(--btn-bg); padding: 8px 14px; border-radius: 10px; font-family: 'Tajawal', sans-serif; font-weight: 700; cursor: pointer; border: 1px solid var(--btn-border); font-size: 13px; color: var(--btn-text); transition: 0.2s; }
+    .btn-nav:hover { background: #F5F8FC; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
     .accessibility-btns { display: flex; gap: 6px; align-items: center; }
-    .btn-icon { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--btn-text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
-    .btn-icon:hover { background: #F5F8FC; }
-    .card { background: var(--card-bg); border-radius: 18px; border: 1px solid var(--line); padding: 20px; margin-bottom: 16px; overflow-x: auto; color: var(--text); }
+    .btn-icon { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--btn-text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .btn-icon:hover { background: #F5F8FC; transform: scale(1.1); }
+    .card { background: var(--card-bg); border-radius: 18px; border: 1px solid var(--line); padding: 20px; margin-bottom: 16px; overflow-x: auto; color: var(--text); transition: box-shadow 0.3s, transform 0.3s; }
+    .card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
     .card h2, .card h3 { font-family: 'Baloo Bhaijaan 2', sans-serif; }
     .card h3 { font-size: 17px; margin-bottom: 8px; }
     .muted { color: var(--muted); font-size: 13px; }
-    .btn { border: none; border-radius: 12px; padding: 10px 18px; font-family: 'Tajawal', sans-serif; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-    .btn:active { transform: scale(0.97); }
+    .btn { border: none; border-radius: 12px; padding: 10px 18px; font-family: 'Tajawal', sans-serif; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn:active { transform: scale(0.96); }
     .btn-primary { background: var(--mint-deep); color: white; }
-    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 14px rgba(53,126,116,0.4); }
     .btn-soft { background: #EAF6F4; color: var(--mint-deep); }
-    .btn-soft:hover { background: #DDF0ED; }
+    .btn-soft:hover { background: #DDF0ED; transform: translateY(-1px); }
     .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { filter: brightness(1.1); transform: translateY(-1px); }
     .btn-danger { background: var(--coral); color: white; }
+    .btn-danger:hover { filter: brightness(1.1); transform: translateY(-1px); }
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn-block { width: 100%; }
     .btn-record { background: #E8F0FE; color: #1A73E8; border: 2px solid #1A73E8; border-radius: 50px; padding: 6px 14px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 12px; }
-    .btn-record:hover { background: #D2E3FC; }
+    .btn-record:hover { background: #D2E3FC; transform: scale(1.03); }
     .btn-record.recording { background: #FEE8E8; color: #D93025; border-color: #D93025; animation: pulse 1s infinite; }
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-    .feedback-correct { color: var(--success); font-weight: bold; }
-    .feedback-wrong { color: var(--fail); font-weight: bold; }
-    input, select, textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); font-family: 'Tajawal', sans-serif; font-size: 15px; background: var(--input-bg); margin-bottom: 12px; color: var(--text); }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--mint); }
-    .auth-form { max-width: 400px; margin: 20px auto; background: var(--card-bg); padding: 30px; border-radius: 20px; border: 1px solid var(--line); }
+    @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+    @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .feedback-correct { color: var(--success); font-weight: bold; animation: pop 0.3s ease; }
+    .feedback-wrong { color: var(--fail); font-weight: bold; animation: shake 0.4s ease; }
+    input, select, textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); font-family: 'Tajawal', sans-serif; font-size: 15px; background: var(--input-bg); margin-bottom: 12px; color: var(--text); transition: border-color 0.2s, box-shadow 0.2s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--mint); box-shadow: 0 0 0 3px rgba(79,182,168,0.2); }
+    .auth-form { max-width: 400px; margin: 20px auto; background: var(--card-bg); padding: 30px; border-radius: 20px; border: 1px solid var(--line); animation: fadeInUp 0.4s ease; }
     .auth-form h2 { text-align: center; margin-bottom: 20px; }
     .auth-toggle { text-align: center; margin-top: 15px; font-size: 13px; color: #5B6A88; }
     .auth-toggle span { color: var(--mint-deep); cursor: pointer; font-weight: 700; text-decoration: underline; }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 22px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 999; box-shadow: 0 10px 24px rgba(0,0,0,0.2); }
-    .student-row { padding: 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 22px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 999; box-shadow: 0 10px 24px rgba(0,0,0,0.2); animation: fadeInUp 0.3s ease; }
+    .student-row { padding: 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; transition: background 0.2s; }
+    .student-row:hover { background: #F8FAFC; border-radius: 8px; }
     .badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block; margin: 2px; }
     .badge-assigned { background: #E1F5FE; color: #0288D1; }
     .badge-free { background: #E8F5E9; color: #388E3C; }
@@ -89,31 +97,37 @@
     .badge-trained { background: #E0F2FE; color: #0288D1; border:1px solid #0288D1; }
     .badge-need { background: #FFF8E1; color: #F57F17; }
     .badge-unclear { background: #FFEBEE; color: #C62828; }
-    .group-title { font-size: 18px; font-weight: 700; color: var(--mint-deep); margin: 20px 0 10px 0; padding: 8px 16px; background: #EAF6F4; border-radius: 30px; display: inline-block; border-right: 4px solid var(--mint-deep); }
+    .group-title { font-size: 18px; font-weight: 700; color: var(--mint-deep); margin: 20px 0 10px 0; padding: 8px 16px; background: #EAF6F4; border-radius: 30px; display: inline-block; border-right: 4px solid var(--mint-deep); animation: fadeInUp 0.3s ease; }
     .diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 15px; }
-    .letter-card { background: #F8FAFC; border: 1px solid var(--line); border-radius: 14px; padding: 12px; text-align: center; transition: 0.2s; }
-    .letter-card .letter-circle { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #4FB6A8, #357E74); display: flex; align-items: center; justify-content: center; margin: 0 auto 4px auto; font-size: 30px; font-weight: bold; color: white; box-shadow: 0 4px 10px rgba(79,182,168,0.3); border: 2px solid white; cursor: pointer; }
+    .letter-card { background: #F8FAFC; border: 1px solid var(--line); border-radius: 14px; padding: 12px; text-align: center; transition: 0.25s; }
+    .letter-card:hover { transform: translateY(-4px); box-shadow: 0 8px 18px rgba(0,0,0,0.1); border-color: var(--mint); }
+    .letter-card .letter-circle { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #4FB6A8, #357E74); display: flex; align-items: center; justify-content: center; margin: 0 auto 4px auto; font-size: 30px; font-weight: bold; color: white; box-shadow: 0 4px 10px rgba(79,182,168,0.3); border: 2px solid white; cursor: pointer; transition: transform 0.2s; }
+    .letter-card .letter-circle:hover { transform: scale(1.1); }
     .letter-title { font-size: 13px; font-weight: bold; color: var(--mint-deep); display: block; margin-bottom: 4px; }
-    .audio-btn { background: var(--mint); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; margin-bottom: 6px; font-size: 14px; }
+    .audio-btn { background: var(--mint); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; margin-bottom: 6px; font-size: 14px; transition: 0.2s; }
+    .audio-btn:hover { transform: scale(1.15); box-shadow: 0 4px 10px rgba(79,182,168,0.5); }
     .eval-btns { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
-    .eval-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+    .eval-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .eval-btn:hover { transform: scale(1.05); }
     .eval-btn.passed { background: #E8F5E9; color: #2E7D32; }
     .eval-btn.trained { background: #E0F2FE; color: #0288D1; }
     .eval-btn.need { background: #FFF8E1; color: #F57F17; }
     .eval-btn.unclear { background: #FFEBEE; color: #C62828; }
     .eval-btn.active { outline: 2px solid var(--text); box-shadow: 0 0 4px rgba(0,0,0,0.3); }
-    .letter-details-toggle { background: none; border: none; color: var(--mint-deep); font-weight: bold; cursor: pointer; font-size: 12px; margin-top: 6px; }
+    .letter-details-toggle { background: none; border: none; color: var(--mint-deep); font-weight: bold; cursor: pointer; font-size: 12px; margin-top: 6px; transition: 0.2s; }
     .letter-details-toggle:hover { text-decoration: underline; }
     .letter-details { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); text-align: right; font-size: 13px; }
-    .letter-details.open { display: block; }
+    .letter-details.open { display: block; animation: fadeInUp 0.3s ease; }
     .detail-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 6px; }
     .detail-row .label { font-weight: bold; color: var(--text); }
     .detail-row select, .detail-row input, .detail-row textarea { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); font-family: 'Tajawal', sans-serif; font-size: 13px; background: white; width: 100%; color: var(--text); }
     .detail-row textarea { resize: vertical; min-height: 40px; }
     .detail-row .radio-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .detail-row .radio-group label { display: flex; align-items: center; gap: 4px; font-weight: normal; }
-    .session-card { background: #FAFDFC; border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .vowel-box { background: #F4F9F8; padding: 10px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; cursor: pointer; border: 1px solid var(--line); }
+    .session-card { background: #FAFDFC; border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; transition: 0.2s; }
+    .session-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); border-color: var(--mint); }
+    .vowel-box { background: #F4F9F8; padding: 10px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; cursor: pointer; border: 1px solid var(--line); transition: 0.2s; }
+    .vowel-box:hover { transform: scale(1.05); background: #EAF6F4; }
     footer { background: var(--card-bg); border-top: 1px solid var(--line); text-align: center; padding: 16px; font-size: 13px; color: var(--muted); margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
     footer .footer-main { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 16px; }
     footer .footer-main .sep { color: var(--line); }
@@ -124,7 +138,7 @@
     .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
     .diag-option-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; margin-bottom: 12px; }
     .diag-option { padding: 6px 16px; border-radius: 30px; border: 2px solid #ddd; background: #f9f9f9; cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; color: #555; user-select: none; }
-    .diag-option:hover { transform: scale(1.02); }
+    .diag-option:hover { transform: scale(1.04); border-color: var(--mint); }
     .diag-option.selected-green { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
     .diag-option.selected-red { background: #FFEBEE; border-color: #C62828; color: #C62828; }
     .diag-option.selected-gray { background: #F5F5F5; border-color: #aaa; color: #616161; }
@@ -136,11 +150,13 @@
     .sessions-table th, .sessions-table td { border: 1px solid var(--line); padding: 10px 8px; text-align: center; white-space: nowrap; }
     .sessions-table th { background: #EAF6F4; color: var(--mint-deep); font-weight: 700; }
     .sessions-table tr:nth-child(even) { background: #F8FAFC; }
+    .sessions-table tr:hover { background: #F0F7FF; }
     .table-container { overflow-x: auto; }
     .vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin-top: 16px; }
     .vocab-item { background: #F8FAFC; border: 2px solid var(--line); border-radius: 20px; padding: 20px 12px; text-align: center; cursor: pointer; transition: 0.25s ease; display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 150px; justify-content: center; }
-    .vocab-item:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-color: var(--mint); }
-    .vocab-item .icon { font-size: 56px; line-height: 1.2; }
+    .vocab-item:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-color: var(--mint); }
+    .vocab-item .icon { font-size: 56px; line-height: 1.2; transition: 0.2s; }
+    .vocab-item:hover .icon { transform: scale(1.15); }
     .vocab-item .word { font-size: 18px; font-weight: 700; color: var(--text); }
     .iep-student-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
     .iep-student-item { background: #F8FAFC; border: 2px solid var(--line); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: 0.2s; }
@@ -151,21 +167,21 @@
     .record-buttons .btn-record { font-size: 11px; padding: 4px 12px; }
 
     /* تنسيقات الألعاب */
-    .game-container { background: #ffffff; border-radius: 20px; padding: 20px; margin-bottom: 16px; border: 2px solid var(--mint); }
+    .game-container { background: #ffffff; border-radius: 20px; padding: 20px; margin-bottom: 16px; border: 2px solid var(--mint); animation: fadeInUp 0.4s ease; }
     .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
     .game-title { font-size: 20px; font-weight: 700; color: var(--mint-deep); }
     .game-score { font-size: 18px; font-weight: bold; color: var(--gold); }
-    .game-question { font-size: 28px; font-weight: bold; text-align: center; margin: 20px 0; }
+    .game-question { font-size: 28px; font-weight: bold; text-align: center; margin: 20px 0; animation: fadeInUp 0.3s ease; }
     .game-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; margin-bottom: 16px; }
     .game-option { padding: 15px; border-radius: 14px; border: 2px solid #ddd; background: #f9f9f9; cursor: pointer; text-align: center; font-size: 22px; font-weight: bold; transition: 0.2s; }
-    .game-option:hover { transform: scale(1.05); border-color: var(--mint); }
-    .game-option.correct { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
-    .game-option.wrong { background: #FFEBEE; border-color: #C62828; color: #C62828; }
+    .game-option:hover { transform: scale(1.06); border-color: var(--mint); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .game-option.correct { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; animation: pop 0.3s ease; }
+    .game-option.wrong { background: #FFEBEE; border-color: #C62828; color: #C62828; animation: shake 0.4s ease; }
     .game-feedback { text-align: center; font-size: 18px; font-weight: bold; min-height: 30px; }
 
     /* شريط التقدم */
     .progress-bar-container { width: 100%; background: #e0e0e0; border-radius: 20px; height: 20px; overflow: hidden; margin: 8px 0; }
-    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #4FB6A8, #357E74); border-radius: 20px; transition: width 0.5s ease; text-align: center; color: white; font-size: 12px; font-weight: bold; line-height: 20px; min-width: 30px; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #4FB6A8, #357E74); border-radius: 20px; transition: width 0.7s ease; text-align: center; color: white; font-size: 12px; font-weight: bold; line-height: 20px; min-width: 30px; }
 
     /* الإشعارات */
     .notification-container { position: fixed; top: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
@@ -177,16 +193,19 @@
 
     /* تنسيقات لوحة الملخص */
     .summary-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .summary-item { background: #ffffff; border-radius: 16px; padding: 15px; text-align: center; border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .summary-item { background: #ffffff; border-radius: 16px; padding: 15px; text-align: center; border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: 0.2s; }
+    .summary-item:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.1); }
     .summary-item .number { font-size: 32px; font-weight: bold; color: var(--mint-deep); }
     .summary-item .label { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
     /* تنسيقات صفحة توجيهات أولياء الأمور */
     .parent-guide-section { margin-bottom: 25px; }
     .parent-guide-title { font-size: 20px; font-weight: 700; color: var(--mint-deep); margin-bottom: 10px; border-bottom: 2px solid var(--mint); padding-bottom: 5px; }
-    .parent-guide-tip { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; font-size: 15px; line-height: 1.8; }
+    .parent-guide-tip { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; font-size: 15px; line-height: 1.8; transition: 0.2s; }
+    .parent-guide-tip:hover { transform: translateX(-4px); }
     .parent-guide-tip .icon { font-size: 24px; }
-    .exercise-box { background: #F0FDFA; border: 1px solid var(--mint); border-radius: 12px; padding: 15px; margin-bottom: 12px; }
+    .exercise-box { background: #F0FDFA; border: 1px solid var(--mint); border-radius: 12px; padding: 15px; margin-bottom: 12px; transition: 0.2s; }
+    .exercise-box:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
     .exercise-box h4 { margin: 0 0 8px 0; color: var(--mint-deep); }
     .exercise-box ul { list-style: disc; padding-right: 20px; }
     .exercise-box li { margin-bottom: 6px; font-size: 14px; line-height: 1.7; }
@@ -325,6 +344,54 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+
+    // ====== دالة المؤثرات الصوتية (بدون ملفات خارجية) ======
+    function playSound(type = 'success') {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        if (type === 'success') {
+          // نغمة صاعدة للنجاح
+          oscillator.frequency.setValueAtTime(523, audioCtx.currentTime); // C5
+          oscillator.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1); // E5
+          oscillator.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2); // G5
+          gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'error') {
+          // نغمة هابطة للخطأ
+          oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+          oscillator.frequency.setValueAtTime(200, audioCtx.currentTime + 0.2);
+          gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.25);
+        } else if (type === 'click') {
+          // نقرة خفيفة
+          oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.08);
+        } else if (type === 'notification') {
+          // نغمة إشعار
+          oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+          oscillator.frequency.setValueAtTime(988, audioCtx.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.2);
+        }
+      } catch(e) {
+        console.warn('تعذر تشغيل الصوت:', e);
+      }
+    }
+    window.playSound = playSound;
 
     async function uploadTeacherFile(teacherId, standardId, file) {
       try {
@@ -706,6 +773,8 @@
       notification.className = `notification-item ${type}`;
       notification.textContent = message;
       container.appendChild(notification);
+      // تشغيل صوت الإشعار
+      playSound('notification');
       setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transition = 'opacity 0.5s';
@@ -907,7 +976,12 @@
       const closeBtn = modal.querySelector('#closePrivacyBtn');
       if (closeBtn) closeBtn.onclick = () => modal.remove();
       modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-    }  
+    }
+  </script>
+</body>
+</html>  
+
+
 
 
 
@@ -961,9 +1035,11 @@ async function updateParentInfo(uid, parentName, parentEmail, parentPhone) {
       parentEmail: parentEmail.trim(),
       parentPhone: parentPhone.trim()
     });
+    playSound('success');
     showToast('✅ تم حفظ بيانات ولي الأمر');
     return true;
   } catch(e) {
+    playSound('error');
     showToast('❌ فشل حفظ البيانات: ' + e.message);
     return false;
   }
@@ -980,7 +1056,6 @@ function sendSessionToParent(sessionData, studentData) {
   const parentPhone = studentData.parentPhone || '';
   const parentName = studentData.parentName || 'ولي الأمر';
 
-  // إنشاء نص الرسالة
   const studentName = studentData.fullName || studentData.email || 'الطالب';
   const typeInfo = SESSION_TYPES.find(t => t.id === sessionData.sessionType) || SESSION_TYPES[0];
   const message = `تقرير جلسة تدريب نطق - منارة النطق\n\n` +
@@ -995,7 +1070,6 @@ function sendSessionToParent(sessionData, studentData) {
 
   const encodedMessage = encodeURIComponent(message);
 
-  // خيارات الإرسال
   let options = [];
   if (parentEmail) {
     const subject = encodeURIComponent(`تقرير جلسة تدريب - ${studentName} - ${sessionData.date}`);
@@ -1003,7 +1077,6 @@ function sendSessionToParent(sessionData, studentData) {
     options.push(`mailto:${parentEmail}?subject=${subject}&body=${encodedMessage}`);
   }
   if (parentPhone) {
-    // تحويل الرقم إلى صيغة دولية (افتراض السعودية 966)
     let phoneNumber = parentPhone.replace(/[^0-9]/g, '');
     if (phoneNumber.startsWith('0')) phoneNumber = '966' + phoneNumber.slice(1);
     if (!phoneNumber.startsWith('966')) phoneNumber = '966' + phoneNumber;
@@ -1013,11 +1086,11 @@ function sendSessionToParent(sessionData, studentData) {
   }
 
   if (options.length === 0) {
+    playSound('error');
     showToast('❌ لا توجد بيانات تواصل لولي الأمر (بريد أو جوال)');
     return;
   }
 
-  // عرض نافذة اختيار
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
   modal.innerHTML = `
@@ -1036,11 +1109,13 @@ function sendSessionToParent(sessionData, studentData) {
   const closeModal = () => modal.remove();
   const emailBtn = modal.querySelector('#emailSendBtn');
   if (emailBtn) emailBtn.onclick = () => {
+    playSound('click');
     window.location.href = options[1];
     closeModal();
   };
   const waBtn = modal.querySelector('#whatsappSendBtn');
   if (waBtn) waBtn.onclick = () => {
+    playSound('click');
     window.open(options[3], '_blank');
     closeModal();
   };
@@ -1081,7 +1156,7 @@ function getAdaptiveSuggestion(studentData, sessions) {
     suggestions.push('🎉 لا توجد اقتراحات حالياً، الطالب بحالة ممتازة');
   }
 
-  return suggestions.slice(0, 3); // أهم ثلاث اقتراحات
+  return suggestions.slice(0, 3);
 }
 window.getAdaptiveSuggestion = getAdaptiveSuggestion;
 
@@ -1101,7 +1176,7 @@ function renderHome(app) {
   app.appendChild(banner);
   if (!state.user) {
     const authBtn = banner.querySelector('#btnAuthHome');
-    if (authBtn) authBtn.onclick = () => { state.view = 'auth'; render(); };
+    if (authBtn) authBtn.onclick = () => { playSound('click'); state.view = 'auth'; render(); };
   }
   const grid = document.createElement('div');
   grid.className = 'grid-2';
@@ -1124,6 +1199,7 @@ function renderHome(app) {
       <button class="btn btn-soft btn-sm">استكشف القائمة</button>
     `;
     card.onclick = () => {
+      playSound('click');
       state.view = 'vocab-list';
       state.currentVocabCategory = category;
       render();
@@ -1141,7 +1217,7 @@ function renderHome(app) {
     <p class="muted">28 حرفاً مع الصور التوضيحية</p>
     <button class="btn btn-soft btn-sm">عرض الحروف</button>
   `;
-  lettersCard.onclick = () => { state.view = 'letter-display'; render(); };
+  lettersCard.onclick = () => { playSound('click'); state.view = 'letter-display'; render(); };
   grid.appendChild(lettersCard);
   const gamesCard = document.createElement('div');
   gamesCard.className = 'card';
@@ -1154,7 +1230,7 @@ function renderHome(app) {
     <p class="muted">اختر الحرف الصحيح وطابق الكلمة مع الصورة</p>
     <button class="btn btn-soft btn-sm">العب الآن</button>
   `;
-  gamesCard.onclick = () => { state.view = 'games'; render(); };
+  gamesCard.onclick = () => { playSound('click'); state.view = 'games'; render(); };
   grid.appendChild(gamesCard);
   const parentGuideCard = document.createElement('div');
   parentGuideCard.className = 'card';
@@ -1167,7 +1243,7 @@ function renderHome(app) {
     <p class="muted">نصائح وتمارين منزلية لتحسين النطق</p>
     <button class="btn btn-soft btn-sm">عرض التوجيهات</button>
   `;
-  parentGuideCard.onclick = () => { state.view = 'parent-guide'; render(); };
+  parentGuideCard.onclick = () => { playSound('click'); state.view = 'parent-guide'; render(); };
   grid.appendChild(parentGuideCard);
   app.appendChild(grid);
 }
@@ -1187,7 +1263,7 @@ function renderVocabList(app) {
     <p class="muted">اضغط على أي كلمة للاستماع إلى نطقها الصحيح</p>
     <div class="vocab-grid">
       ${items.map(item => `
-        <div class="vocab-item" onclick="speakText('${item.word}')">
+        <div class="vocab-item" onclick="playSound('click'); speakText('${item.word}')">
           <span class="icon">${item.icon}</span>
           <span class="word">${item.word}</span>
         </div>
@@ -1217,16 +1293,17 @@ function renderAuth(app) {
     try {
       const email = document.getElementById('email').value.trim();
       const pass = document.getElementById('password').value;
-      if (!email || !pass) return showToast('يرجى إدخال البريد وكلمة المرور');
+      if (!email || !pass) { playSound('error'); return showToast('يرجى إدخال البريد وكلمة المرور'); }
       const res = await signInWithEmailAndPassword(auth, email, pass);
+      playSound('success');
       state.user = res.user;
       await fetchUserData(res.user.uid);
-    } catch (e) { showToast('خطأ في بيانات الدخول: ' + e.message); }
+    } catch (e) { playSound('error'); showToast('خطأ في بيانات الدخول: ' + e.message); }
   };
   const toReg = card.querySelector('#toRegister');
-  if (toReg) toReg.onclick = () => { state.view = 'register'; render(); };
+  if (toReg) toReg.onclick = () => { playSound('click'); state.view = 'register'; render(); };
   const toReset = card.querySelector('#toReset');
-  if (toReset) toReset.onclick = () => { state.view = 'reset-password'; render(); };
+  if (toReset) toReset.onclick = () => { playSound('click'); state.view = 'reset-password'; render(); };
   app.appendChild(card);
 }
 
@@ -1251,7 +1328,7 @@ function renderRegister(app) {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const role = document.getElementById('role').value;
-    if (!email || !password) return showToast('يرجى ملء جميع الحقول المطلوبة');
+    if (!email || !password) { playSound('error'); return showToast('يرجى ملء جميع الحقول المطلوبة'); }
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
       await setDoc(doc(db, "users", res.user.uid), {
@@ -1264,12 +1341,13 @@ function renderRegister(app) {
         parentEmail: '',
         parentPhone: ''
       });
+      playSound('success');
       state.user = res.user; state.role = role;
       state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
       showToast('تم إنشاء الحساب بنجاح');
       if (role === 'teacher') await fetchTeacherStudents();
       else render();
-    } catch (e) { showToast('فشل التسجيل: ' + e.message); }
+    } catch (e) { playSound('error'); showToast('فشل التسجيل: ' + e.message); }
   };
   app.appendChild(card);
 }
@@ -1288,16 +1366,17 @@ function renderResetPassword(app) {
   const resetBtn = card.querySelector('#resetBtn');
   if (resetBtn) resetBtn.onclick = async () => {
     const email = document.getElementById('resetEmail').value.trim();
-    if (!email) return showToast('يرجى كتابة البريد الإلكتروني');
+    if (!email) { playSound('error'); return showToast('يرجى كتابة البريد الإلكتروني'); }
     try {
       await sendPasswordResetEmail(auth, email);
+      playSound('success');
       showToast('تم إرسال رابط إعادة التعيين لبريدك الإلكتروني');
       state.view = 'auth';
       render();
-    } catch(e) { showToast('تعذر الإرسال: تأكد من صحة البريد الإلكتروني'); }
+    } catch(e) { playSound('error'); showToast('تعذر الإرسال: تأكد من صحة البريد الإلكتروني'); }
   };
   const backBtn = card.querySelector('#backToLogin');
-  if (backBtn) backBtn.onclick = () => { state.view = 'auth'; render(); };
+  if (backBtn) backBtn.onclick = () => { playSound('click'); state.view = 'auth'; render(); };
   app.appendChild(card);
 }
 
@@ -1386,6 +1465,7 @@ async function renderTeacherDashboard(app) {
 
   const btnSessions = actCard.querySelector('#btnSessions');
   if (btnSessions) btnSessions.onclick = () => {
+    playSound('click');
     if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
     if (state.currentStudent) {
       state.diagEval = state.currentStudent.diagnostic || {};
@@ -1396,17 +1476,17 @@ async function renderTeacherDashboard(app) {
     render();
   };
   const btnSessionsLog = actCard.querySelector('#btnSessionsLog');
-  if (btnSessionsLog) btnSessionsLog.onclick = () => { state.view = 'sessions-log'; render(); };
+  if (btnSessionsLog) btnSessionsLog.onclick = () => { playSound('click'); state.view = 'sessions-log'; render(); };
   const btnIEPList = actCard.querySelector('#btnIEPList');
-  if (btnIEPList) btnIEPList.onclick = () => { state.view = 'iep-session'; render(); };
+  if (btnIEPList) btnIEPList.onclick = () => { playSound('click'); state.view = 'iep-session'; render(); };
   const btnAchievementList = actCard.querySelector('#btnAchievementList');
-  if (btnAchievementList) btnAchievementList.onclick = () => { state.view = 'student-achievement-list'; render(); };
+  if (btnAchievementList) btnAchievementList.onclick = () => { playSound('click'); state.view = 'student-achievement-list'; render(); };
   const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
-  if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
+  if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { playSound('click'); state.view = 'teacher-achievement'; render(); };
   const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
-  if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
+  if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { playSound('click'); state.view = 'weekly-plan'; render(); };
   const btnParentGuide = actCard.querySelector('#btnParentGuide');
-  if (btnParentGuide) btnParentGuide.onclick = () => { state.view = 'parent-guide'; render(); };
+  if (btnParentGuide) btnParentGuide.onclick = () => { playSound('click'); state.view = 'parent-guide'; render(); };
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
@@ -1430,6 +1510,7 @@ async function renderTeacherDashboard(app) {
       setTimeout(() => {
         const diagBtn = document.getElementById(`diag_${st.id}`);
         if (diagBtn) diagBtn.onclick = () => {
+          playSound('click');
           state.currentStudent = st;
           state.diagEval = st.diagnostic || {};
           if (st.comprehensive) state.comprehensive = st.comprehensive;
@@ -1438,6 +1519,7 @@ async function renderTeacherDashboard(app) {
         };
         const profBtn = document.getElementById(`prof_${st.id}`);
         if (profBtn) profBtn.onclick = () => {
+          playSound('click');
           state.currentStudent = st;
           state.diagEval = st.diagnostic || {};
           state.view = 'speech-sessions';
@@ -1445,6 +1527,7 @@ async function renderTeacherDashboard(app) {
         };
         const achvBtn = document.getElementById(`achv_${st.id}`);
         if (achvBtn) achvBtn.onclick = () => {
+          playSound('click');
           state.currentStudent = st;
           state.view = 'achievement';
           render();
@@ -1464,11 +1547,8 @@ async function renderTeacherDashboard(app) {
     adaptiveCard.innerHTML += '<p class="muted">لا يوجد طلاب.</p>';
   } else {
     for (const student of state.myStudents) {
-      // جلب جلسات هذا الطالب من القائمة المحملة
       const studentSessions = allSessionsForTeacher.filter(s => s.studentId === student.id);
-      // جلب بيانات الطالب الكاملة من قاعدة البيانات (للتأكد من وجود diagnostic)
-      let studentData = student; // نستخدم الموجود في القائمة، لكن قد يكون غير محدث
-      // من الأفضل جلبها من قاعدة البيانات للحصول على أحدث بيانات
+      let studentData = student;
       try {
         const studentDoc = await getDoc(doc(db, "users", student.id));
         if (studentDoc.exists()) studentData = studentDoc.data();
@@ -1519,23 +1599,26 @@ window.claimStudent = async function(studentId) {
     const ref = doc(db, "users", studentId);
     const snap = await getDoc(ref);
     if (snap.exists() && snap.data().teacherId && snap.data().teacherId !== state.user.uid) {
+      playSound('error');
       showToast('هذا الطالب مرتبط بمعلم آخر');
       await fetchTeacherStudents();
       return;
     }
     await updateDoc(ref, { teacherId: state.user.uid });
+    playSound('success');
     showToast('تمت إضافة الطالب بنجاح');
     showNotification('تمت إضافة طالب جديد إلى قائمتك', 'success');
     await fetchTeacherStudents();
-  } catch(e) { showToast('فشل في إضافة الطالب'); }
+  } catch(e) { playSound('error'); showToast('فشل في إضافة الطالب'); }
 };
 
 window.removeStudent = async function(studentId) {
   try {
     await updateDoc(doc(db, "users", studentId), { teacherId: null });
+    playSound('success');
     showToast('تم إزالة الطالب من قائمتك');
     await fetchTeacherStudents();
-  } catch(e) { showToast('فشل في إزالة الطالب'); }
+  } catch(e) { playSound('error'); showToast('فشل في إزالة الطالب'); }
 };
 
 // ====== صفحة الألعاب التعليمية ======
@@ -1601,11 +1684,13 @@ function renderGames(app) {
           letterFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
           letterScore += 10;
           letterGameScore.textContent = `النقاط: ${letterScore}`;
+          playSound('success');
           showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
           setTimeout(generateLetterQuestion, 1500);
         } else {
           btn.classList.add('wrong');
           letterFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
+          playSound('error');
           speakText(letter);
         }
       };
@@ -1649,11 +1734,13 @@ function renderGames(app) {
           matchFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
           matchScore += 10;
           matchGameScore.textContent = `النقاط: ${matchScore}`;
+          playSound('success');
           showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
           setTimeout(generateMatchQuestion, 1500);
         } else {
           btn.classList.add('wrong');
           matchFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
+          playSound('error');
           speakText(item.word);
         }
       };
@@ -1811,6 +1898,7 @@ function renderParentGuide(app) {
   const printBtn = container.querySelector('#printGuideBtn');
   if (printBtn) {
     printBtn.onclick = () => {
+      playSound('click');
       printParentGuide(container.innerHTML);
     };
   }
@@ -1858,7 +1946,7 @@ async function renderWeeklyPlan(app) {
   app.appendChild(container);
 
   const printBtn = container.querySelector('#printWeeklyPlanBtn');
-  if (printBtn) printBtn.onclick = () => printWeeklyPlan();
+  if (printBtn) printBtn.onclick = () => { playSound('click'); printWeeklyPlan(); };
 
   if (!state.myStudents.length) {
     const emptyCard = document.createElement('div');
@@ -1927,7 +2015,7 @@ async function renderWeeklyPlan(app) {
             <div style="display:flex; gap:10px; align-items:center; padding:4px 0; border-bottom:1px solid #eee;">
               <span style="min-width:70px;">حرف ${letter}</span>
               <span style="color:${completed >= totalNeeded ? 'green' : '#F57F17'};">${completed}/${totalNeeded} جلسات</span>
-              <button class="btn btn-soft btn-sm" onclick="speakText('${letter}')">🔊</button>
+              <button class="btn btn-soft btn-sm" onclick="playSound('click'); speakText('${letter}')">🔊</button>
             </div>
           `;
         }).join('')}
@@ -1987,6 +2075,7 @@ async function renderStudentAchievementList(app) {
       <div class="student-email">${st.email}</div>
     `;
     item.onclick = () => {
+      playSound('click');
       state.currentStudent = st;
       state.view = 'achievement';
       render();
@@ -2028,6 +2117,7 @@ async function renderTeacherAchievement(app) {
   } catch(e) { console.error('خطأ في جلب بيانات المعلم:', e); }
   const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
 
+  // بدلاً من Storage، نعتمد على روابط خارجية مخزنة في Firestore
   let existingFiles = {};
   try {
     const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
@@ -2055,9 +2145,9 @@ async function renderTeacherAchievement(app) {
   app.appendChild(headerCard);
 
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
+  if (printBtn) printBtn.onclick = () => { playSound('click'); printTeacherAchievement(teacherName, existingFiles); };
   const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
-  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
+  if (generateBtn) generateBtn.onclick = () => { playSound('click'); generateEvidenceReport(teacherName); };
 
   TEACHER_STANDARDS.forEach(standard => {
     const card = document.createElement('div');
@@ -2066,52 +2156,44 @@ async function renderTeacherAchievement(app) {
     card.innerHTML = `
       <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
       <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
-        <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
-        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
-        <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
-      </div>
-      <div id="filesList_${standard.id}" style="margin-top:8px;">
+      <div style="margin-top:8px;">
         ${(existingFiles[standard.id] || []).map(file => `
           <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
-            <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
-            <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
+            <span style="font-size:13px;">📄 ${file.name || 'رابط ملف'}</span>
+            ${file.url ? `<a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>` : ''}
           </div>
         `).join('')}
+      </div>
+      <div style="margin-top:8px;">
+        <label style="font-size:12px;">رابط ملف خارجي (اختياري):</label>
+        <input type="text" id="linkInput_${standard.id}" placeholder="https://drive.google.com/..." style="margin-bottom:4px;">
+        <button class="btn btn-soft btn-sm" id="saveLinkBtn_${standard.id}">➕ إضافة رابط</button>
       </div>
     `;
     app.appendChild(card);
 
-    const fileInput = card.querySelector(`#fileInput_${standard.id}`);
-    const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
-    const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
-    if (uploadBtn && fileInput) {
-      uploadBtn.onclick = () => fileInput.click();
-      fileInput.onchange = async () => {
-        if (!fileInput.files || fileInput.files.length === 0) return;
-        fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
-        const uploadPromises = Array.from(fileInput.files).map(file => uploadTeacherFile(teacherId, standard.id, file));
-        const results = await Promise.all(uploadPromises);
-        const success = results.filter(r => r !== null);
-        if (success.length > 0) {
-          for (const fileInfo of success) {
-            try {
-              await addDoc(collection(db, "teacher_files"), {
-                teacherId,
-                standardId: standard.id,
-                name: fileInfo.name,
-                url: fileInfo.url,
-                type: fileInfo.type,
-                uploadedAt: fileInfo.uploadedAt
-              });
-            } catch(e) { console.error('خطأ في حفظ الملف:', e); }
-          }
-          showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
+    const linkInput = card.querySelector(`#linkInput_${standard.id}`);
+    const saveLinkBtn = card.querySelector(`#saveLinkBtn_${standard.id}`);
+    if (saveLinkBtn && linkInput) {
+      saveLinkBtn.onclick = async () => {
+        const url = linkInput.value.trim();
+        if (!url) return showToast('أدخل رابطاً صحيحاً');
+        try {
+          await addDoc(collection(db, "teacher_files"), {
+            teacherId,
+            standardId: standard.id,
+            name: url.split('/').pop() || 'رابط',
+            url: url,
+            type: 'link',
+            uploadedAt: new Date().toISOString()
+          });
+          playSound('success');
+          showToast('تم حفظ الرابط');
           renderTeacherAchievement(app);
-        } else {
-          showToast('❌ فشل رفع الملفات');
+        } catch(e) {
+          playSound('error');
+          showToast('فشل حفظ الرابط: ' + e.message);
         }
-        fileInput.value = '';
       };
     }
   });
@@ -2216,6 +2298,7 @@ async function generateEvidenceReport(teacherName) {
     setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
   } catch(e) {
     console.error('خطأ في توليد الشواهد:', e);
+    playSound('error');
     showToast('❌ فشل توليد الشواهد');
   }
 }
@@ -2239,7 +2322,7 @@ function printTeacherAchievement(teacherName, existingFiles) {
         <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
           <strong>${standard.id}. ${standard.title}</strong>
           <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
-          ${(existingFiles[standard.id] || []).map(file => `<div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>`).join('')}
+          ${(existingFiles[standard.id] || []).map(file => `<div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'رابط ملف'} ${file.url ? `- <a href="${file.url}" target="_blank">عرض</a>` : ''}</div>`).join('')}
         </div>
       `).join('')}
       <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
@@ -2355,6 +2438,7 @@ async function renderAchievement(app) {
     const printBtn = card.querySelector('#printAchievementBtn');
     if (printBtn) {
       printBtn.onclick = () => {
+        playSound('click');
         printAchievement(state.currentStudent, {
           passedLetters, needLetters, trainedLetters, totalSessions, averageSuccess,
           masteryPercentage, achievementLevel, achievementIcon, points, weeklyStats
@@ -2529,6 +2613,7 @@ function renderComprehensiveDiagnosis(container) {
     const opts = group.querySelectorAll('.diag-option');
     opts.forEach(opt => {
       opt.onclick = () => {
+        playSound('click');
         const val = opt.dataset.value;
         state.comprehensive[key] = val;
         if (key === 'scans') {
@@ -2618,9 +2703,10 @@ function renderDiagnosticSession(app) {
       diagnosticAudio = { letters: {}, words: {} };
       try {
         await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
+        playSound('success');
         showToast('تم مسح تشخيص الحروف');
         renderDiagnosticSession(app);
-      } catch(e) { showToast('خطأ في المسح'); }
+      } catch(e) { playSound('error'); showToast('خطأ في المسح'); }
     }
   };
 
@@ -2643,8 +2729,10 @@ function renderDiagnosticSession(app) {
       });
       const iepData = generateIEP(passed, trained, need, unclear, state.currentStudent);
       await setDoc(doc(db, "iep", state.currentStudent.id), iepData);
+      playSound('success');
       showToast('✅ تم حفظ التشخيص وإنشاء الخطة الفردية (IEP) تلقائياً!');
     } catch(e) {
+      playSound('error');
       showToast('❌ خطأ في الحفظ: ' + e.message);
     }
   };
@@ -2683,11 +2771,11 @@ function renderDiagnosticSession(app) {
       const notes = letterData.notes || '';
 
       card.innerHTML = `
-        <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
+        <div class="letter-circle" onclick="playSound('click'); speakText('${letter}')">${letter}</div>
         <span class="letter-title">${titleStr}</span>
         <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:4px;">
-          <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
-          <button class="audio-btn" onclick="speakText('${titleStr}')" title="نطق الكلمة">🔊 ${titleStr}</button>
+          <button class="audio-btn" onclick="playSound('click'); speakText('${letter}')">🔊</button>
+          <button class="audio-btn" onclick="playSound('click'); speakText('${titleStr}')" title="نطق الكلمة">🔊 ${titleStr}</button>
         </div>
         <div class="record-buttons">
           <button class="btn-record" id="recordLetterBtn_${letter}" data-letter="${letter}">🎤 سجل الحرف</button>
@@ -2746,6 +2834,7 @@ function renderDiagnosticSession(app) {
       evalBtns.forEach(btn => {
         btn.onclick = function(e) {
           e.stopPropagation();
+          playSound('click');
           const l = this.dataset.letter;
           const v = this.dataset.value;
           if (!state.diagEval[l]) state.diagEval[l] = {};
@@ -2757,6 +2846,7 @@ function renderDiagnosticSession(app) {
       const recordLetterBtn = card.querySelector(`#recordLetterBtn_${letter}`);
       if (recordLetterBtn) {
         recordLetterBtn.onclick = function() {
+          playSound('click');
           const l = this.dataset.letter;
           const feedbackEl = document.getElementById(`feedback_${l}`);
           startRecording(l, (transcript, analysis, audioUrl) => {
@@ -2765,6 +2855,7 @@ function renderDiagnosticSession(app) {
               return;
             }
             if (analysis.isMatch) {
+              playSound('success');
               if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح. (النص: "${transcript}")`;
               if (!state.diagEval[l]) state.diagEval[l] = {};
               state.diagEval[l].status = 'passed';
@@ -2772,6 +2863,7 @@ function renderDiagnosticSession(app) {
               showToast('🎉 أحسنت! نطق صحيح');
               renderDiagnosticSession(app);
             } else {
+              playSound('error');
               const similarity = analysis.similarityPercent !== undefined ? ` | التشابه: ${analysis.similarityPercent}%` : '';
               if (feedbackEl) feedbackEl.innerHTML = `❌ غير صحيح: ${getDisorderFeedback(analysis.disorderType)} (النص: "${transcript}")${similarity}`;
               if (!state.diagEval[l]) state.diagEval[l] = {};
@@ -2787,6 +2879,7 @@ function renderDiagnosticSession(app) {
       const recordWordBtn = card.querySelector(`#recordWordBtn_${letter}`);
       if (recordWordBtn) {
         recordWordBtn.onclick = function() {
+          playSound('click');
           const word = this.dataset.word;
           const l = letter;
           const feedbackEl = document.getElementById(`feedback_${l}`);
@@ -2796,9 +2889,11 @@ function renderDiagnosticSession(app) {
               return;
             }
             if (analysis.isMatch) {
+              playSound('success');
               if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${word}) صحيح. (النص: "${transcript}")`;
               showToast('🎉 أحسنت! نطق صحيح');
             } else {
+              playSound('error');
               const similarity = analysis.similarityPercent !== undefined ? ` | التشابه: ${analysis.similarityPercent}%` : '';
               if (feedbackEl) feedbackEl.innerHTML = `❌ (${word}) غير صحيحة: ${getDisorderFeedback(analysis.disorderType)} (النص: "${transcript}")${similarity}`;
               showToast('💪 لا بأس، حاول مرة أخرى');
@@ -2811,6 +2906,7 @@ function renderDiagnosticSession(app) {
       const detailsDiv = card.querySelector(`#details_${letter}`);
       if (toggleBtn && detailsDiv) {
         toggleBtn.onclick = function() {
+          playSound('click');
           detailsDiv.classList.toggle('open');
           this.textContent = detailsDiv.classList.contains('open') ? '📌 تفاصيل متقدمة ▲' : '📌 تفاصيل متقدمة ▼';
         };
@@ -2955,6 +3051,7 @@ async function renderStudentMenu(app) {
 
   const achvBtn = summary.querySelector('#achievementBtn');
   if (achvBtn) achvBtn.onclick = () => {
+    playSound('click');
     state.currentStudent = { id: state.user.uid, ...studentData };
     state.view = 'achievement';
     render();
@@ -2987,11 +3084,11 @@ async function renderStudentMenu(app) {
   const saveParentBtn = parentCard.querySelector('#saveParentInfoBtn');
   if (saveParentBtn) {
     saveParentBtn.onclick = async () => {
+      playSound('click');
       const name = document.getElementById('parentNameInput').value.trim();
       const email = document.getElementById('parentEmailInput').value.trim();
       const phone = document.getElementById('parentPhoneInput').value.trim();
       await updateParentInfo(state.user.uid, name, email, phone);
-      // تحديث بيانات الطالب في الحالة
       state.currentStudent.parentName = name;
       state.currentStudent.parentEmail = email;
       state.currentStudent.parentPhone = phone;
@@ -3081,6 +3178,7 @@ async function renderStudentMenu(app) {
         setTimeout(() => {
           const openBtn = document.getElementById(`openSess_${sess.id}`);
           if (openBtn) openBtn.onclick = () => {
+            playSound('click');
             state.currentSession = { id: sess.id, ...sess };
             state.view = 'single-session';
             render();
@@ -3190,6 +3288,7 @@ async function renderSpeechSessions(app) {
   const typeSelect = addCard.querySelector('#sessType');
   if (letterSelect && typeSelect) {
     letterSelect.onchange = () => {
+      playSound('click');
       const selectedLetter = letterSelect.value;
       const suggestedType = getSuggestedSessionType(selectedLetter);
       typeSelect.value = suggestedType;
@@ -3210,6 +3309,7 @@ async function renderSpeechSessions(app) {
     const method = document.getElementById('sessMethod').value;
 
     if (!letter || !date) {
+      playSound('error');
       showToast('يرجى اختيار حرف وتاريخ الجلسة');
       return;
     }
@@ -3239,11 +3339,13 @@ async function renderSpeechSessions(app) {
         recommendations: '',
         createdAt: new Date().toISOString()
       });
+      playSound('success');
       showToast(`✅ تمت إضافة الجلسة رقم (${sessionNumber}) بنجاح!`);
       showNotification(`تمت إضافة جلسة جديدة لحرف ${letter}`, 'success');
       renderSpeechSessions(app);
     } catch(e) {
       console.error(e);
+      playSound('error');
       showToast('❌ فشل في إضافة الجلسة');
     }
   };
@@ -3289,6 +3391,7 @@ async function renderSpeechSessions(app) {
           setTimeout(() => {
             const viewBtn = document.getElementById(`viewSess_${sess.id}`);
             if (viewBtn) viewBtn.onclick = () => {
+              playSound('click');
               state.currentSession = sess;
               state.view = 'single-session';
               render();
