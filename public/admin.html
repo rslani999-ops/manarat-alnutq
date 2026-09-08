@@ -1694,9 +1694,9 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
-    // ====== صفحة الخطة الأسبوعية التلقائية ======
+    // ====== صفحة الخطة الأسبوعية الذكية ======
     async function renderWeeklyPlan(app) {
-      renderTopbar(app, '📅 الخطة الأسبوعية', 'خطة تدريب مقترحة تلقائياً', () => {
+      renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
         state.view = 'teacher-dashboard';
         render();
       });
@@ -1705,10 +1705,16 @@
       container.innerHTML = `
         <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep); margin-bottom:15px;">
           <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 الخطة الأسبوعية المقترحة</h3>
-          <p class="muted" style="text-align:center;">بناءً على الحروف التي تحتاج تدريبًا لكل طالب</p>
+          <p class="muted" style="text-align:center;">تتحدث تلقائياً حسب الجلسات المكتملة وشدة الحالة</p>
+          <div style="text-align:center;margin-top:10px;">
+            <button class="btn btn-primary btn-sm" id="printWeeklyPlanBtn" style="border-radius:50px;">🖨️ طباعة / حفظ PDF</button>
+          </div>
         </div>
       `;
       app.appendChild(container);
+
+      const printBtn = container.querySelector('#printWeeklyPlanBtn');
+      if (printBtn) printBtn.onclick = () => printWeeklyPlan();
 
       if (!state.myStudents.length) {
         const emptyCard = document.createElement('div');
@@ -1716,6 +1722,36 @@
         emptyCard.innerHTML = '<p class="muted">لا يوجد طلاب لعرض الخطة.</p>';
         app.appendChild(emptyCard);
         return;
+      }
+
+      // جلب جميع جلسات المعلم
+      const allSessionsSnap = await getDocs(collection(db, "sessions"));
+      const allSessions = [];
+      allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+
+      const daysMap = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+      const nonConsecutiveDays = ['السبت', 'الإثنين', 'الأربعاء'];
+      const singleDay = ['الأحد'];
+
+      // دالة حساب عدد الجلسات الأسبوعية حسب شدة الحالة
+      function getWeeklySessions(studentData, sessions) {
+        const diag = studentData.diagnostic || {};
+        const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+        const severeTypes = ['حذف', 'قلب', 'خنف', 'تأتأة / تلعثم', 'حبسة'];
+        let severity = 0;
+        needLetters.forEach(letter => {
+          const info = diag[letter] || {};
+          if (severeTypes.includes(info.disorderType)) severity += 2;
+          else severity += 1;
+        });
+        if (severity <= 2) return 1; // جلسة واحدة
+        else if (severity <= 4) return 2; // جلستان
+        else return 3; // ثلاث جلسات
+      }
+
+      // دالة حساب الجلسات المكتملة لكل حرف
+      function getCompletedSessions(letter, studentId) {
+        return allSessions.filter(s => s.studentId === studentId && s.letter === letter && (s.evaluation === 'passed' || s.evaluation === 'trained')).length;
       }
 
       for (const student of state.myStudents) {
@@ -1727,36 +1763,70 @@
         if (needLetters.length === 0) {
           const okCard = document.createElement('div');
           okCard.className = 'card';
-          okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً، جميع الحروف متقنة أو في مراجعة.</p>`;
+          okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً.</p>`;
           app.appendChild(okCard);
           continue;
         }
 
-        const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-        let dayIndex = 0;
-        const weeklyLetters = [];
-        for (let i = 0; i < needLetters.length && dayIndex < days.length; i++) {
-          weeklyLetters.push({ day: days[dayIndex], letter: needLetters[i] });
-          dayIndex++;
-        }
+        const sessionsPerWeek = getWeeklySessions(studentData, allSessions);
+        const daysForStudent = sessionsPerWeek === 1 ? singleDay : nonConsecutiveDays.slice(0, sessionsPerWeek);
 
         const planCard = document.createElement('div');
         planCard.className = 'card';
+        planCard.style.borderRight = '4px solid var(--mint-deep)';
         planCard.innerHTML = `
           <h4 style="margin:0;color:var(--mint-deep);">👤 ${student.fullName || student.email}</h4>
+          <p style="font-size:13px;color:#555;margin:4px 0;">
+            الجلسات الأسبوعية الموصى بها: <strong>${sessionsPerWeek}</strong> - الأيام: ${daysForStudent.join(' و ')}
+          </p>
           <div style="margin-top:8px;">
-            ${weeklyLetters.map(item => `
-              <div style="display:flex; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
-                <span style="font-weight:bold; min-width:60px;">${item.day}</span>
-                <span>حرف ${item.letter}</span>
-                <button class="btn btn-soft btn-sm" onclick="speakText('${item.letter}')">🔊</button>
-              </div>
-            `).join('')}
+            ${needLetters.slice(0, 4).map(letter => {
+              const completed = getCompletedSessions(letter, student.id);
+              const totalNeeded = 4; // عدد الجلسات المطلوبة لكل حرف
+              return `
+                <div style="display:flex; gap:10px; align-items:center; padding:4px 0; border-bottom:1px solid #eee;">
+                  <span style="min-width:70px;">حرف ${letter}</span>
+                  <span style="color:${completed >= totalNeeded ? 'green' : '#F57F17'};">${completed}/${totalNeeded} جلسات</span>
+                  <button class="btn btn-soft btn-sm" onclick="speakText('${letter}')">🔊</button>
+                </div>
+              `;
+            }).join('')}
           </div>
-          <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الأسبوع القادم سيبدأ من الحرف التالي تلقائيًا.</p>
+          <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الجلسات الفردية فقط، دون دمج الطلاب.</p>
         `;
         app.appendChild(planCard);
       }
+    }
+
+    function printWeeklyPlan() {
+      let printArea = document.getElementById('iep-print-area');
+      if (!printArea) {
+        printArea = document.createElement('div');
+        printArea.id = 'iep-print-area';
+        document.body.appendChild(printArea);
+      }
+
+      const planContent = document.getElementById('app').innerText;
+
+      printArea.innerHTML = `
+        <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+            <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب</p>
+            <hr style="border:1px solid #ddd;margin:10px 0;">
+          </div>
+          <pre style="white-space:pre-wrap;font-size:14px;line-height:1.8;">${planContent}</pre>
+          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
+            تم توليد هذه الخطة تلقائياً بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
+          </div>
+        </div>
+      `;
+
+      window.print();
+
+      setTimeout(() => {
+        if (printArea) printArea.remove();
+      }, 1000);
     }
 
     // ====== صفحة قائمة الطلاب لملفات الإنجاز ======
@@ -2134,7 +2204,6 @@
 
         const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
 
-        // حساب النقاط
         const points = calculateStudentPoints(studentData);
 
         let achievementLevel = '';
@@ -3144,7 +3213,7 @@
 
 
 
-        // ====== عرض جلسة واحدة ======
+    // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -3271,6 +3340,8 @@
             showToast('تم حفظ التقييم والتوصيات');
             state.currentSession = { ...sess, evaluation: selectedEval, successRate: selectedRate, recommendations: recText };
             renderSingleSession(app);
+            // بعد الحفظ، نتحقق من اكتمال 4 جلسات ناجحة
+            checkAndSuggestMastery(sess.studentId, sess.letter);
           } catch(e) {
             showToast('خطأ في الحفظ: ' + e.message);
           }
@@ -3483,6 +3554,36 @@
             }
           });
         };
+      }
+    }
+
+    // ====== دالة التحقق واقتراح الإتقان بعد 4 جلسات ناجحة ======
+    async function checkAndSuggestMastery(studentId, letter) {
+      try {
+        const qS = query(collection(db, "sessions"), where("studentId", "==", studentId), where("letter", "==", letter));
+        const snap = await getDocs(qS);
+        const sessions = [];
+        snap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
+
+        const successful = sessions.filter(s => s.evaluation === 'passed' || s.evaluation === 'trained');
+        const totalNeeded = 4;
+
+        if (successful.length >= totalNeeded) {
+          // عرض تنبيه للمعلم
+          if (confirm(`🎉 الطالب أتم ${totalNeeded} جلسات ناجحة لحرف (${letter}). هل تريد نقل الحرف إلى المتقن؟`)) {
+            const studentDoc = await getDoc(doc(db, "users", studentId));
+            if (studentDoc.exists()) {
+              const studentData = studentDoc.data();
+              const diag = studentData.diagnostic || {};
+              diag[letter] = diag[letter] || {};
+              diag[letter].status = 'passed';
+              await updateDoc(doc(db, "users", studentId), { diagnostic: diag });
+              showToast(`✅ تم نقل حرف (${letter}) إلى المتقن!`);
+            }
+          }
+        }
+      } catch(e) {
+        console.error('خطأ في التحقق من الإتقان:', e);
       }
     }
 
@@ -3773,4 +3874,4 @@
 
   </script>
 </body>
-</html>
+</html>    
