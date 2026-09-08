@@ -690,7 +690,7 @@
     </div>
     <div class="school-info">ابتدائية قتيبة بن مسلم - حفر الباطن</div>
     <div class="footer-links">
-      <a href="mailto:rslani999@gmail.com">سياسة الخصوصية</a>
+      <a href="#" id="privacyPolicyLink">سياسة الخصوصية</a>
       <a href="mailto:rslani999@gmail.com">اتصل بنا</a>
     </div>
   </footer>
@@ -754,7 +754,6 @@
         return null;
       }
     }
-
     window.uploadTeacherFile = uploadTeacherFile;
 
     // ====== بيانات أساسية ======
@@ -778,7 +777,7 @@
     const letterTitleMap = {};
     alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
 
-    // ====== قوائم المفردات (كما هي سابقاً) ======
+    // ====== قوائم المفردات ======
     const VOCAB_LISTS = {
       'الأشكال': [
         { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
@@ -853,7 +852,6 @@
     };
     const VOCAB_CATEGORIES = Object.keys(VOCAB_LISTS);
 
-    // ====== أنواع الجلسات ======
     const SESSION_TYPES = [
       { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
       { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
@@ -929,6 +927,7 @@
       return names[type] || `تدريب حرف (${letter})`;
     }
 
+    // ====== دالة النطق ======
     function speakText(text) {
       if (!('speechSynthesis' in window)) {
         showToast('❌ المتصفح لا يدعم خاصية النطق الصوتي.');
@@ -947,6 +946,7 @@
     }
     window.speakText = speakText;
 
+    // ====== دالة التسجيل ======
     async function startRecording(targetText, callback, maxSeconds = 5) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -1069,6 +1069,7 @@
       return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير دقيق' };
     }
 
+    // ====== الحالة العامة ======
     let state = {
       view: 'home',
       user: null,
@@ -1099,6 +1100,7 @@
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
 
+    // ====== دوال الوصول ======
     function toggleHighContrast() {
       document.body.classList.toggle('high-contrast');
       localStorage.setItem('highContrast', document.body.classList.contains('high-contrast') ? 'on' : 'off');
@@ -1130,6 +1132,28 @@
       updateAccessibilityButtons();
     }
 
+    // ====== نظام النقاط التحفيزي ======
+    function calculateStudentPoints(studentData) {
+      const diag = studentData?.diagnostic || {};
+      let points = 0;
+      ALL_LETTERS.forEach(letter => {
+        const status = diag[letter]?.status || 'none';
+        if (status === 'passed') points += 10;
+        else if (status === 'trained') points += 5;
+      });
+      return points;
+    }
+
+    async function updateStudentPoints(studentId, points) {
+      try {
+        await updateDoc(doc(db, "users", studentId), { points });
+      } catch(e) { console.error('خطأ في تحديث النقاط:', e); }
+    }
+
+    window.calculateStudentPoints = calculateStudentPoints;
+    window.updateStudentPoints = updateStudentPoints;
+
+    // ====== شريط الأعلى ======
     function renderTopbar(appContainer, title, sub, onBack) {
       const bar = document.createElement('div');
       bar.className = 'topbar';
@@ -1208,6 +1232,51 @@
       updateAccessibilityButtons();
     }
 
+    // ====== ربط رابط سياسة الخصوصية ======
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'privacyPolicyLink') {
+        e.preventDefault();
+        showPrivacyPolicy();
+      }
+    });
+
+    function showPrivacyPolicy() {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      modal.innerHTML = `
+        <div style="background:white;padding:25px;border-radius:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
+          <h3 style="margin-bottom:16px;color:var(--mint-deep);">سياسة الخصوصية</h3>
+          <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
+            نحن في منصة <strong>منارة النطق</strong> نلتزم بحماية بيانات المستخدمين (المعلمين والطلاب) ونستخدمها فقط لتقديم خدمات المنصة.
+          </p>
+          <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
+            <strong>البيانات التي نجمعها:</strong><br>
+            - الاسم والبريد الإلكتروني<br>
+            - نتائج التشخيص والجلسات<br>
+            - الملفات المرفوعة (شواهد الإنجاز)<br>
+            - التسجيلات الصوتية (إن استُخدمت)
+          </p>
+          <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
+            <strong>كيف نستخدم البيانات:</strong><br>
+            - لتقديم خدمات التشخيص والتدريب<br>
+            - لإعداد التقارير والخطط الفردية<br>
+            - لتحسين المنصة وتجربة المستخدم
+          </p>
+          <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
+            <strong>حماية البيانات:</strong><br>
+            نستخدم تشفير SSL ونخزن البيانات في خوادم آمنة (Firebase)، ولا نشاركها مع أي طرف ثالث.
+          </p>
+          <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
+            يمكنك التواصل معنا عبر البريد الإلكتروني rslani999@gmail.com لأي استفسار أو طلب حذف البيانات.
+          </p>
+          <button class="btn btn-primary btn-block" id="closePrivacyBtn">إغلاق</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const closeBtn = modal.querySelector('#closePrivacyBtn');
+      if (closeBtn) closeBtn.onclick = () => modal.remove();
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    }
 
 
 
@@ -1216,21 +1285,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-                            
 
 
 
@@ -1263,6 +1317,7 @@
       if (state.view === 'achievement') return renderAchievement(app);
       if (state.view === 'student-achievement-list') return renderStudentAchievementList(app);
       if (state.view === 'teacher-achievement') return renderTeacherAchievement(app);
+      if (state.view === 'weekly-plan') return renderWeeklyPlan(app);
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
     }
@@ -1504,6 +1559,7 @@
           <button class="btn btn-soft btn-sm" id="btnIEPList">📋 الخطة الفردية (IEP)</button>
           <button class="btn btn-soft btn-sm" id="btnAchievementList">🏆 ملف إنجاز الطلاب</button>
           <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
+          <button class="btn btn-soft btn-sm" id="btnWeeklyPlan">📅 الخطة الأسبوعية</button>
         </div>
       `;
       app.appendChild(actCard);
@@ -1536,6 +1592,11 @@
       const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
       if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => {
         state.view = 'teacher-achievement';
+        render();
+      };
+      const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
+      if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => {
+        state.view = 'weekly-plan';
         render();
       };
 
@@ -1632,6 +1693,71 @@
         await fetchTeacherStudents();
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
+
+    // ====== صفحة الخطة الأسبوعية التلقائية ======
+    async function renderWeeklyPlan(app) {
+      renderTopbar(app, '📅 الخطة الأسبوعية', 'خطة تدريب مقترحة تلقائياً', () => {
+        state.view = 'teacher-dashboard';
+        render();
+      });
+
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep); margin-bottom:15px;">
+          <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 الخطة الأسبوعية المقترحة</h3>
+          <p class="muted" style="text-align:center;">بناءً على الحروف التي تحتاج تدريبًا لكل طالب</p>
+        </div>
+      `;
+      app.appendChild(container);
+
+      if (!state.myStudents.length) {
+        const emptyCard = document.createElement('div');
+        emptyCard.className = 'card';
+        emptyCard.innerHTML = '<p class="muted">لا يوجد طلاب لعرض الخطة.</p>';
+        app.appendChild(emptyCard);
+        return;
+      }
+
+      for (const student of state.myStudents) {
+        const studentDoc = await getDoc(doc(db, "users", student.id));
+        const studentData = studentDoc.exists() ? studentDoc.data() : {};
+        const diag = studentData.diagnostic || {};
+        const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+
+        if (needLetters.length === 0) {
+          const okCard = document.createElement('div');
+          okCard.className = 'card';
+          okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً، جميع الحروف متقنة أو في مراجعة.</p>`;
+          app.appendChild(okCard);
+          continue;
+        }
+
+        const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+        let dayIndex = 0;
+        const weeklyLetters = [];
+        for (let i = 0; i < needLetters.length && dayIndex < days.length; i++) {
+          weeklyLetters.push({ day: days[dayIndex], letter: needLetters[i] });
+          dayIndex++;
+        }
+
+        const planCard = document.createElement('div');
+        planCard.className = 'card';
+        planCard.innerHTML = `
+          <h4 style="margin:0;color:var(--mint-deep);">👤 ${student.fullName || student.email}</h4>
+          <div style="margin-top:8px;">
+            ${weeklyLetters.map(item => `
+              <div style="display:flex; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
+                <span style="font-weight:bold; min-width:60px;">${item.day}</span>
+                <span>حرف ${item.letter}</span>
+                <button class="btn btn-soft btn-sm" onclick="speakText('${item.letter}')">🔊</button>
+              </div>
+            `).join('')}
+          </div>
+          <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الأسبوع القادم سيبدأ من الحرف التالي تلقائيًا.</p>
+        `;
+        app.appendChild(planCard);
+      }
+    }
 
     // ====== صفحة قائمة الطلاب لملفات الإنجاز ======
     async function renderStudentAchievementList(app) {
@@ -1810,7 +1936,6 @@
       try {
         const teacherId = state.user.uid;
 
-        // جلب جميع الجلسات
         const allSessionsSnap = await getDocs(collection(db, "sessions"));
         const allSessions = [];
         allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
@@ -1825,7 +1950,6 @@
 
         const totalStudents = state.myStudents.length;
 
-        // جلب ملخص كل طالب
         const studentSummaries = [];
         for (const student of state.myStudents) {
           const studentDoc = await getDoc(doc(db, "users", student.id));
@@ -1849,7 +1973,6 @@
           });
         }
 
-        // بناء التقرير
         let printArea = document.getElementById('iep-print-area');
         if (!printArea) {
           printArea = document.createElement('div');
@@ -2011,6 +2134,9 @@
 
         const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
 
+        // حساب النقاط
+        const points = calculateStudentPoints(studentData);
+
         let achievementLevel = '';
         let achievementIcon = '';
         if (masteryPercentage >= 80) {
@@ -2059,8 +2185,8 @@
               <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
             </div>
             <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-              <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${achievementLevel}</div>
-              <div style="font-size:13px;color:#6B7A99;">مستوى الإنجاز</div>
+              <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
+              <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
             </div>
           </div>
           <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
@@ -2071,6 +2197,9 @@
           </div>
           <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
             <strong>الحروف التي أتقنها بعد تدريب:</strong> ${trainedLetters.length ? trainedLetters.join(' - ') : 'لا يوجد'}
+          </div>
+          <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+            <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${passedLetters.length} حرف متقن (تحسن ${passedLetters.length} حرف)
           </div>
           <div style="text-align:center; margin-top:20px;">
             <button class="btn btn-primary" id="printAchievementBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>
@@ -2089,7 +2218,8 @@
               averageSuccess,
               masteryPercentage,
               achievementLevel,
-              achievementIcon
+              achievementIcon,
+              points
             });
           };
         }
@@ -2127,6 +2257,7 @@
             <div><strong>عدد الجلسات:</strong> ${data.totalSessions}</div>
             <div><strong>متوسط النجاح:</strong> ${data.averageSuccess}%</div>
             <div><strong>نسبة الإتقان:</strong> ${data.masteryPercentage}%</div>
+            <div><strong>النقاط:</strong> ${data.points}</div>
           </div>
           <div style="margin-bottom:10px;">
             <strong>الحروف المتقنة:</strong> ${data.passedLetters.length ? data.passedLetters.join('، ') : 'لا يوجد'}
@@ -2136,6 +2267,9 @@
           </div>
           <div style="margin-bottom:10px;">
             <strong>الحروف التي أتقنها بعد تدريب:</strong> ${data.trainedLetters.length ? data.trainedLetters.join('، ') : 'لا يوجد'}
+          </div>
+          <div style="margin-bottom:10px;">
+            <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${data.passedLetters.length} حرف متقن
           </div>
           <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
             تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
@@ -2684,6 +2818,7 @@
       const diag = studentData.diagnostic || {};
       const passed = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
       const need = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+      const points = calculateStudentPoints(studentData);
 
       const summary = document.createElement('div');
       summary.className = 'card';
@@ -2691,6 +2826,7 @@
         <h3>📊 ملخص مستوى الطالب والنطق</h3>
         <div><strong>الحروف المتقنة:</strong> ${passed.length ? passed.join(' - ') : 'لا يوجد'}</div>
         <div><strong>حروف تحتاج تدريب:</strong> ${need.length ? need.join(' - ') : 'لا يوجد'}</div>
+        <div style="margin-top:8px;"><strong>🏆 النقاط التحفيزية:</strong> ${points} نقطة</div>
         <button class="btn btn-primary btn-sm" id="achievementBtn" style="margin-top:10px;">🏆 ملف الإنجاز</button>
       `;
       container.appendChild(summary);
@@ -2988,7 +3124,7 @@
         listCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
       }
       app.appendChild(listCard);
-    }
+    }   
 
 
 
@@ -3004,12 +3140,11 @@
 
 
 
-    
 
 
 
 
-    // ====== عرض جلسة واحدة ======
+        // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -3089,33 +3224,6 @@
         ` : `<div style="margin-top:12px;background:#F0F7FF;padding:12px;border-radius:16px;font-size:14px;color:#0288D1;">💡 التقييم متاح للمعلم فقط.</div>`}
       `;
       app.appendChild(infoCard);
-
-      // ===== تقرير تلقائي بعد الجلسة =====
-      if (sess.evaluation && sess.evaluation !== 'none') {
-        const reportCard = document.createElement('div');
-        reportCard.className = 'card';
-        reportCard.style.background = '#F8FAFC';
-        reportCard.style.border = '2px solid var(--mint-deep)';
-        const successRate = sess.successRate || 0;
-        const feedbackMessage = successRate >= 80 ? '🎉 أداء ممتاز! استمر في التقدم.' :
-                               successRate >= 50 ? '👍 جيد جداً، مع بعض التدريب الإضافي ستتحسن.' :
-                               '💪 لا بأس، تحتاج إلى مزيد من التدريب والمتابعة.';
-        reportCard.innerHTML = `
-          <h3 style="color:var(--mint-deep);">📊 تقرير الجلسة</h3>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px;">
-            <div><strong>الحرف:</strong> ${letter}</div>
-            <div><strong>نوع الجلسة:</strong> ${typeInfo.icon} ${typeInfo.name}</div>
-            <div><strong>التقييم:</strong> ${evalLabels[sess.evaluation] || sess.evaluation}</div>
-            <div><strong>نسبة النجاح:</strong> ${successRate}%</div>
-          </div>
-          <div style="margin-top:10px;">
-            <strong>الرسالة:</strong> ${feedbackMessage}
-          </div>
-          ${sess.recommendations ? `<div style="margin-top:10px;"><strong>📝 التوصيات:</strong> ${sess.recommendations}</div>` : ''}
-          <div style="margin-top:10px;font-size:12px;color:#6B7A99;">تم إنشاء هذا التقرير تلقائياً بعد حفظ الجلسة.</div>
-        `;
-        app.appendChild(reportCard);
-      }
 
       if (state.role === 'teacher' || state.role === 'admin') {
         let selectedEval = currentEval;
@@ -3378,7 +3486,7 @@
       }
     }
 
-    // ====== سجل الجلسات (جدول) مع إمكانية حذف الجلسات غير المعروفة ======
+    // ====== سجل الجلسات (جدول) ======
     async function renderSessionsLog(app) {
       renderTopbar(app, '📊 جدول سجل الجلسات', 'عرض جميع الجلسات المسجلة', () => {
         state.view = 'teacher-dashboard';
@@ -3666,7 +3774,3 @@
   </script>
 </body>
 </html>
-
-
-
-  
