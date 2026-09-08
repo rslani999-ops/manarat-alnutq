@@ -556,6 +556,128 @@
       padding: 4px 12px;
     }
 
+    /* ====== تنسيقات الألعاب ====== */
+    .game-container {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 2px solid var(--mint);
+    }
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .game-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--mint-deep);
+    }
+    .game-score {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--gold);
+    }
+    .game-question {
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .game-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .game-option {
+      padding: 15px;
+      border-radius: 14px;
+      border: 2px solid #ddd;
+      background: #f9f9f9;
+      cursor: pointer;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    .game-option:hover {
+      transform: scale(1.05);
+      border-color: var(--mint);
+    }
+    .game-option.correct {
+      background: #E8F5E9;
+      border-color: #2E7D32;
+      color: #2E7D32;
+    }
+    .game-option.wrong {
+      background: #FFEBEE;
+      border-color: #C62828;
+      color: #C62828;
+    }
+    .game-feedback {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      min-height: 30px;
+    }
+
+    /* ====== شريط التقدم ====== */
+    .progress-bar-container {
+      width: 100%;
+      background: #e0e0e0;
+      border-radius: 20px;
+      height: 20px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4FB6A8, #357E74);
+      border-radius: 20px;
+      transition: width 0.5s ease;
+      text-align: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      line-height: 20px;
+      min-width: 30px;
+    }
+
+    /* ====== الإشعارات الداخلية ====== */
+    .notification-container {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 320px;
+    }
+    .notification-item {
+      background: white;
+      border-right: 4px solid var(--mint-deep);
+      border-radius: 10px;
+      padding: 12px 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .notification-item.success { border-right-color: #2E7D32; }
+    .notification-item.info { border-right-color: #0288D1; }
+    .notification-item.warning { border-right-color: #F57F17; }
+    @keyframes slideIn {
+      from { transform: translateX(-100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
     /* ====== وضع التباين العالي ====== */
     body.high-contrast {
       --bg: #000000;
@@ -605,6 +727,18 @@
       color: #00ffcc;
       border: 1px solid #00ffcc;
     }
+    body.high-contrast .game-container {
+      background: #000000;
+      border-color: #00ffcc;
+    }
+    body.high-contrast .game-option {
+      background: #000000;
+      border-color: #ffffff;
+      color: #ffffff;
+    }
+    body.high-contrast .progress-bar-container {
+      background: #333;
+    }
 
     /* ====== وضع تكبير الخط ====== */
     body.larger-text {
@@ -639,6 +773,12 @@
     }
     body.larger-text .muted {
       font-size: 15px;
+    }
+    body.larger-text .game-question {
+      font-size: 32px;
+    }
+    body.larger-text .game-option {
+      font-size: 26px;
     }
 
     @media print {
@@ -680,7 +820,11 @@
 
 
 
-<body>
+
+
+
+
+  <body>
   <div id="app"></div>
   <footer>
     <div class="footer-main">
@@ -1015,6 +1159,7 @@
     }
     window.startRecording = startRecording;
 
+    // ====== تحسين تحليل النطق ======
     function levenshteinDistance(a, b) {
       const matrix = [];
       for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -1033,16 +1178,28 @@
       const target = normalize(targetText);
       const spoken = normalize(transcript);
 
-      if (!target || !spoken) return { isMatch: false, disorderType: 'غير واضح', detail: 'الصوت غير واضح أو لم يتم التعرف عليه.' };
-      if (target === spoken) return { isMatch: true, disorderType: 'طبيعي', detail: '' };
+      if (!target || !spoken) {
+        return { isMatch: false, disorderType: 'غير واضح', detail: 'الصوت غير واضح أو لم يتم التعرف عليه.', similarityPercent: 0 };
+      }
+
+      if (target === spoken) {
+        return { isMatch: true, disorderType: 'طبيعي', detail: '', similarityPercent: 100 };
+      }
 
       const distance = levenshteinDistance(target, spoken);
       const maxLen = Math.max(target.length, spoken.length);
-      const similarity = 1 - distance / maxLen;
+      const similarityPercent = Math.round((1 - distance / maxLen) * 100);
 
-      if (similarity < 0.5) return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير واضح أو مشوه بشكل كبير' };
-      if (spoken.length > target.length) return { isMatch: false, disorderType: 'إضافة', detail: `تمت إضافة حروف: ${spoken.slice(target.length)}` };
-      if (spoken.length < target.length) return { isMatch: false, disorderType: 'حذف', detail: `تم حذف حروف: ${target.slice(spoken.length)}` };
+      if (similarityPercent < 50) {
+        return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير واضح أو مشوه بشكل كبير', similarityPercent };
+      }
+
+      if (spoken.length > target.length) {
+        return { isMatch: false, disorderType: 'إضافة', detail: `تمت إضافة حروف: ${spoken.slice(target.length)}`, similarityPercent };
+      }
+      if (spoken.length < target.length) {
+        return { isMatch: false, disorderType: 'حذف', detail: `تم حذف حروف: ${target.slice(spoken.length)}`, similarityPercent };
+      }
 
       const similarLetters = {
         'ر': ['ل', 'ز', 'ذ'], 'ب': ['م', 'ف', 'و'], 'ت': ['ث', 'د', 'ذ'],
@@ -1061,12 +1218,15 @@
         const sChar = spoken[i];
         if (tChar !== sChar) {
           const possible = similarLetters[tChar] || [];
-          if (possible.includes(sChar)) return { isMatch: false, disorderType: 'إبدال', detail: `إبدال حرف (${tChar}) بـ (${sChar})` };
-          else return { isMatch: false, disorderType: 'إبدال', detail: `إبدال غير نمطي: (${tChar}) -> (${sChar})` };
+          if (possible.includes(sChar)) {
+            return { isMatch: false, disorderType: 'إبدال', detail: `إبدال حرف (${tChar}) بـ (${sChar})`, similarityPercent };
+          } else {
+            return { isMatch: false, disorderType: 'إبدال', detail: `إبدال غير نمطي: (${tChar}) -> (${sChar})`, similarityPercent };
+          }
         }
       }
 
-      return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير دقيق' };
+      return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير دقيق', similarityPercent };
     }
 
     // ====== الحالة العامة ======
@@ -1099,6 +1259,27 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => t.remove(), 3000);
     }
+
+    // ====== الإشعارات الداخلية ======
+    function showNotification(message, type = 'info') {
+      let container = document.getElementById('notificationContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'notificationContainer';
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+      }
+      const notification = document.createElement('div');
+      notification.className = `notification-item ${type}`;
+      notification.textContent = message;
+      container.appendChild(notification);
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+      }, 4000);
+    }
+    window.showNotification = showNotification;
 
     // ====== دوال الوصول ======
     function toggleHighContrast() {
@@ -1144,14 +1325,7 @@
       return points;
     }
 
-    async function updateStudentPoints(studentId, points) {
-      try {
-        await updateDoc(doc(db, "users", studentId), { points });
-      } catch(e) { console.error('خطأ في تحديث النقاط:', e); }
-    }
-
     window.calculateStudentPoints = calculateStudentPoints;
-    window.updateStudentPoints = updateStudentPoints;
 
     // ====== شريط الأعلى ======
     function renderTopbar(appContainer, title, sub, onBack) {
@@ -1297,7 +1471,7 @@
 
 
 
-    // ====== التصيير الرئيسي ======
+       // ====== التصيير الرئيسي ======
     function render() {
       const app = document.getElementById('app');
       app.innerHTML = '';
@@ -1318,6 +1492,7 @@
       if (state.view === 'student-achievement-list') return renderStudentAchievementList(app);
       if (state.view === 'teacher-achievement') return renderTeacherAchievement(app);
       if (state.view === 'weekly-plan') return renderWeeklyPlan(app);
+      if (state.view === 'games') return renderGames(app);
       if (state.view === 'student-profile') return app.innerHTML = '<div class="card"><h3>الملف الشخصي</h3><p class="muted">قيد التطوير</p></div>';
       if (state.view === 'letter-training') return app.innerHTML = '<div class="card"><h3>تدريب الحروف</h3><p class="muted">قيد التطوير</p></div>';
     }
@@ -1332,7 +1507,7 @@
       banner.innerHTML = `
         <h2 style="margin-top:0;">منصة تشخيص وتدريب النطق الشاملة</h2>
         <p>تشخيص 28 حرفاً مع الصوت والصورة وإدارة الجلسات الأسبوعية العلاجية المباشرة والخطة الفردية (IEP).</p>
-        <p style="font-size:14px; opacity:0.9;">استكشف القوائم التعليمية أدناه لزيادة الثروة اللغوية.</p>
+        <p style="font-size:14px; opacity:0.9;">استكشف القوائم التعليمية والألعاب التفاعلية أدناه.</p>
         ${!state.user ? '<button class="btn btn-soft" id="btnAuthHome" style="color:#357E74; margin-top:8px;">تسجيل الدخول / إنشاء حساب</button>' : ''}
       `;
       app.appendChild(banner);
@@ -1380,6 +1555,19 @@
       `;
       lettersCard.onclick = () => { state.view = 'letter-display'; render(); };
       grid.appendChild(lettersCard);
+      const gamesCard = document.createElement('div');
+      gamesCard.className = 'card';
+      gamesCard.style.cursor = 'pointer';
+      gamesCard.style.transition = '0.2s';
+      gamesCard.onmouseover = () => { gamesCard.style.transform = 'translateY(-4px)'; };
+      gamesCard.onmouseout = () => { gamesCard.style.transform = 'translateY(0)'; };
+      gamesCard.innerHTML = `
+        <h3>🎮 الألعاب التعليمية</h3>
+        <p class="muted">اختر الحرف الصحيح وطابق الكلمة مع الصورة</p>
+        <button class="btn btn-soft btn-sm">العب الآن</button>
+      `;
+      gamesCard.onclick = () => { state.view = 'games'; render(); };
+      grid.appendChild(gamesCard);
       app.appendChild(grid);
     }
 
@@ -1575,30 +1763,15 @@
         render();
       };
       const btnSessionsLog = actCard.querySelector('#btnSessionsLog');
-      if (btnSessionsLog) btnSessionsLog.onclick = () => {
-        state.view = 'sessions-log';
-        render();
-      };
+      if (btnSessionsLog) btnSessionsLog.onclick = () => { state.view = 'sessions-log'; render(); };
       const btnIEPList = actCard.querySelector('#btnIEPList');
-      if (btnIEPList) btnIEPList.onclick = () => {
-        state.view = 'iep-session';
-        render();
-      };
+      if (btnIEPList) btnIEPList.onclick = () => { state.view = 'iep-session'; render(); };
       const btnAchievementList = actCard.querySelector('#btnAchievementList');
-      if (btnAchievementList) btnAchievementList.onclick = () => {
-        state.view = 'student-achievement-list';
-        render();
-      };
+      if (btnAchievementList) btnAchievementList.onclick = () => { state.view = 'student-achievement-list'; render(); };
       const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
-      if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => {
-        state.view = 'teacher-achievement';
-        render();
-      };
+      if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
       const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
-      if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => {
-        state.view = 'weekly-plan';
-        render();
-      };
+      if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
 
       const myCard = document.createElement('div');
       myCard.className = 'card no-print';
@@ -1682,6 +1855,7 @@
         }
         await updateDoc(ref, { teacherId: state.user.uid });
         showToast('تمت إضافة الطالب بنجاح');
+        showNotification('تمت إضافة طالب جديد إلى قائمتك', 'success');
         await fetchTeacherStudents();
       } catch(e) { showToast('فشل في إضافة الطالب'); }
     };
@@ -1694,1506 +1868,140 @@
       } catch(e) { showToast('فشل في إزالة الطالب'); }
     };
 
-    // ====== صفحة الخطة الأسبوعية الذكية ======
-    async function renderWeeklyPlan(app) {
-      renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
-        state.view = 'teacher-dashboard';
+    // ====== صفحة الألعاب التعليمية ======
+    function renderGames(app) {
+      renderTopbar(app, '🎮 الألعاب التعليمية', 'تعلم والعب مع النطق', () => {
+        state.view = 'home';
         render();
       });
 
       const container = document.createElement('div');
       container.innerHTML = `
-        <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep); margin-bottom:15px;">
-          <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 الخطة الأسبوعية المقترحة</h3>
-          <p class="muted" style="text-align:center;">تتحدث تلقائياً حسب الجلسات المكتملة وشدة الحالة</p>
-          <div style="text-align:center;margin-top:10px;">
-            <button class="btn btn-primary btn-sm" id="printWeeklyPlanBtn" style="border-radius:50px;">🖨️ طباعة / حفظ PDF</button>
+        <div class="game-container">
+          <div class="game-header">
+            <span class="game-title">🎯 اختر الحرف الصحيح</span>
+            <span class="game-score" id="letterGameScore">النقاط: 0</span>
           </div>
+          <div class="game-question" id="letterQuestion">اضغط ابدأ للعب</div>
+          <div class="game-options" id="letterOptions"></div>
+          <div class="game-feedback" id="letterFeedback"></div>
+          <button class="btn btn-primary" id="startLetterGameBtn" style="margin-top:10px;">ابدأ اللعبة</button>
+        </div>
+
+        <div class="game-container">
+          <div class="game-header">
+            <span class="game-title">🖼️ طابق الكلمة مع الصورة</span>
+            <span class="game-score" id="matchGameScore">النقاط: 0</span>
+          </div>
+          <div class="game-question" id="matchQuestion">اضغط ابدأ للعب</div>
+          <div class="game-options" id="matchOptions"></div>
+          <div class="game-feedback" id="matchFeedback"></div>
+          <button class="btn btn-primary" id="startMatchGameBtn" style="margin-top:10px;">ابدأ اللعبة</button>
         </div>
       `;
       app.appendChild(container);
 
-      const printBtn = container.querySelector('#printWeeklyPlanBtn');
-      if (printBtn) printBtn.onclick = () => printWeeklyPlan();
+      // ====== لعبة اختر الحرف الصحيح ======
+      let letterScore = 0;
+      let currentLetter = '';
 
-      if (!state.myStudents.length) {
-        const emptyCard = document.createElement('div');
-        emptyCard.className = 'card';
-        emptyCard.innerHTML = '<p class="muted">لا يوجد طلاب لعرض الخطة.</p>';
-        app.appendChild(emptyCard);
-        return;
-      }
+      const startLetterBtn = container.querySelector('#startLetterGameBtn');
+      const letterQuestion = container.querySelector('#letterQuestion');
+      const letterOptions = container.querySelector('#letterOptions');
+      const letterFeedback = container.querySelector('#letterFeedback');
+      const letterGameScore = container.querySelector('#letterGameScore');
 
-      // جلب جميع جلسات المعلم
-      const allSessionsSnap = await getDocs(collection(db, "sessions"));
-      const allSessions = [];
-      allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
-
-      const daysMap = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-      const nonConsecutiveDays = ['السبت', 'الإثنين', 'الأربعاء'];
-      const singleDay = ['الأحد'];
-
-      // دالة حساب عدد الجلسات الأسبوعية حسب شدة الحالة
-      function getWeeklySessions(studentData, sessions) {
-        const diag = studentData.diagnostic || {};
-        const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-        const severeTypes = ['حذف', 'قلب', 'خنف', 'تأتأة / تلعثم', 'حبسة'];
-        let severity = 0;
-        needLetters.forEach(letter => {
-          const info = diag[letter] || {};
-          if (severeTypes.includes(info.disorderType)) severity += 2;
-          else severity += 1;
-        });
-        if (severity <= 2) return 1; // جلسة واحدة
-        else if (severity <= 4) return 2; // جلستان
-        else return 3; // ثلاث جلسات
-      }
-
-      // دالة حساب الجلسات المكتملة لكل حرف
-      function getCompletedSessions(letter, studentId) {
-        return allSessions.filter(s => s.studentId === studentId && s.letter === letter && (s.evaluation === 'passed' || s.evaluation === 'trained')).length;
-      }
-
-      for (const student of state.myStudents) {
-        const studentDoc = await getDoc(doc(db, "users", student.id));
-        const studentData = studentDoc.exists() ? studentDoc.data() : {};
-        const diag = studentData.diagnostic || {};
-        const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-
-        if (needLetters.length === 0) {
-          const okCard = document.createElement('div');
-          okCard.className = 'card';
-          okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً.</p>`;
-          app.appendChild(okCard);
-          continue;
+      function generateLetterQuestion() {
+        const randomLetter = ALL_LETTERS[Math.floor(Math.random() * ALL_LETTERS.length)];
+        currentLetter = randomLetter;
+        letterQuestion.textContent = `ما هو الحرف الذي تبدأ به كلمة "${letterTitleMap[randomLetter] || randomLetter}"؟`;
+        letterFeedback.textContent = '';
+        letterOptions.innerHTML = '';
+        const options = [randomLetter];
+        while (options.length < 4) {
+          const l = ALL_LETTERS[Math.floor(Math.random() * ALL_LETTERS.length)];
+          if (!options.includes(l)) options.push(l);
         }
-
-        const sessionsPerWeek = getWeeklySessions(studentData, allSessions);
-        const daysForStudent = sessionsPerWeek === 1 ? singleDay : nonConsecutiveDays.slice(0, sessionsPerWeek);
-
-        const planCard = document.createElement('div');
-        planCard.className = 'card';
-        planCard.style.borderRight = '4px solid var(--mint-deep)';
-        planCard.innerHTML = `
-          <h4 style="margin:0;color:var(--mint-deep);">👤 ${student.fullName || student.email}</h4>
-          <p style="font-size:13px;color:#555;margin:4px 0;">
-            الجلسات الأسبوعية الموصى بها: <strong>${sessionsPerWeek}</strong> - الأيام: ${daysForStudent.join(' و ')}
-          </p>
-          <div style="margin-top:8px;">
-            ${needLetters.slice(0, 4).map(letter => {
-              const completed = getCompletedSessions(letter, student.id);
-              const totalNeeded = 4; // عدد الجلسات المطلوبة لكل حرف
-              return `
-                <div style="display:flex; gap:10px; align-items:center; padding:4px 0; border-bottom:1px solid #eee;">
-                  <span style="min-width:70px;">حرف ${letter}</span>
-                  <span style="color:${completed >= totalNeeded ? 'green' : '#F57F17'};">${completed}/${totalNeeded} جلسات</span>
-                  <button class="btn btn-soft btn-sm" onclick="speakText('${letter}')">🔊</button>
-                </div>
-              `;
-            }).join('')}
-          </div>
-          <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الجلسات الفردية فقط، دون دمج الطلاب.</p>
-        `;
-        app.appendChild(planCard);
-      }
-    }
-
-    function printWeeklyPlan() {
-      let printArea = document.getElementById('iep-print-area');
-      if (!printArea) {
-        printArea = document.createElement('div');
-        printArea.id = 'iep-print-area';
-        document.body.appendChild(printArea);
-      }
-
-      const planContent = document.getElementById('app').innerText;
-
-      printArea.innerHTML = `
-        <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-          <div style="text-align:center;margin-bottom:20px;">
-            <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-            <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب</p>
-            <hr style="border:1px solid #ddd;margin:10px 0;">
-          </div>
-          <pre style="white-space:pre-wrap;font-size:14px;line-height:1.8;">${planContent}</pre>
-          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
-            تم توليد هذه الخطة تلقائياً بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
-          </div>
-        </div>
-      `;
-
-      window.print();
-
-      setTimeout(() => {
-        if (printArea) printArea.remove();
-      }, 1000);
-    }
-
-    // ====== صفحة قائمة الطلاب لملفات الإنجاز ======
-    async function renderStudentAchievementList(app) {
-      renderTopbar(app, '🏆 ملفات إنجاز الطلاب', 'اختر طالباً لعرض ملف إنجازه', () => {
-        state.view = 'teacher-dashboard';
-        render();
-      });
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = '<h3>👥 الطلاب</h3>';
-      app.appendChild(card);
-
-      if (!state.myStudents.length) {
-        card.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
-        return;
-      }
-
-      const list = document.createElement('div');
-      list.className = 'iep-student-list';
-      card.appendChild(list);
-
-      state.myStudents.forEach(st => {
-        const item = document.createElement('div');
-        item.className = 'iep-student-item';
-        item.innerHTML = `
-          <div style="font-size:40px;">🧒</div>
-          <div class="student-name">${st.fullName || st.email}</div>
-          <div class="student-email">${st.email}</div>
-        `;
-        item.onclick = () => {
-          state.currentStudent = st;
-          state.view = 'achievement';
-          render();
-        };
-        list.appendChild(item);
-      });
-    }
-
-    // ====== صفحة ملف إنجاز المعلم ======
-    const TEACHER_STANDARDS = [
-      { id: 1, title: 'أداء الواجبات الوظيفية', evidences: 'سجل الدوام، سجل المناوبة والإشراف، سجل الانتظار، خطة توزيع المنهج.' },
-      { id: 2, title: 'التفاعل مع المجتمع المحلي', evidences: 'سجل مجتمعات التعلم، سجل تبادل الزيارات، تقرير درس تطبيقي، شهادات حضور.' },
-      { id: 3, title: 'التفاعل مع أولياء الأمور', evidences: 'صور من الجمعية العمومية، تقرير اجتماع مع ولي الأمر، نسخة من الخطة الأسبوعية.' },
-      { id: 4, title: 'التنويع في استراتيجيات التدريس', evidences: 'تقرير عن تطبيق استراتيجية، ملف إنجاز المعلم.' },
-      { id: 5, title: 'تحسين نتائج المتعلمين', evidences: 'نتائج الاختبارات القبلية والبعدية، كشف متابعة الطلاب.' },
-      { id: 6, title: 'إعداد وتنفيذ خطة التعلم', evidences: 'خطة توزيع المنهج، نماذج من إعداد الدروس، نماذج من الواجبات والاختبارات.' },
-      { id: 7, title: 'توظيف تقنيات ووسائل التعلم', evidences: 'صور من الوسائل التعليمية، تقرير عن برنامج تقني.' },
-      { id: 8, title: 'تهيئة البيئة التعليمية', evidences: 'تقرير تصنيف الطلاب حسب أنماط التعلم، نماذج من التحفيز المادي والمعنوي.' },
-      { id: 9, title: 'الإدارة الصفية', evidences: 'كشف المتابعة، تطبيق إدارة الصف.' },
-      { id: 10, title: 'تحليل نتائج المتعلمين', evidences: 'تقرير تحليل نتائج الطلاب، سجل معالجة الفاقد التعليمي.' },
-      { id: 11, title: 'تنوع أساليب التقويم', evidences: 'نماذج من الاختبارات، ملفات إنجاز الطلاب، نماذج من المهام الأدائية والمشاريع.' }
-    ];
-
-    async function renderTeacherAchievement(app) {
-      renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
-        state.view = 'teacher-dashboard';
-        render();
-      });
-
-      if (!state.user) {
-        showToast('يجب تسجيل الدخول');
-        state.view = 'auth';
-        return render();
-      }
-
-      const teacherId = state.user.uid;
-
-      let teacherData = {};
-      try {
-        const teacherDoc = await getDoc(doc(db, "users", teacherId));
-        if (teacherDoc.exists()) teacherData = teacherDoc.data();
-      } catch(e) { console.error('خطأ في جلب بيانات المعلم:', e); }
-
-      const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
-
-      let existingFiles = {};
-      try {
-        const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
-        const filesSnap = await getDocs(filesQuery);
-        filesSnap.forEach(d => {
-          const data = d.data();
-          const standardId = data.standardId;
-          if (!existingFiles[standardId]) existingFiles[standardId] = [];
-          existingFiles[standardId].push({ id: d.id, ...data });
-        });
-      } catch(e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
-
-      const headerCard = document.createElement('div');
-      headerCard.className = 'card';
-      headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-      headerCard.style.border = '2px solid var(--mint-deep)';
-      headerCard.innerHTML = `
-        <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
-        <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
-          <button class="btn btn-primary btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">🖨️ طباعة / حفظ PDF</button>
-          <button class="btn btn-soft btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:8px 20px;">📄 توليد الشواهد تلقائياً</button>
-        </div>
-      `;
-      app.appendChild(headerCard);
-
-      const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-      if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
-
-      const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
-      if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
-
-      TEACHER_STANDARDS.forEach(standard => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.marginBottom = '12px';
-        card.innerHTML = `
-          <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
-          <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
-            <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
-            <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
-            <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
-          </div>
-          <div id="filesList_${standard.id}" style="margin-top:8px;">
-            ${(existingFiles[standard.id] || []).map(file => `
-              <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
-                <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
-                <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
-              </div>
-            `).join('')}
-          </div>
-        `;
-        app.appendChild(card);
-
-        const fileInput = card.querySelector(`#fileInput_${standard.id}`);
-        const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
-        const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
-
-        if (uploadBtn && fileInput) {
-          uploadBtn.onclick = () => fileInput.click();
-          fileInput.onchange = async () => {
-            if (!fileInput.files || fileInput.files.length === 0) return;
-            fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
-
-            const uploadPromises = Array.from(fileInput.files).map(file => {
-              return uploadTeacherFile(teacherId, standard.id, file);
-            });
-            const results = await Promise.all(uploadPromises);
-            const success = results.filter(r => r !== null);
-
-            if (success.length > 0) {
-              for (const fileInfo of success) {
-                try {
-                  await addDoc(collection(db, "teacher_files"), {
-                    teacherId,
-                    standardId: standard.id,
-                    name: fileInfo.name,
-                    url: fileInfo.url,
-                    type: fileInfo.type,
-                    uploadedAt: fileInfo.uploadedAt
-                  });
-                } catch(e) { console.error('خطأ في حفظ الملف:', e); }
-              }
-              showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
-              renderTeacherAchievement(app);
+        options.sort(() => Math.random() - 0.5);
+        options.forEach(letter => {
+          const btn = document.createElement('button');
+          btn.className = 'game-option';
+          btn.textContent = letter;
+          btn.onclick = () => {
+            if (letter === currentLetter) {
+              btn.classList.add('correct');
+              letterFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
+              letterScore += 10;
+              letterGameScore.textContent = `النقاط: ${letterScore}`;
+              showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
+              setTimeout(generateLetterQuestion, 1500);
             } else {
-              showToast('❌ فشل رفع الملفات');
+              btn.classList.add('wrong');
+              letterFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
+              speakText(letter);
             }
-            fileInput.value = '';
           };
-        }
-      });
-    }
-
-    // ====== دالة توليد الشواهد تلقائيًا ======
-    async function generateEvidenceReport(teacherName) {
-      showToast('⏳ جاري توليد الشواهد تلقائياً...');
-
-      try {
-        const teacherId = state.user.uid;
-
-        const allSessionsSnap = await getDocs(collection(db, "sessions"));
-        const allSessions = [];
-        allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
-
-        const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
-        const totalSessions = teacherSessions.length;
-
-        const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
-        const averageSuccess = evaluatedSessions.length > 0
-          ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
-          : 0;
-
-        const totalStudents = state.myStudents.length;
-
-        const studentSummaries = [];
-        for (const student of state.myStudents) {
-          const studentDoc = await getDoc(doc(db, "users", student.id));
-          const studentData = studentDoc.exists() ? studentDoc.data() : {};
-          const diag = studentData.diagnostic || {};
-          const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-          const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-          const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
-          const studentSessions = allSessions.filter(s => s.studentId === student.id && s.evaluation && s.evaluation !== 'none');
-          const studentAvg = studentSessions.length > 0
-            ? Math.round(studentSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / studentSessions.length)
-            : 0;
-
-          studentSummaries.push({
-            name: student.fullName || student.email,
-            passed: passedLetters.length,
-            need: needLetters.length,
-            trained: trainedLetters.length,
-            sessions: studentSessions.length,
-            avg: studentAvg
-          });
-        }
-
-        let printArea = document.getElementById('iep-print-area');
-        if (!printArea) {
-          printArea = document.createElement('div');
-          printArea.id = 'iep-print-area';
-          document.body.appendChild(printArea);
-        }
-
-        printArea.innerHTML = `
-          <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-            <div style="text-align:center;margin-bottom:20px;">
-              <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-              <p style="margin:5px 0 0;font-size:14px;color:#555;">شواهد إنجاز المعلم - تقرير تلقائي</p>
-              <hr style="border:1px solid #ddd;margin:10px 0;">
-            </div>
-
-            <div style="margin-bottom:15px;text-align:center;">
-              <strong>اسم المعلم:</strong> ${teacherName}
-              <br>
-              <strong>تاريخ التوليد:</strong> ${new Date().toLocaleDateString('ar-SA')}
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;background:#f5f5f5;padding:15px;border-radius:8px;">
-              <div><strong>عدد الطلاب:</strong> ${totalStudents}</div>
-              <div><strong>عدد الجلسات المنفذة:</strong> ${totalSessions}</div>
-              <div><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
-              <div><strong>عدد الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
-            </div>
-
-            <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">ملخص أداء الطلاب</h3>
-            ${studentSummaries.length > 0 ? `
-              <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-                <thead>
-                  <tr style="background:#f0f0f0;">
-                    <th style="border:1px solid #ddd;padding:8px;">الطالب</th>
-                    <th style="border:1px solid #ddd;padding:8px;">حروف متقنة</th>
-                    <th style="border:1px solid #ddd;padding:8px;">تحتاج تدريب</th>
-                    <th style="border:1px solid #ddd;padding:8px;">جلسات</th>
-                    <th style="border:1px solid #ddd;padding:8px;">متوسط النجاح</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${studentSummaries.map(s => `
-                    <tr>
-                      <td style="border:1px solid #ddd;padding:8px;">${s.name}</td>
-                      <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.passed}</td>
-                      <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.need}</td>
-                      <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.sessions}</td>
-                      <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.avg}%</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            ` : '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض بياناتهم.</p>'}
-
-            <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">الشواهد المتاحة من المنصة</h3>
-            <div style="margin-bottom:10px;font-size:14px;">
-              <p>✅ سجل الجلسات السحابي (${totalSessions} جلسة)</p>
-              <p>✅ التقارير الفردية للطلاب</p>
-              <p>✅ التشخيص الشامل للحروف</p>
-              <p>✅ التسجيل الصوتي والتغذية الراجعة</p>
-              <p>✅ ملفات إنجاز الطلاب</p>
-              <p>✅ الخطط الفردية (IEP)</p>
-              <p>✅ قوائم المفردات التفاعلية</p>
-              <p>✅ أدوات التقييم المتنوعة (أتقن/تدريب/غير واضح)</p>
-            </div>
-
-            <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
-              تم توليد هذا التقرير تلقائياً من منصة منارة النطق
-            </div>
-          </div>
-        `;
-
-        window.print();
-
-        setTimeout(() => {
-          if (printArea) printArea.remove();
-        }, 1000);
-
-      } catch(e) {
-        console.error('خطأ في توليد الشواهد:', e);
-        showToast('❌ فشل توليد الشواهد');
-      }
-    }
-
-    function printTeacherAchievement(teacherName, existingFiles) {
-      let printArea = document.getElementById('iep-print-area');
-      if (!printArea) {
-        printArea = document.createElement('div');
-        printArea.id = 'iep-print-area';
-        document.body.appendChild(printArea);
-      }
-
-      printArea.innerHTML = `
-        <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-          <div style="text-align:center;margin-bottom:20px;">
-            <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-            <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز المعلم</p>
-            <hr style="border:1px solid #ddd;margin:10px 0;">
-          </div>
-          <div style="margin-bottom:15px;text-align:center;">
-            <strong>اسم المعلم:</strong> ${teacherName}
-          </div>
-          ${TEACHER_STANDARDS.map(standard => `
-            <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
-              <strong>${standard.id}. ${standard.title}</strong>
-              <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
-              ${(existingFiles[standard.id] || []).map(file => `
-                <div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>
-              `).join('')}
-            </div>
-          `).join('')}
-          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
-            تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
-          </div>
-        </div>
-      `;
-
-      window.print();
-
-      setTimeout(() => {
-        if (printArea) printArea.remove();
-      }, 1000);
-    }
-
-    // ====== ملف الإنجاز الرقمي للطالب ======
-    async function renderAchievement(app) {
-      if (!state.currentStudent) {
-        showToast('اختر طالباً أولاً');
-        state.view = 'teacher-dashboard';
-        return render();
-      }
-
-      renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
-        state.view = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
-        render();
-      });
-
-      try {
-        const studentRef = doc(db, "users", state.currentStudent.id);
-        const studentDoc = await getDoc(studentRef);
-        const studentData = studentDoc.exists() ? studentDoc.data() : {};
-        const diag = studentData.diagnostic || {};
-
-        const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-        const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-        const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
-
-        const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
-        const sessionsSnap = await getDocs(sessionsQuery);
-        const sessions = [];
-        sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
-        sessions.sort((a,b) => (a.sessionNumber||0) - (b.sessionNumber||0));
-
-        const totalSessions = sessions.length;
-        const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
-        const averageSuccess = evaluatedSessions.length > 0 
-          ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length) 
-          : 0;
-
-        const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
-
-        const points = calculateStudentPoints(studentData);
-
-        let achievementLevel = '';
-        let achievementIcon = '';
-        if (masteryPercentage >= 80) {
-          achievementLevel = 'ممتاز';
-          achievementIcon = '🌟';
-        } else if (masteryPercentage >= 50) {
-          achievementLevel = 'جيد جداً';
-          achievementIcon = '⭐';
-        } else if (masteryPercentage >= 30) {
-          achievementLevel = 'جيد';
-          achievementIcon = '👍';
-        } else {
-          achievementLevel = 'يحتاج متابعة';
-          achievementIcon = '💪';
-        }
-
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-        card.style.border = '2px solid var(--mint-deep)';
-        card.innerHTML = `
-          <div style="text-align:center; margin-bottom:20px;">
-            <div style="font-size:60px;">${achievementIcon}</div>
-            <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
-            <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
-            <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-              <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${passedLetters.length}</div>
-              <div style="font-size:13px;color:#6B7A99;">حروف متقنة</div>
-            </div>
-            <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-              <div style="font-size:32px;font-weight:bold;color:#F57F17;">${needLetters.length}</div>
-              <div style="font-size:13px;color:#6B7A99;">تحتاج تدريب</div>
-            </div>
-            <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-              <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${totalSessions}</div>
-              <div style="font-size:13px;color:#6B7A99;">جلسة منفذة</div>
-            </div>
-            <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-              <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${averageSuccess}%</div>
-              <div style="font-size:13px;color:#6B7A99;">متوسط النجاح</div>
-            </div>
-            <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-              <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${masteryPercentage}%</div>
-              <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
-            </div>
-            <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-              <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
-              <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
-            </div>
-          </div>
-          <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-            <strong>الحروف المتقنة:</strong> ${passedLetters.length ? passedLetters.join(' - ') : 'لا يوجد'}
-          </div>
-          <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-            <strong>الحروف التي تحتاج تدريب:</strong> ${needLetters.length ? needLetters.join(' - ') : 'لا يوجد'}
-          </div>
-          <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-            <strong>الحروف التي أتقنها بعد تدريب:</strong> ${trainedLetters.length ? trainedLetters.join(' - ') : 'لا يوجد'}
-          </div>
-          <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-            <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${passedLetters.length} حرف متقن (تحسن ${passedLetters.length} حرف)
-          </div>
-          <div style="text-align:center; margin-top:20px;">
-            <button class="btn btn-primary" id="printAchievementBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>
-          </div>
-        `;
-        app.appendChild(card);
-
-        const printBtn = card.querySelector('#printAchievementBtn');
-        if (printBtn) {
-          printBtn.onclick = () => {
-            printAchievement(state.currentStudent, {
-              passedLetters,
-              needLetters,
-              trainedLetters,
-              totalSessions,
-              averageSuccess,
-              masteryPercentage,
-              achievementLevel,
-              achievementIcon,
-              points
-            });
-          };
-        }
-      } catch(e) {
-        const errorCard = document.createElement('div');
-        errorCard.className = 'card';
-        errorCard.innerHTML = `<p class="muted">⚠️ خطأ في تحميل ملف الإنجاز: ${e.message}</p>`;
-        app.appendChild(errorCard);
-      }
-    }
-
-    function printAchievement(student, data) {
-      let printArea = document.getElementById('iep-print-area');
-      if (!printArea) {
-        printArea = document.createElement('div');
-        printArea.id = 'iep-print-area';
-        document.body.appendChild(printArea);
-      }
-
-      printArea.innerHTML = `
-        <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-          <div style="text-align:center;margin-bottom:20px;">
-            <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-            <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز الطالب</p>
-            <hr style="border:1px solid #ddd;margin:10px 0;">
-          </div>
-          <div style="margin-bottom:15px;text-align:center;">
-            <strong>اسم الطالب:</strong> ${student.fullName || student.email}
-            <br>
-            <strong>المستوى:</strong> ${data.achievementLevel} ${data.achievementIcon}
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
-            <div><strong>الحروف المتقنة:</strong> ${data.passedLetters.length}</div>
-            <div><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length}</div>
-            <div><strong>عدد الجلسات:</strong> ${data.totalSessions}</div>
-            <div><strong>متوسط النجاح:</strong> ${data.averageSuccess}%</div>
-            <div><strong>نسبة الإتقان:</strong> ${data.masteryPercentage}%</div>
-            <div><strong>النقاط:</strong> ${data.points}</div>
-          </div>
-          <div style="margin-bottom:10px;">
-            <strong>الحروف المتقنة:</strong> ${data.passedLetters.length ? data.passedLetters.join('، ') : 'لا يوجد'}
-          </div>
-          <div style="margin-bottom:10px;">
-            <strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length ? data.needLetters.join('، ') : 'لا يوجد'}
-          </div>
-          <div style="margin-bottom:10px;">
-            <strong>الحروف التي أتقنها بعد تدريب:</strong> ${data.trainedLetters.length ? data.trainedLetters.join('، ') : 'لا يوجد'}
-          </div>
-          <div style="margin-bottom:10px;">
-            <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${data.passedLetters.length} حرف متقن
-          </div>
-          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
-            تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
-          </div>
-        </div>
-      `;
-
-      window.print();
-
-      setTimeout(() => {
-        if (printArea) printArea.remove();
-      }, 1000);
-    }
-
-    // ====== التشخيص الشامل ======
-    function renderComprehensiveDiagnosis(container) {
-      container.innerHTML = '';
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <h3>🩺 التشخيص الشامل لحالة الطالب</h3>
-        <hr style="border:0;border-top:1px solid var(--line);margin:8px 0 12px 0;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div>
-            <span style="font-weight:bold;">👂 السمع</span>
-            <div class="diag-option-group" id="hearingGroup">
-              ${['normal:طبيعي','weak:ضعيف سمع','deaf:أصم'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.hearing === val;
-                return `<span class="diag-option ${sel ? (val==='normal'?'selected-green':'selected-red') : ''}" data-key="hearing" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">🦻 المعين السمعي</span>
-            <div class="diag-option-group" id="hearingAidGroup">
-              ${['none:لا يستخدم','wearing:يستخدم'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.hearingAid === val;
-                return `<span class="diag-option ${sel ? 'selected-green' : ''}" data-key="hearingAid" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">👁️ الإبصار</span>
-            <div class="diag-option-group" id="visionGroup">
-              ${['normal:طبيعي','weak:ضعيف','blind:كفيف'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.vision === val;
-                return `<span class="diag-option ${sel ? (val==='normal'?'selected-green':'selected-red') : ''}" data-key="vision" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">🦵 المشي والحركة</span>
-            <div class="diag-option-group" id="movementGroup">
-              ${['none:طبيعي','tremor:شلل اهتزازي','hemiplegia:شلل نصفي','other:شلل دماغي/آخر'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.movement === val;
-                return `<span class="diag-option ${sel ? (val==='none'?'selected-green':'selected-red') : ''}" data-key="movement" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">🧠 الانتباه والتركيز</span>
-            <div class="diag-option-group" id="attentionGroup">
-              ${['stable:قليل التشتت','distracted:يشتت انتباهه بسهولة'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.attention === val;
-                return `<span class="diag-option ${sel ? (val==='stable'?'selected-green':'selected-red') : ''}" data-key="attention" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">📖 الفهم والاستيعاب</span>
-            <div class="diag-option-group" id="comprehensionGroup">
-              ${['normal:يفهم التعليمات','difficult:يفهم بصعوبة'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.comprehension === val;
-                return `<span class="diag-option ${sel ? (val==='normal'?'selected-green':'selected-red') : ''}" data-key="comprehension" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">📏 النمو الجسدي</span>
-            <div class="diag-option-group" id="physicalGroup">
-              ${['normal:طبيعي','abnormal:غير طبيعي'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.physical === val;
-                return `<span class="diag-option ${sel ? (val==='normal'?'selected-green':'selected-red') : ''}" data-key="physical" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">🧘 الناحية النفسية</span>
-            <div class="diag-option-group" id="psychologicalGroup">
-              ${['stable:مستقر','anxious:عصبي/قلق','fearful:يعاني من الخوف'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.psychological === val;
-                return `<span class="diag-option ${sel ? (val==='stable'?'selected-green':'selected-red') : ''}" data-key="psychological" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">📋 الفحوصات والأشعة</span>
-            <div class="diag-option-group" id="scansGroup">
-              ${['none:لم تُجرَ','done:أُجريت'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.scans === val;
-                return `<span class="diag-option ${sel ? (val==='none'?'selected-green':'selected-red') : ''}" data-key="scans" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-            <div id="scanDetailsContainer" style="display:${state.comprehensive.scans === 'done' ? 'block' : 'none'};margin-top:4px;">
-              <input class="input-sm" id="scanDetailsInput" placeholder="تفاصيل الفحوصات..." value="${state.comprehensive.scanDetails || ''}">
-            </div>
-          </div>
-          <div>
-            <span style="font-weight:bold;">🔬 العمليات الجراحية</span>
-            <div class="diag-option-group" id="surgeriesGroup">
-              ${['none:لم يُجرَ','done:أُجريت'].map(opt => {
-                const [val, label] = opt.split(':');
-                const sel = state.comprehensive.surgeries === val;
-                return `<span class="diag-option ${sel ? (val==='none'?'selected-green':'selected-red') : ''}" data-key="surgeries" data-value="${val}">${label}</span>`;
-              }).join('')}
-            </div>
-            <div id="surgeryDetailsContainer" style="display:${state.comprehensive.surgeries === 'done' ? 'block' : 'none'};margin-top:4px;">
-              <input class="input-sm" id="surgeryDetailsInput" placeholder="تفاصيل العمليات..." value="${state.comprehensive.surgeryDetails || ''}">
-            </div>
-          </div>
-        </div>
-      `;
-      container.appendChild(card);
-      const keys = ['hearing','hearingAid','vision','movement','attention','comprehension','physical','psychological','scans','surgeries'];
-      keys.forEach(key => {
-        const group = card.querySelector(`[data-key="${key}"]`)?.closest('.diag-option-group');
-        if (!group) return;
-        const opts = group.querySelectorAll('.diag-option');
-        opts.forEach(opt => {
-          opt.onclick = () => {
-            const val = opt.dataset.value;
-            state.comprehensive[key] = val;
-            if (key === 'scans') {
-              const c = card.querySelector('#scanDetailsContainer');
-              if (c) c.style.display = (val === 'done') ? 'block' : 'none';
-            }
-            if (key === 'surgeries') {
-              const c = card.querySelector('#surgeryDetailsContainer');
-              if (c) c.style.display = (val === 'done') ? 'block' : 'none';
-            }
-            renderComprehensiveDiagnosis(container);
-          };
+          letterOptions.appendChild(btn);
         });
-      });
-      const scanInput = card.querySelector('#scanDetailsInput');
-      if (scanInput) scanInput.oninput = (e) => { state.comprehensive.scanDetails = e.target.value; };
-      const surgeryInput = card.querySelector('#surgeryDetailsInput');
-      if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
-    }
-
-    // ====== صفحة التشخيص المتقدمة ======
-    let diagnosticAudio = { letters: {}, words: {} };
-
-    function getDisorderFeedback(disorderType) {
-      const messages = {
-        'طبيعي': '✅ ممتاز! النطق سليم.',
-        'إبدال': '🔄 حاول نطق الحرف الأصلي بدلاً من استبداله بحرف آخر.',
-        'تشويه': '🗣️ ركز على مخرج الحرف الصحيح وحاول مرة أخرى.',
-        'حذف': '📝 حاول نطق الكلمة كاملة دون حذف أي حرف.',
-        'إضافة': '✂️ تجنب إضافة حروف زائدة في الكلمة.',
-        'قلب': '🔁 انتبه لترتيب الحروف في الكلمة.',
-        'خنف': '👃 حاول تقليل الصوت الأنفي أثناء النطق.',
-        'لجلجة': '📖 تحدث ببطء ووضوح.',
-        'تأتأة / تلعثم': '🧘 خذ نفساً عميقاً وحاول النطق بهدوء.',
-        'حبسة': '💬 استخدم جمل قصيرة وتدرب على التكرار.',
-        'بحة صوتية': '💧 اشرب ماءً وحاول إخراج الصوت بلطف.',
-        'خشونة الصوت': '🎵 حاول النطق بنبرة أوضح وأنعم.',
-        'نعومة الصوت': '📢 ارفع صوتك قليلاً أثناء النطق.',
-        'بطء في الكلام': '🐢 حاول زيادة سرعتك تدريجياً.',
-        'سرعة في الكلام': '🐇 تحدث ببطء وخذ وقتك.',
-        'كلام طفولي': '🧒 حاول استخدام أنماط كلام مناسبة لعمرك.'
-      };
-      return messages[disorderType] || '📌 استمر في التدريب وحاول مرة أخرى.';
-    }
-
-    function renderDiagnosticSession(app) {
-      renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف المتقدم', () => {
-        state.view = 'teacher-dashboard';
-        render();
-      });
-
-      const nameCard = document.createElement('div');
-      nameCard.className = 'card';
-      nameCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-      nameCard.style.border = '2px solid var(--mint-deep)';
-      nameCard.innerHTML = `<h2 style="margin:0;color:var(--mint-deep);text-align:center;">👤 الطالب: ${state.currentStudent?.fullName || state.currentStudent?.email || 'غير محدد'}</h2>`;
-      app.appendChild(nameCard);
-
-      let compContainer = document.getElementById('comprehensiveContainer');
-      if (!compContainer) {
-        compContainer = document.createElement('div');
-        compContainer.id = 'comprehensiveContainer';
-        app.appendChild(compContainer);
-      }
-      renderComprehensiveDiagnosis(compContainer);
-
-      const controlsCard = document.createElement('div');
-      controlsCard.className = 'card';
-      controlsCard.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div>
-            <h3 style="margin:0;">📋 تشخيص الحروف التفصيلي</h3>
-            <p class="muted">اختر التقييم لكل حرف، أو استخدم التسجيل الصوتي لتشخيص النطق تلقائياً.</p>
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn btn-danger btn-sm" id="resetDiag">🗑️ مسح الكل</button>
-            <button class="btn btn-success btn-sm" id="saveAllDiag">💾 حفظ الكل</button>
-          </div>
-        </div>
-      `;
-      app.appendChild(controlsCard);
-
-      const resetDiagBtn = controlsCard.querySelector('#resetDiag');
-      if (resetDiagBtn) resetDiagBtn.onclick = async () => {
-        if (confirm('هل أنت متأكد؟ سيتم مسح تشخيص الحروف بالكامل.')) {
-          state.diagEval = {};
-          diagnosticAudio = { letters: {}, words: {} };
-          try {
-            await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
-            showToast('تم مسح تشخيص الحروف');
-            renderDiagnosticSession(app);
-          } catch(e) { showToast('خطأ في المسح'); }
-        }
-      };
-
-      const saveAllDiagBtn = controlsCard.querySelector('#saveAllDiag');
-      if (saveAllDiagBtn) saveAllDiagBtn.onclick = async () => {
-        try {
-          const ref = doc(db, "users", state.currentStudent.id);
-          await updateDoc(ref, {
-            diagnostic: state.diagEval,
-            comprehensive: state.comprehensive
-          });
-          const letters = state.diagEval || {};
-          const passed = []; const trained = []; const need = []; const unclear = [];
-          Object.keys(letters).forEach(letter => {
-            const status = letters[letter]?.status || 'none';
-            if (status === 'passed') passed.push(letter);
-            else if (status === 'trained') trained.push(letter);
-            else if (status === 'need') need.push(letter);
-            else if (status === 'unclear') unclear.push(letter);
-          });
-          const iepData = generateIEP(passed, trained, need, unclear, state.currentStudent);
-          await setDoc(doc(db, "iep", state.currentStudent.id), iepData);
-          showToast('✅ تم حفظ التشخيص وإنشاء الخطة الفردية (IEP) تلقائياً!');
-        } catch(e) {
-          showToast('❌ خطأ في الحفظ: ' + e.message);
-        }
-      };
-
-      let container = document.getElementById('lettersContainer');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'lettersContainer';
-        container.style.marginTop = '15px';
-        app.appendChild(container);
-      } else {
-        container.innerHTML = '';
       }
 
-      LETTER_GROUPS.forEach(group => {
-        const title = document.createElement('div');
-        title.className = 'group-title';
-        title.textContent = group.name;
-        container.appendChild(title);
+      if (startLetterBtn) startLetterBtn.onclick = generateLetterQuestion;
 
-        const grid = document.createElement('div');
-        grid.className = 'diag-grid';
+      // ====== لعبة طابق الكلمة مع الصورة ======
+      let matchScore = 0;
+      let currentMatch = null;
 
-        group.letters.forEach(letter => {
-          const letterData = state.diagEval[letter] || {};
-          const status = letterData.status || 'none';
-          const titleStr = letterTitleMap[letter] || '';
-          const card = document.createElement('div');
-          card.className = 'letter-card';
-          card.id = `letterCard_${letter}`;
+      const startMatchBtn = container.querySelector('#startMatchGameBtn');
+      const matchQuestion = container.querySelector('#matchQuestion');
+      const matchOptions = container.querySelector('#matchOptions');
+      const matchFeedback = container.querySelector('#matchFeedback');
+      const matchGameScore = container.querySelector('#matchGameScore');
 
-          const positions = letterData.positions || { start: false, middle: false, end: false };
-          const vowels = letterData.vowels || { fatha: false, damma: false, kasra: false, sukoon: false };
-          const disorderType = letterData.disorderType || 'طبيعي';
-          const isOrganic = letterData.isOrganic !== undefined ? letterData.isOrganic : null;
-          const notes = letterData.notes || '';
+      const allVocab = [];
+      VOCAB_CATEGORIES.forEach(cat => {
+        VOCAB_LISTS[cat].forEach(item => allVocab.push({ word: item.word, icon: item.icon }));
+      });
 
-          card.innerHTML = `
-            <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
-            <span class="letter-title">${titleStr}</span>
-            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:4px;">
-              <button class="audio-btn" onclick="speakText('${letter}')">🔊</button>
-              <button class="audio-btn" onclick="speakText('${titleStr}')" title="نطق الكلمة">🔊 ${titleStr}</button>
-            </div>
-            <div class="record-buttons">
-              <button class="btn-record" id="recordLetterBtn_${letter}" data-letter="${letter}">🎤 سجل الحرف</button>
-              <button class="btn-record" id="recordWordBtn_${letter}" data-word="${titleStr}">🎤 سجل الكلمة</button>
-            </div>
-            <div id="feedback_${letter}" style="font-size:13px;min-height:40px;margin-bottom:4px;line-height:1.5;"></div>
-            <div class="eval-btns" id="evalBtns_${letter}">
-              <button class="eval-btn passed ${status === 'passed' ? 'active' : ''}" data-letter="${letter}" data-value="passed">أتقن</button>
-              <button class="eval-btn trained ${status === 'trained' ? 'active' : ''}" data-letter="${letter}" data-value="trained">اجتاز بعد تدريب</button>
-              <button class="eval-btn need ${status === 'need' ? 'active' : ''}" data-letter="${letter}" data-value="need">تدريب</button>
-              <button class="eval-btn unclear ${status === 'unclear' ? 'active' : ''}" data-letter="${letter}" data-value="unclear">غير واضح</button>
-            </div>
-            <button class="letter-details-toggle" data-letter="${letter}">📌 تفاصيل متقدمة ▼</button>
-            <div class="letter-details" id="details_${letter}">
-              <div class="detail-row">
-                <div class="label">مواقع الحرف:</div>
-                <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                  <label><input type="checkbox" data-letter="${letter}" data-pos="start" ${positions.start ? 'checked' : ''}> بداية</label>
-                  <label><input type="checkbox" data-letter="${letter}" data-pos="middle" ${positions.middle ? 'checked' : ''}> وسط</label>
-                  <label><input type="checkbox" data-letter="${letter}" data-pos="end" ${positions.end ? 'checked' : ''}> نهاية</label>
-                </div>
-              </div>
-              <div class="detail-row">
-                <div class="label">الحركات:</div>
-                <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                  <label><input type="checkbox" data-letter="${letter}" data-vowel="fatha" ${vowels.fatha ? 'checked' : ''}> فتحة</label>
-                  <label><input type="checkbox" data-letter="${letter}" data-vowel="damma" ${vowels.damma ? 'checked' : ''}> ضمة</label>
-                  <label><input type="checkbox" data-letter="${letter}" data-vowel="kasra" ${vowels.kasra ? 'checked' : ''}> كسرة</label>
-                  <label><input type="checkbox" data-letter="${letter}" data-vowel="sukoon" ${vowels.sukoon ? 'checked' : ''}> سكون</label>
-                </div>
-              </div>
-              <div class="detail-row">
-                <div class="label">نوع العيب:</div>
-                <select data-letter="${letter}" data-field="disorderType" id="disorderSelect_${letter}">
-                  ${DISORDER_TYPES.map(t => `<option value="${t}" ${t === disorderType ? 'selected' : ''}>${t}</option>`).join('')}
-                </select>
-                <div id="disorderDefinition_${letter}" style="font-size:11px;color:#6B7A99;margin-top:2px;line-height:1.4;">${DISORDER_DEFINITIONS[disorderType] || ''}</div>
-              </div>
-              <div class="detail-row">
-                <div class="label">نوع العيب:</div>
-                <div class="radio-group">
-                  <label><input type="radio" data-letter="${letter}" data-field="isOrganic" value="true" ${isOrganic === true ? 'checked' : ''}> عضوي</label>
-                  <label><input type="radio" data-letter="${letter}" data-field="isOrganic" value="false" ${isOrganic === false ? 'checked' : ''}> غير عضوي</label>
-                  <label><input type="radio" data-letter="${letter}" data-field="isOrganic" value="" ${isOrganic === null ? 'checked' : ''}> غير محدد</label>
-                </div>
-              </div>
-              <div class="detail-row" style="grid-column:1/-1;">
-                <div class="label">الملاحظات:</div>
-                <textarea data-letter="${letter}" data-field="notes" rows="2" placeholder="ملاحظات إضافية...">${notes}</textarea>
-              </div>
-            </div>
-          `;
-          grid.appendChild(card);
-
-          const evalBtns = card.querySelectorAll('.eval-btn');
-          evalBtns.forEach(btn => {
-            btn.onclick = function(e) {
-              e.stopPropagation();
-              const l = this.dataset.letter;
-              const v = this.dataset.value;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              state.diagEval[l].status = v;
-              renderDiagnosticSession(app);
-            };
-          });
-
-          const recordLetterBtn = card.querySelector(`#recordLetterBtn_${letter}`);
-          if (recordLetterBtn) {
-            recordLetterBtn.onclick = function() {
-              const l = this.dataset.letter;
-              const feedbackEl = document.getElementById(`feedback_${l}`);
-              startRecording(l, (transcript, analysis, audioUrl) => {
-                if (!transcript) {
-                  if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
-                  return;
-                }
-                if (analysis.isMatch) {
-                  if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح. (النص: "${transcript}")`;
-                  if (!state.diagEval[l]) state.diagEval[l] = {};
-                  state.diagEval[l].status = 'passed';
-                  state.diagEval[l].disorderType = 'طبيعي';
-                  showToast('🎉 أحسنت! نطق صحيح');
-                  renderDiagnosticSession(app);
-                } else {
-                  if (feedbackEl) feedbackEl.innerHTML = `❌ غير صحيح: ${getDisorderFeedback(analysis.disorderType)} (النص: "${transcript}")`;
-                  if (!state.diagEval[l]) state.diagEval[l] = {};
-                  state.diagEval[l].status = 'need';
-                  state.diagEval[l].disorderType = analysis.disorderType;
-                  showToast('💪 لا بأس، حاول مرة أخرى');
-                  renderDiagnosticSession(app);
-                }
-              });
-            };
-          }
-
-          const recordWordBtn = card.querySelector(`#recordWordBtn_${letter}`);
-          if (recordWordBtn) {
-            recordWordBtn.onclick = function() {
-              const word = this.dataset.word;
-              const l = letter;
-              const feedbackEl = document.getElementById(`feedback_${l}`);
-              startRecording(word, (transcript, analysis, audioUrl) => {
-                if (!transcript) {
-                  if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
-                  return;
-                }
-                if (analysis.isMatch) {
-                  if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${word}) صحيح. (النص: "${transcript}")`;
-                  showToast('🎉 أحسنت! نطق صحيح');
-                } else {
-                  if (feedbackEl) feedbackEl.innerHTML = `❌ (${word}) غير صحيحة: ${getDisorderFeedback(analysis.disorderType)} (النص: "${transcript}")`;
-                  showToast('💪 لا بأس، حاول مرة أخرى');
-                }
-              });
-            };
-          }
-
-          const toggleBtn = card.querySelector('.letter-details-toggle');
-          const detailsDiv = card.querySelector(`#details_${letter}`);
-          if (toggleBtn && detailsDiv) {
-            toggleBtn.onclick = function() {
-              detailsDiv.classList.toggle('open');
-              this.textContent = detailsDiv.classList.contains('open') ? '📌 تفاصيل متقدمة ▲' : '📌 تفاصيل متقدمة ▼';
-            };
-            if (Object.keys(letterData).length > 0) {
-              detailsDiv.classList.add('open');
-              toggleBtn.textContent = '📌 تفاصيل متقدمة ▲';
+      function generateMatchQuestion() {
+        const randomItem = allVocab[Math.floor(Math.random() * allVocab.length)];
+        currentMatch = randomItem;
+        matchQuestion.textContent = `اختر الصورة الصحيحة لكلمة "${randomItem.word}"`;
+        matchFeedback.textContent = '';
+        matchOptions.innerHTML = '';
+        const options = [randomItem];
+        while (options.length < 4) {
+          const item = allVocab[Math.floor(Math.random() * allVocab.length)];
+          if (!options.includes(item)) options.push(item);
+        }
+        options.sort(() => Math.random() - 0.5);
+        options.forEach(item => {
+          const btn = document.createElement('button');
+          btn.className = 'game-option';
+          btn.textContent = item.icon;
+          btn.style.fontSize = '48px';
+          btn.onclick = () => {
+            if (item.word === currentMatch.word) {
+              btn.classList.add('correct');
+              matchFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
+              matchScore += 10;
+              matchGameScore.textContent = `النقاط: ${matchScore}`;
+              showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
+              setTimeout(generateMatchQuestion, 1500);
+            } else {
+              btn.classList.add('wrong');
+              matchFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
+              speakText(item.word);
             }
-          }
-
-          detailsDiv.querySelectorAll('input[type="checkbox"][data-pos]').forEach(cb => {
-            cb.onchange = function() {
-              const l = this.dataset.letter;
-              const pos = this.dataset.pos;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              if (!state.diagEval[l].positions) state.diagEval[l].positions = { start: false, middle: false, end: false };
-              state.diagEval[l].positions[pos] = this.checked;
-            };
-          });
-          detailsDiv.querySelectorAll('input[type="checkbox"][data-vowel]').forEach(cb => {
-            cb.onchange = function() {
-              const l = this.dataset.letter;
-              const vowel = this.dataset.vowel;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              if (!state.diagEval[l].vowels) state.diagEval[l].vowels = { fatha: false, damma: false, kasra: false, sukoon: false };
-              state.diagEval[l].vowels[vowel] = this.checked;
-            };
-          });
-          detailsDiv.querySelectorAll('select[data-field="disorderType"]').forEach(sel => {
-            sel.onchange = function() {
-              const l = this.dataset.letter;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              state.diagEval[l].disorderType = this.value;
-              const defDiv = document.getElementById(`disorderDefinition_${l}`);
-              if (defDiv) defDiv.textContent = DISORDER_DEFINITIONS[this.value] || '';
-            };
-          });
-          detailsDiv.querySelectorAll('input[type="radio"][data-field="isOrganic"]').forEach(radio => {
-            radio.onchange = function() {
-              const l = this.dataset.letter;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              state.diagEval[l].isOrganic = this.value === 'true' ? true : this.value === 'false' ? false : null;
-            };
-          });
-          detailsDiv.querySelectorAll('textarea[data-field="notes"]').forEach(ta => {
-            ta.oninput = function() {
-              const l = this.dataset.letter;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              state.diagEval[l].notes = this.value;
-            };
-          });
+          };
+          matchOptions.appendChild(btn);
         });
+      }
 
-        container.appendChild(grid);
-      });
+      if (startMatchBtn) startMatchBtn.onclick = generateMatchQuestion;
     }
 
-    // ====== دالة توليد الخطة الفردية ======
-    function generateIEP(passed, trained, need, unclear, student) {
-      const studentName = student?.fullName || student?.email || 'الطالب';
-      let diagnosisText = `الطالب: ${studentName}\n\n`;
-      if (passed.length > 0) diagnosisText += `✅ الحروف المتقنة: ${passed.join('، ')}\n`;
-      if (trained.length > 0) diagnosisText += `🔄 الحروف التي اجتازها بعد تدريب: ${trained.join('، ')}\n`;
-      if (need.length > 0) diagnosisText += `⚠️ الحروف التي تحتاج إلى تدريب: ${need.join('، ')}\n`;
-      if (unclear.length > 0) diagnosisText += `❌ الحروف غير الواضحة: ${unclear.join('، ')}\n`;
-      if (need.length === 0 && unclear.length === 0 && trained.length === 0) {
-        diagnosisText += `\n🎉 الطالب أتقن جميع الحروف بشكل ممتاز.`;
-      } else {
-        diagnosisText += `\n📋 ملخص: يعاني الطالب من صعوبات في نطق بعض الحروف، ويحتاج إلى برنامج تدريبي مكثف.`;
-      }
-
-      let disorderDetails = '';
-      const diag = state.diagEval || {};
-      Object.keys(diag).forEach(letter => {
-        const data = diag[letter];
-        if (data.disorderType && data.disorderType !== 'طبيعي') {
-          disorderDetails += `- حرف (${letter}): ${data.disorderType}`;
-          if (data.isOrganic !== null) disorderDetails += ` - ${data.isOrganic ? 'عضوي' : 'غير عضوي'}`;
-          if (data.notes) disorderDetails += ` - ملاحظات: ${data.notes}`;
-          disorderDetails += '\n';
-        }
-      });
-      if (disorderDetails) {
-        diagnosisText += `\n📌 تفاصيل العيوب:\n${disorderDetails}`;
-      }
-
-      const targetLetters = [...need, ...unclear, ...trained];
-      const targetLettersStr = targetLetters.length > 0 ? targetLetters.join('، ') : 'جميع الحروف';
-      let longGoal = targetLetters.length === 0
-        ? `تعزيز مهارات النطق لدى الطالب والحفاظ على المكتسبات اللغوية.`
-        : `تمكين الطالب من نطق الحروف المستهدفة (${targetLettersStr}) بشكل صحيح في جميع مواضع الكلمة.`;
-
-      let shortGoals = targetLetters.length === 0
-        ? `1. تعزيز النطق الصحيح للحروف المتقنة.\n2. تطوير مهارات الاستماع والتمييز السمعي.\n3. تحسين الطلاقة اللغوية.`
-        : `1. أن ينطق الطالب الحروف المستهدفة (${targetLettersStr}) بشكل مفرد وصحيح.\n2. أن ينطق الطالب الحروف المستهدفة في بداية الكلمة ووسطها ونهايتها.\n3. أن يستخدم الطالب الحروف المستهدفة في جمل بسيطة.\n4. أن يميز الطالب سمعياً بين الحروف المتشابهة.`;
-
-      let notes = targetLetters.length === 0
-        ? `- الاستمرار في تدريبات النطق اليومية.\n- تشجيع الطالب على القراءة والمحادثة.\n- متابعة تقدم الطالب بشكل دوري.`
-        : `- تخصيص 10-15 دقيقة يومياً للتدريب على الحروف المستهدفة.\n- استخدام المرآة لتدريب الطالب على مخارج الحروف.\n- تدريبات سمعية للتمييز بين الحروف المتشابهة.\n- متابعة مع أخصائي النطق بشكل دوري.`;
-
-      return {
-        diagnosis: diagnosisText,
-        longGoal,
-        shortGoals,
-        notes,
-        updatedAt: new Date().toISOString(),
-        passed,
-        trained,
-        need,
-        unclear
-      };
-    }
-
-    // ====== صفحة الطالب ======
-    async function renderStudentMenu(app) {
-      renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
-      let container = document.getElementById('studentContent');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'studentContent';
-        app.appendChild(container);
-      } else {
-        container.innerHTML = '';
-      }
-
-      const uDoc = await getDoc(doc(db, "users", state.user.uid));
-      const studentData = uDoc.data() || {};
-      const diag = studentData.diagnostic || {};
-      const passed = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-      const need = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-      const points = calculateStudentPoints(studentData);
-
-      const summary = document.createElement('div');
-      summary.className = 'card';
-      summary.innerHTML = `
-        <h3>📊 ملخص مستوى الطالب والنطق</h3>
-        <div><strong>الحروف المتقنة:</strong> ${passed.length ? passed.join(' - ') : 'لا يوجد'}</div>
-        <div><strong>حروف تحتاج تدريب:</strong> ${need.length ? need.join(' - ') : 'لا يوجد'}</div>
-        <div style="margin-top:8px;"><strong>🏆 النقاط التحفيزية:</strong> ${points} نقطة</div>
-        <button class="btn btn-primary btn-sm" id="achievementBtn" style="margin-top:10px;">🏆 ملف الإنجاز</button>
-      `;
-      container.appendChild(summary);
-
-      const achvBtn = summary.querySelector('#achievementBtn');
-      if (achvBtn) achvBtn.onclick = () => {
-        state.currentStudent = { id: state.user.uid, ...studentData };
-        state.view = 'achievement';
-        render();
-      };
-
-      const iepCard = document.createElement('div');
-      iepCard.className = 'card';
-      iepCard.innerHTML = `<h3>📋 الخطة الفردية (IEP)</h3>`;
-      try {
-        const iepDoc = await getDoc(doc(db, "iep", state.user.uid));
-        if (iepDoc.exists()) {
-          const iepData = iepDoc.data();
-          iepCard.innerHTML += `
-            <div style="background:#f9f9f9;padding:16px;border-radius:12px;border-right:4px solid var(--mint-deep);">
-              <div style="margin-bottom:12px;">
-                <strong style="color:var(--mint-deep);">📝 تشخيص الحالة:</strong>
-                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.diagnosis || 'لا يوجد تشخيص'}</div>
-              </div>
-              <div style="margin-bottom:12px;">
-                <strong style="color:var(--mint-deep);">🎯 الهدف العام:</strong>
-                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.longGoal || 'لا يوجد هدف عام'}</div>
-              </div>
-              <div style="margin-bottom:12px;">
-                <strong style="color:var(--mint-deep);">📌 الأهداف القصيرة:</strong>
-                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.shortGoals || 'لا توجد أهداف قصيرة'}</div>
-              </div>
-              <div>
-                <strong style="color:var(--mint-deep);">💡 التوصيات:</strong>
-                <div style="white-space:pre-wrap;margin-top:4px;font-size:14px;">${iepData.notes || 'لا توجد توصيات'}</div>
-              </div>
-              <div style="margin-top:12px;font-size:12px;color:#6B7A99;">
-                آخر تحديث: ${iepData.updatedAt ? new Date(iepData.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}
-              </div>
-            </div>
-            <p class="muted" style="margin-top:8px;">ℹ️ هذه الخطة للقراءة فقط، يمكنك مناقشتها مع معلمك.</p>
-          `;
-        } else {
-          iepCard.innerHTML += `<p class="muted">⚠️ لا توجد خطة فردية مسجلة حتى الآن. يرجى التواصل مع معلمك لإجراء التشخيص.</p>`;
-        }
-      } catch(e) {
-        iepCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الخطة الفردية.</p>`;
-      }
-      container.appendChild(iepCard);
-
-      const sessionsCard = document.createElement('div');
-      sessionsCard.className = 'card';
-      sessionsCard.innerHTML = '<h3>📂 سجل جلسات التدريب الخاصة بك</h3>';
-      try {
-        const qS = query(collection(db, "sessions"), where("studentId", "==", state.user.uid));
-        const snap = await getDocs(qS);
-        if (snap.empty) {
-          sessionsCard.innerHTML += '<p class="muted">لا توجد جلسات مسجلة.</p>';
-        } else {
-          const allS = [];
-          snap.forEach(d => allS.push({ id: d.id, ...d.data() }));
-          allS.sort((a,b) => (a.sessionNumber||0) - (b.sessionNumber||0));
-          allS.forEach(sess => {
-            const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
-            const sItem = document.createElement('div');
-            sItem.className = 'session-card';
-            sItem.innerHTML = `
-              <div>
-                <span class="badge badge-assigned">${typeInfo.icon} ${typeInfo.name}</span>
-                <strong>حرف ${sess.letter}</strong> - #${sess.sessionNumber || '?'} - ${sess.date}
-                <div style="font-size:12px;color:#6B7A99;">${sess.goal}</div>
-              </div>
-              <button class="btn btn-primary btn-sm" id="openSess_${sess.id}">فتح الجلسة</button>
-            `;
-            sessionsCard.appendChild(sItem);
-            setTimeout(() => {
-              const openBtn = document.getElementById(`openSess_${sess.id}`);
-              if (openBtn) openBtn.onclick = () => {
-                state.currentSession = { id: sess.id, ...sess };
-                state.view = 'single-session';
-                render();
-              };
-            }, 0);
-          });
-        }
-      } catch(e) {
-        sessionsCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
-      }
-      container.appendChild(sessionsCard);
-    }
-
-    // ====== إدارة الجلسات ======
-    async function renderSpeechSessions(app) {
-      if (!state.currentStudent) {
-        showToast('اختر طالباً أولاً');
-        state.view = 'teacher-dashboard';
-        return render();
-      }
-
-      renderTopbar(app, `سجل جلسات: ${state.currentStudent.fullName || state.currentStudent.email}`, 'إضافة وتدريب ورصد التقييم', () => {
-        state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'student-menu';
-        render();
-      });
-
-      const diag = (state.currentStudent && state.currentStudent.diagnostic) ? state.currentStudent.diagnostic : (state.diagEval || {});
-      const needLetters = ALL_LETTERS.filter(letter => {
-        const status = diag[letter]?.status || diag[letter];
-        return status === 'need' || status === 'unclear';
-      });
-
-      let existingSessions = [];
-      try {
-        const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
-        const snap = await getDocs(qS);
-        snap.forEach(d => existingSessions.push({ id: d.id, ...d.data() }));
-      } catch(e) { console.error('خطأ في جلب الجلسات:', e); }
-
-      function getSuggestedSessionType(letter) {
-        const letterSessions = existingSessions
-          .filter(s => s.letter === letter)
-          .sort((a, b) => (a.sessionType || 0) - (b.sessionType || 0));
-        if (letterSessions.length === 0) return 1;
-        const maxType = Math.max(...letterSessions.map(s => s.sessionType || 0));
-        if (maxType >= 4) return 1;
-        return maxType + 1;
-      }
-
-      const defaultLetter = needLetters.length > 0 ? needLetters[0] : ALL_LETTERS[0];
-      const defaultSessionType = defaultLetter ? getSuggestedSessionType(defaultLetter) : 1;
-
-      const addCard = document.createElement('div');
-      addCard.className = 'card';
-      addCard.style.borderRadius = '20px';
-      addCard.innerHTML = `
-        <h3>➕ إضافة جلسة تدريب جديدة</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
-          <div>
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">🔤 اختر الحرف:</label>
-            <select id="sessLetter">
-              ${needLetters.length > 0 ? 
-                needLetters.map(l => `<option value="${l}" ${l === defaultLetter ? 'selected' : ''}>حرف ${l} (يحتاج تدريب)</option>`).join('') :
-                ALL_LETTERS.map(l => `<option value="${l}">حرف ${l}</option>`).join('')
-              }
-            </select>
-            ${needLetters.length === 0 ? '<p class="muted" style="font-size:12px;margin-top:4px;">⚠️ جميع الحروف متقنة، يمكنك إضافة جلسات مراجعة.</p>' : ''}
-          </div>
-          <div>
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">📚 نوع الجلسة:</label>
-            <select id="sessType">
-              ${SESSION_TYPES.map(t => `
-                <option value="${t.id}" ${t.id === defaultSessionType ? 'selected' : ''}>${t.icon} ${t.name}</option>
-              `).join('')}
-            </select>
-          </div>
-          <div>
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">📅 التاريخ:</label>
-            <input type="date" id="sessDate" value="${new Date().toISOString().split('T')[0]}">
-          </div>
-          <div>
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">⏱️ المدة:</label>
-            <input type="text" id="sessDuration" value="30 دقيقة">
-          </div>
-          <div>
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">🛠️ الأدوات:</label>
-            <select id="sessTools">${TOOLS_OPTIONS.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
-          </div>
-          <div>
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">📍 مخرج الحرف:</label>
-            <select id="sessPlace">${PLACE_OPTIONS.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
-          </div>
-          <div style="grid-column:1/-1;">
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">🎯 الهدف:</label>
-            <input type="text" id="sessGoal" placeholder="مثال: نطق الحرف بالفتحة">
-          </div>
-          <div style="grid-column:1/-1;">
-            <label style="font-weight:bold;display:block;margin-bottom:4px;">📋 الطريقة:</label>
-            <select id="sessMethod">${METHOD_OPTIONS.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
-          </div>
-        </div>
-        <button class="btn btn-primary" id="createSessBtn" style="border-radius:50px;padding:10px 30px;margin-top:12px;">🚀 إنشاء الجلسة</button>
-      `;
-      app.appendChild(addCard);
-
-      const letterSelect = addCard.querySelector('#sessLetter');
-      const typeSelect = addCard.querySelector('#sessType');
-      if (letterSelect && typeSelect) {
-        letterSelect.onchange = () => {
-          const selectedLetter = letterSelect.value;
-          const suggestedType = getSuggestedSessionType(selectedLetter);
-          typeSelect.value = suggestedType;
-        };
-      }
-
-      const createBtn = addCard.querySelector('#createSessBtn');
-      if (createBtn) createBtn.onclick = async () => {
-        if (!state.currentStudent || !state.user) return;
-
-        const letter = letterSelect.value;
-        const sessionType = parseInt(typeSelect.value);
-        const date = document.getElementById('sessDate').value;
-        const duration = document.getElementById('sessDuration').value.trim() || '30 دقيقة';
-        const goal = document.getElementById('sessGoal').value.trim() || getDefaultGoal(letter, sessionType);
-        const tools = document.getElementById('sessTools').value;
-        const place = document.getElementById('sessPlace').value;
-        const method = document.getElementById('sessMethod').value;
-
-        if (!letter || !date) {
-          showToast('يرجى اختيار حرف وتاريخ الجلسة');
-          return;
-        }
-
-        try {
-          const qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
-          const snapCount = await getDocs(qCount);
-          const sessionNumber = snapCount.size + 1;
-
-          await addDoc(collection(db, "sessions"), {
-            studentId: state.currentStudent.id,
-            teacherId: state.user.uid,
-            studentName: state.currentStudent.fullName || state.currentStudent.email || 'غير محدد',
-            studentEmail: state.currentStudent.email || '',
-            letter,
-            sessionType,
-            sessionNumber,
-            date,
-            duration,
-            goal,
-            tools,
-            place,
-            method,
-            evaluation: 'none',
-            successRate: 0,
-            notes: '',
-            recommendations: '',
-            createdAt: new Date().toISOString()
-          });
-          showToast(`✅ تمت إضافة الجلسة رقم (${sessionNumber}) بنجاح!`);
-          renderSpeechSessions(app);
-        } catch(e) {
-          console.error(e);
-          showToast('❌ فشل في إضافة الجلسة');
-        }
-      };
-
-      const listCard = document.createElement('div');
-      listCard.className = 'card';
-      listCard.innerHTML = '<h3>📋 الجلسات المسجلة للطالب</h3>';
-      try {
-        const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
-        const snap = await getDocs(qS);
-        if (snap.empty) {
-          listCard.innerHTML += '<p class="muted">لا توجد جلسات سابقة.</p>';
-        } else {
-          const allS = [];
-          snap.forEach(d => allS.push({ id: d.id, ...d.data() }));
-          allS.sort((a,b) => (a.sessionNumber||0) - (b.sessionNumber||0));
-          const sessionsByLetter = {};
-          allS.forEach(sess => {
-            if (!sessionsByLetter[sess.letter]) sessionsByLetter[sess.letter] = [];
-            sessionsByLetter[sess.letter].push(sess);
-          });
-          Object.keys(sessionsByLetter).forEach(letter => {
-            const sessions = sessionsByLetter[letter].sort((a,b) => (a.sessionType||0) - (b.sessionType||0));
-            const header = document.createElement('div');
-            header.style.cssText = 'font-size:16px;font-weight:bold;color:var(--mint-deep);margin:12px 0 8px 0;padding:4px 12px;background:#EAF6F4;border-radius:30px;display:inline-block;';
-            header.textContent = `🔤 حرف (${letter}) - ${letterTitleMap[letter] || ''}`;
-            listCard.appendChild(header);
-            sessions.forEach(sess => {
-              const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
-              const row = document.createElement('div');
-              row.className = 'session-card';
-              row.style.borderRight = `4px solid ${sess.evaluation === 'passed' ? '#2E7D32' : sess.evaluation === 'trained' ? '#0288D1' : '#F57F17'}`;
-              row.innerHTML = `
-                <div>
-                  <span class="badge badge-assigned">${typeInfo.icon} ${typeInfo.name}</span>
-                  <strong>#${sess.sessionNumber || '?'}</strong> - ${sess.date}
-                  <div style="font-size:12px;color:#6B7A99;">🎯 ${sess.goal}</div>
-                  <div>التقييم: ${sess.evaluation || 'غير مقيم'} ${sess.successRate ? `| ${sess.successRate}%` : ''}</div>
-                </div>
-                <button class="btn btn-soft btn-sm" id="viewSess_${sess.id}">📖 فتح</button>
-              `;
-              listCard.appendChild(row);
-              setTimeout(() => {
-                const viewBtn = document.getElementById(`viewSess_${sess.id}`);
-                if (viewBtn) viewBtn.onclick = () => {
-                  state.currentSession = sess;
-                  state.view = 'single-session';
-                  render();
-                };
-              }, 0);
-            });
-          });
-        }
-      } catch(e) {
-        listCard.innerHTML += `<p class="muted">⚠️ خطأ في تحميل الجلسات: ${e.message}</p>`;
-      }
-      app.appendChild(listCard);
-    }   
+    // ====== باقي الدوال (الخطة الأسبوعية، ملفات الإنجاز، التشخيص، الجلسات) ======
+    // ... (ستستكمل في القسم الثالث المتبقي) 
 
 
 
@@ -3213,7 +2021,7 @@
 
 
 
-    // ====== عرض جلسة واحدة ======
+        // ====== عرض جلسة واحدة ======
     function renderSingleSession(app) {
       const sess = state.currentSession;
       if (!sess) { state.view = 'student-menu'; return render(); }
@@ -3319,13 +2127,9 @@
         const saveRateBtn = infoCard.querySelector('#saveRateBtn');
         if (saveRateBtn) saveRateBtn.onclick = async () => {
           try {
-            await updateDoc(doc(db, "sessions", sess.id), {
-              successRate: selectedRate
-            });
+            await updateDoc(doc(db, "sessions", sess.id), { successRate: selectedRate });
             showToast('تم حفظ نسبة النجاح');
-          } catch(e) {
-            showToast('خطأ في حفظ النسبة: ' + e.message);
-          }
+          } catch(e) { showToast('خطأ في حفظ النسبة: ' + e.message); }
         };
 
         const saveEvalBtn = infoCard.querySelector('#saveEvalBtn');
@@ -3340,11 +2144,8 @@
             showToast('تم حفظ التقييم والتوصيات');
             state.currentSession = { ...sess, evaluation: selectedEval, successRate: selectedRate, recommendations: recText };
             renderSingleSession(app);
-            // بعد الحفظ، نتحقق من اكتمال 4 جلسات ناجحة
             checkAndSuggestMastery(sess.studentId, sess.letter);
-          } catch(e) {
-            showToast('خطأ في الحفظ: ' + e.message);
-          }
+          } catch(e) { showToast('خطأ في الحفظ: ' + e.message); }
         };
 
         const resetEvalBtn = infoCard.querySelector('#resetEvalBtn');
@@ -3358,9 +2159,7 @@
             showToast('تم إعادة ضبط التقييم');
             state.currentSession = { ...sess, evaluation: 'none', successRate: 0, recommendations: '' };
             renderSingleSession(app);
-          } catch(e) {
-            showToast('خطأ في إعادة الضبط: ' + e.message);
-          }
+          } catch(e) { showToast('خطأ في إعادة الضبط: ' + e.message); }
         };
 
         const goNextBtn = infoCard.querySelector('#goNextBtn');
@@ -3394,9 +2193,7 @@
               showToast('تم إنشاء الجلسة التالية');
               state.view = 'speech-sessions';
               render();
-            } catch(e) {
-              showToast('خطأ في إنشاء الجلسة التالية: ' + e.message);
-            }
+            } catch(e) { showToast('خطأ في إنشاء الجلسة التالية: ' + e.message); }
           } else {
             showToast('هذه آخر جلسة في التسلسل');
           }
@@ -3410,9 +2207,7 @@
               showToast('تم حذف الجلسة');
               state.view = 'speech-sessions';
               render();
-            } catch(e) {
-              showToast('خطأ في الحذف: ' + e.message);
-            }
+            } catch(e) { showToast('خطأ في الحذف: ' + e.message); }
           }
         };
       }
@@ -3549,7 +2344,8 @@
               showToast('✅ نطق صحيح!');
             } else {
               const extraFeedback = typeof getDisorderFeedback === 'function' ? getDisorderFeedback(analysis.disorderType) : analysis.disorderType;
-              if (feedbackEl) feedbackEl.innerHTML = `❌ غير صحيح: ${extraFeedback} (النص: "${transcript}")`;
+              const similarity = analysis.similarityPercent !== undefined ? ` | التشابه: ${analysis.similarityPercent}%` : '';
+              if (feedbackEl) feedbackEl.innerHTML = `❌ غير صحيح: ${extraFeedback} (النص: "${transcript}")${similarity}`;
               showToast(`⚠️ نطق غير صحيح: ${analysis.disorderType}`);
             }
           });
@@ -3557,7 +2353,7 @@
       }
     }
 
-    // ====== دالة التحقق واقتراح الإتقان بعد 4 جلسات ناجحة ======
+    // ====== دالة التحقق واقتراح الإتقان ======
     async function checkAndSuggestMastery(studentId, letter) {
       try {
         const qS = query(collection(db, "sessions"), where("studentId", "==", studentId), where("letter", "==", letter));
@@ -3569,7 +2365,6 @@
         const totalNeeded = 4;
 
         if (successful.length >= totalNeeded) {
-          // عرض تنبيه للمعلم
           if (confirm(`🎉 الطالب أتم ${totalNeeded} جلسات ناجحة لحرف (${letter}). هل تريد نقل الحرف إلى المتقن؟`)) {
             const studentDoc = await getDoc(doc(db, "users", studentId));
             if (studentDoc.exists()) {
@@ -3579,6 +2374,7 @@
               diag[letter].status = 'passed';
               await updateDoc(doc(db, "users", studentId), { diagnostic: diag });
               showToast(`✅ تم نقل حرف (${letter}) إلى المتقن!`);
+              showNotification(`تم نقل حرف (${letter}) إلى المتقن`, 'success');
             }
           }
         }
@@ -3587,7 +2383,7 @@
       }
     }
 
-    // ====== سجل الجلسات (جدول) ======
+    // ====== سجل الجلسات ======
     async function renderSessionsLog(app) {
       renderTopbar(app, '📊 جدول سجل الجلسات', 'عرض جميع الجلسات المسجلة', () => {
         state.view = 'teacher-dashboard';
@@ -3625,9 +2421,7 @@
             }
             showToast(`تم حذف ${deletedCount} جلسة غير معروفة`);
             renderSessionsLog(app);
-          } catch(e) {
-            showToast('خطأ في مسح الجلسات: ' + e.message);
-          }
+          } catch(e) { showToast('خطأ في مسح الجلسات: ' + e.message); }
         };
       }
 
@@ -3665,9 +2459,7 @@
             <tbody>
               ${allSessions.map(sess => {
                 let studentName = sess.studentName;
-                if (!studentName) {
-                  studentName = getStudentNameById(sess.studentId) || 'غير محدد';
-                }
+                if (!studentName) studentName = getStudentNameById(sess.studentId) || 'غير محدد';
                 const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
                 const evalMap = { 'passed': '✅ اجتاز', 'trained': '🔄 تدريب', 'need': '⚠️ يحتاج تدريب', 'unclear': '❌ غير واضح', 'none': '⏳ قيد التقييم' };
                 const evalText = evalMap[sess.evaluation] || 'غير مقيم';
@@ -3687,7 +2479,6 @@
             </tbody>
           `;
           tableContainer.appendChild(table);
-
           const deleteButtons = tableContainer.querySelectorAll('.delete-session-btn');
           deleteButtons.forEach(btn => {
             btn.onclick = async () => {
@@ -3696,9 +2487,7 @@
                   await deleteDoc(doc(db, "sessions", btn.dataset.id));
                   showToast('تم حذف الجلسة');
                   renderSessionsLog(app);
-                } catch(e) {
-                  showToast('خطأ في حذف الجلسة: ' + e.message);
-                }
+                } catch(e) { showToast('خطأ في حذف الجلسة: ' + e.message); }
               }
             };
           });
@@ -3708,7 +2497,7 @@
       }
     }
 
-    // ====== قائمة IEP للمعلم ======
+    // ====== قائمة IEP ======
     async function renderIEPSession(app) {
       renderTopbar(app, '📋 الخطط الفردية (IEP)', 'اختر طالباً لعرض خطته', () => {
         state.view = 'teacher-dashboard';
@@ -3745,9 +2534,7 @@
             } else {
               showToast('لا توجد خطة فردية لهذا الطالب');
             }
-          } catch(e) {
-            showToast('خطأ في جلب الخطة');
-          }
+          } catch(e) { showToast('خطأ في جلب الخطة'); }
         };
         list.appendChild(item);
       });
@@ -3770,16 +2557,13 @@
         </div>
       `;
       document.body.appendChild(modal);
-
       const closeBtn = modal.querySelector('#closeModalBtn');
       if (closeBtn) closeBtn.onclick = () => modal.remove();
-
       const printBtn = modal.querySelector('#printIEPBtn');
       if (printBtn) printBtn.onclick = () => {
         printIEP(student, iepData);
         modal.remove();
       };
-
       modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     }
 
@@ -3790,7 +2574,6 @@
         printArea.id = 'iep-print-area';
         document.body.appendChild(printArea);
       }
-
       printArea.innerHTML = `
         <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
           <div style="text-align:center;margin-bottom:20px;">
@@ -3798,46 +2581,21 @@
             <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الفردية للطالب (IEP)</p>
             <hr style="border:1px solid #ddd;margin:10px 0;">
           </div>
-          <div style="margin-bottom:15px;">
-            <strong>اسم الطالب:</strong> ${student.fullName || student.email}
-            <br>
-            <strong>البريد الإلكتروني:</strong> ${student.email || 'غير محدد'}
-          </div>
-          <div style="margin-bottom:15px;">
-            <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">📝 تشخيص الحالة</h3>
-            <div style="white-space:pre-wrap;">${iepData.diagnosis || 'لا يوجد تشخيص'}</div>
-          </div>
-          <div style="margin-bottom:15px;">
-            <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">🎯 الهدف العام</h3>
-            <div style="white-space:pre-wrap;">${iepData.longGoal || 'غير محدد'}</div>
-          </div>
-          <div style="margin-bottom:15px;">
-            <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">📌 الأهداف القصيرة</h3>
-            <div style="white-space:pre-wrap;">${iepData.shortGoals || 'غير محددة'}</div>
-          </div>
-          <div style="margin-bottom:15px;">
-            <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">💡 التوصيات</h3>
-            <div style="white-space:pre-wrap;">${iepData.notes || 'لا توجد توصيات'}</div>
-          </div>
-          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
-            تم إنشاء هذه الخطة بتاريخ: ${iepData.updatedAt ? new Date(iepData.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}
-          </div>
+          <div style="margin-bottom:15px;"><strong>اسم الطالب:</strong> ${student.fullName || student.email}<br><strong>البريد الإلكتروني:</strong> ${student.email || 'غير محدد'}</div>
+          <div style="margin-bottom:15px;"><h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">📝 تشخيص الحالة</h3><div style="white-space:pre-wrap;">${iepData.diagnosis || 'لا يوجد تشخيص'}</div></div>
+          <div style="margin-bottom:15px;"><h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">🎯 الهدف العام</h3><div style="white-space:pre-wrap;">${iepData.longGoal || 'غير محدد'}</div></div>
+          <div style="margin-bottom:15px;"><h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">📌 الأهداف القصيرة</h3><div style="white-space:pre-wrap;">${iepData.shortGoals || 'غير محددة'}</div></div>
+          <div style="margin-bottom:15px;"><h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;">💡 التوصيات</h3><div style="white-space:pre-wrap;">${iepData.notes || 'لا توجد توصيات'}</div></div>
+          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذه الخطة بتاريخ: ${iepData.updatedAt ? new Date(iepData.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}</div>
         </div>
       `;
-
       window.print();
-
-      setTimeout(() => {
-        if (printArea) printArea.remove();
-      }, 1000);
+      setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
     }
 
     // ====== عرض الحروف ======
     function renderLetterDisplay(app) {
-      renderTopbar(app, '🔤 الحروف الأبجدية', '28 حرفاً مع الصور التوضيحية', () => {
-        state.view = 'home';
-        render();
-      });
+      renderTopbar(app, '🔤 الحروف الأبجدية', '28 حرفاً مع الصور التوضيحية', () => { state.view = 'home'; render(); });
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
@@ -3874,4 +2632,4 @@
 
   </script>
 </body>
-</html>    
+</html>
