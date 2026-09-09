@@ -1349,8 +1349,7 @@ function renderVocabList(app) {
     <div class="vocab-grid">
       ${items.map(item => `
         <div class="vocab-item" onclick="playSound('click'); speakText('${item.word}')">
-          <img src="${item.image}" alt="${item.word}" style="width:80px;height:80px;border-radius:12px;object-fit:cover;margin-bottom:6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <span class="icon" style="display:none;">${item.icon}</span>
+          <span class="icon">${item.icon}</span>
           <span class="word">${item.word}</span>
         </div>
       `).join('')}
@@ -1794,7 +1793,7 @@ function renderGames(app) {
   const matchGameScore = container.querySelector('#matchGameScore');
   const allVocab = [];
   VOCAB_CATEGORIES.forEach(cat => {
-    VOCAB_LISTS[cat].forEach(item => allVocab.push({ word: item.word, icon: item.icon, image: item.image }));
+    VOCAB_LISTS[cat].forEach(item => allVocab.push({ word: item.word, icon: item.icon }));
   });
 
   function generateMatchQuestion() {
@@ -1812,13 +1811,8 @@ function renderGames(app) {
     options.forEach(item => {
       const btn = document.createElement('button');
       btn.className = 'game-option';
-      // عرض الصورة إذا وجدت، وإلا الإيموجي
-      if (item.image) {
-        btn.innerHTML = `<img src="${item.image}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;" onerror="this.outerHTML='${item.icon}'">`;
-      } else {
-        btn.textContent = item.icon;
-        btn.style.fontSize = '48px';
-      }
+      btn.textContent = item.icon;
+      btn.style.fontSize = '48px';
       btn.onclick = () => {
         if (item.word === currentMatch.word) {
           btn.classList.add('correct');
