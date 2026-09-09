@@ -411,7 +411,7 @@
     ];
     const ALL_LETTERS = LETTER_GROUPS.flatMap(g => g.letters);
 
-    // ====== بيانات الحروف مع الصور ======
+    // ====== بيانات الحروف مع الصور (صور الحروف فقط) ======
     const alphabetData = [
       { letter: 'أ', title: 'أسد', image: 'https://upload.wikimedia.org/wikipedia/commons/7/73/Lion_waiting_in_Namibia.jpg' },
       { letter: 'ب', title: 'بطة', image: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Mallard_drake_swimming.jpg' },
@@ -445,177 +445,77 @@
     const letterTitleMap = {};
     alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
 
-    // ====== قوائم المفردات مع الصور ======
+    // ====== قوائم المفردات (بدون صور، بالإيموجي كما كانت) ======
     const VOCAB_LISTS = {
       'الأشكال': [
-        { word: 'دائرة', icon: '⭕', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Circle_-_black_simple.svg' },
-        { word: 'مربع', icon: '🟨', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Square_-_black_simple.svg' },
-        { word: 'مثلث', icon: '🔺', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Triangle_-_black_simple.svg' },
-        { word: 'مستطيل', icon: '▬', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Rectangle_-_black_simple.svg' },
-        { word: 'نجمة', icon: '⭐', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Star_-_black_simple.svg' },
-        { word: 'قلب', icon: '❤️', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Heart_-_black_simple.svg' },
-        { word: 'هلال', icon: '🌙', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Crescent_-_black_simple.svg' },
-        { word: 'بيضاوي', icon: '🥚', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Ellipse_-_black_simple.svg' },
-        { word: 'معين', icon: '🔶', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Rhombus_-_black_simple.svg' },
-        { word: 'خماسي', icon: '⬠', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Pentagon_-_black_simple.svg' },
-        { word: 'سداسي', icon: '⬡', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Hexagon_-_black_simple.svg' },
-        { word: 'مخروط', icon: '🔺', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Cone_-_black_simple.svg' },
-        { word: 'أسطوانة', icon: '🧴', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Cylinder_-_black_simple.svg' },
-        { word: 'كرة', icon: '⚽', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Sphere_-_black_simple.svg' },
-        { word: 'مكعب', icon: '🧊', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Cube_-_black_simple.svg' }
+        { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
+        { word: 'مستطيل', icon: '▬' }, { word: 'نجمة', icon: '⭐' }, { word: 'قلب', icon: '❤️' },
+        { word: 'هلال', icon: '🌙' }, { word: 'بيضاوي', icon: '🥚' }, { word: 'معين', icon: '🔶' },
+        { word: 'خماسي', icon: '⬠' }, { word: 'سداسي', icon: '⬡' }, { word: 'مخروط', icon: '🔺' },
+        { word: 'أسطوانة', icon: '🧴' }, { word: 'كرة', icon: '⚽' }, { word: 'مكعب', icon: '🧊' }
       ],
       'الألوان': [
-        { word: 'أحمر', icon: '🔴', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Red_color_swatch.svg' },
-        { word: 'أزرق', icon: '🔵', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Blue_color_swatch.svg' },
-        { word: 'أصفر', icon: '🟡', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Yellow_color_swatch.svg' },
-        { word: 'أخضر', icon: '🟢', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Green_color_swatch.svg' },
-        { word: 'برتقالي', icon: '🟠', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Orange_color_swatch.svg' },
-        { word: 'بنفسجي', icon: '🟣', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Purple_color_swatch.svg' },
-        { word: 'وردي', icon: '💗', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Pink_color_swatch.svg' },
-        { word: 'بني', icon: '🟤', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Brown_color_swatch.svg' },
-        { word: 'رمادي', icon: '🔘', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Gray_color_swatch.svg' },
-        { word: 'أبيض', icon: '⚪', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/White_color_swatch.svg' },
-        { word: 'أسود', icon: '⚫', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Black_color_swatch.svg' },
-        { word: 'نحاسي', icon: '🟠', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Copper_color_swatch.svg' },
-        { word: 'فيروزي', icon: '💎', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Turquoise_color_swatch.svg' },
-        { word: 'ذهبي', icon: '✨', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Gold_color_swatch.svg' },
-        { word: 'فضي', icon: '🔘', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Silver_color_swatch.svg' }
+        { word: 'أحمر', icon: '🔴' }, { word: 'أزرق', icon: '🔵' }, { word: 'أصفر', icon: '🟡' },
+        { word: 'أخضر', icon: '🟢' }, { word: 'برتقالي', icon: '🟠' }, { word: 'بنفسجي', icon: '🟣' },
+        { word: 'وردي', icon: '💗' }, { word: 'بني', icon: '🟤' }, { word: 'رمادي', icon: '🔘' },
+        { word: 'أبيض', icon: '⚪' }, { word: 'أسود', icon: '⚫' }, { word: 'نحاسي', icon: '🟠' },
+        { word: 'فيروزي', icon: '💎' }, { word: 'ذهبي', icon: '✨' }, { word: 'فضي', icon: '🔘' }
       ],
       'الفاكهة': [
-        { word: 'تفاحة', icon: '🍎', image: 'https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg' },
-        { word: 'موز', icon: '🍌', image: 'https://upload.wikimedia.org/wikipedia/commons/8/8a/Banana-Single.jpg' },
-        { word: 'برتقال', icon: '🍊', image: 'https://upload.wikimedia.org/wikipedia/commons/c/c4/Orange-Fruit-Pieces.jpg' },
-        { word: 'عنب', icon: '🍇', image: 'https://upload.wikimedia.org/wikipedia/commons/b/bb/Table_grapes_on_white.jpg' },
-        { word: 'فراولة', icon: '🍓', image: 'https://upload.wikimedia.org/wikipedia/commons/2/29/Perfect_Strawberry.jpg' },
-        { word: 'بطيخ', icon: '🍉', image: 'https://upload.wikimedia.org/wikipedia/commons/4/47/Taiwan_2009_Tainan_City_Organic_Farm_Watermelon_FRD_7962.jpg' },
-        { word: 'مانجو', icon: '🥭', image: 'https://upload.wikimedia.org/wikipedia/commons/9/90/Hapus_Mango.jpg' },
-        { word: 'أناناس', icon: '🍍', image: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/Pineapple_and_cross_section.jpg' },
-        { word: 'كمثرى', icon: '🍐', image: 'https://upload.wikimedia.org/wikipedia/commons/8/88/Pears.jpg' },
-        { word: 'خوخ', icon: '🍑', image: 'https://upload.wikimedia.org/wikipedia/commons/9/9e/Peach_Stalk.jpg' },
-        { word: 'كرز', icon: '🍒', image: 'https://upload.wikimedia.org/wikipedia/commons/b/bb/Cherry_Stella444.jpg' },
-        { word: 'ليمون', icon: '🍋', image: 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Lemon_%282357518032%29.jpg' },
-        { word: 'جريب فروت', icon: '🍊', image: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Grapefruit_%28Citrus_paradisi%29.jpg' },
-        { word: 'رمان', icon: '🍎', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Pomegranate_fruit_2.jpg' },
-        { word: 'توت', icon: '🫐', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Blackberries_on_bush.jpg' }
+        { word: 'تفاحة', icon: '🍎' }, { word: 'موز', icon: '🍌' }, { word: 'برتقال', icon: '🍊' },
+        { word: 'عنب', icon: '🍇' }, { word: 'فراولة', icon: '🍓' }, { word: 'بطيخ', icon: '🍉' },
+        { word: 'مانجو', icon: '🥭' }, { word: 'أناناس', icon: '🍍' }, { word: 'كمثرى', icon: '🍐' },
+        { word: 'خوخ', icon: '🍑' }, { word: 'كرز', icon: '🍒' }, { word: 'ليمون', icon: '🍋' },
+        { word: 'جريب فروت', icon: '🍊' }, { word: 'رمان', icon: '🍎' }, { word: 'توت', icon: '🫐' }
       ],
       'الخضروات': [
-        { word: 'جزر', icon: '🥕', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Carrot_2006-02-11.jpg' },
-        { word: 'طماطم', icon: '🍅', image: 'https://upload.wikimedia.org/wikipedia/commons/8/88/Bright_red_tomato_and_cross_section02.jpg' },
-        { word: 'خيار', icon: '🥒', image: 'https://upload.wikimedia.org/wikipedia/commons/9/9f/Cucumber_in_ice_water.jpg' },
-        { word: 'فلفل', icon: '🫑', image: 'https://upload.wikimedia.org/wikipedia/commons/6/62/Red_bell_pepper.jpg' },
-        { word: 'بصل', icon: '🧅', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/Onion_on_white.jpg' },
-        { word: 'ثوم', icon: '🧄', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Garlic.jpg' },
-        { word: 'بطاطس', icon: '🥔', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Potato_%283373986133%29.jpg' },
-        { word: 'كوسا', icon: '🥒', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Zucchini_3.jpg' },
-        { word: 'باذنجان', icon: '🍆', image: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Eggplant_%28solanum_melongena%29.jpg' },
-        { word: 'قرنبيط', icon: '🥦', image: 'https://upload.wikimedia.org/wikipedia/commons/c/cd/Cauliflower_%28Brassica_oleracea%29.jpg' },
-        { word: 'سبانخ', icon: '🍃', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Spinach_leaves.jpg' },
-        { word: 'خس', icon: '🥬', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2b/Lettuce_%283375284330%29.jpg' },
-        { word: 'فجل', icon: '🥕', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/Radishes_%28Raphanus_sativus%29.jpg' },
-        { word: 'كراث', icon: '🧅', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Leeks_%28Allium_ampeloprasum%29.jpg' },
-        { word: 'قرع', icon: '🎃', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5d/Pumpkins_%28Cucurbita_pepo%29.jpg' }
+        { word: 'جزر', icon: '🥕' }, { word: 'طماطم', icon: '🍅' }, { word: 'خيار', icon: '🥒' },
+        { word: 'فلفل', icon: '🫑' }, { word: 'بصل', icon: '🧅' }, { word: 'ثوم', icon: '🧄' },
+        { word: 'بطاطس', icon: '🥔' }, { word: 'كوسا', icon: '🥒' }, { word: 'باذنجان', icon: '🍆' },
+        { word: 'قرنبيط', icon: '🥦' }, { word: 'سبانخ', icon: '🍃' }, { word: 'خس', icon: '🥬' },
+        { word: 'فجل', icon: '🥕' }, { word: 'كراث', icon: '🧅' }, { word: 'قرع', icon: '🎃' }
       ],
       'الحيوانات': [
-        { word: 'أسد', icon: '🦁', image: 'https://upload.wikimedia.org/wikipedia/commons/7/73/Lion_waiting_in_Namibia.jpg' },
-        { word: 'نمر', icon: '🐅', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Panthera_tigris_corbetti_%28Tiger%29.jpg' },
-        { word: 'فيل', icon: '🐘', image: 'https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg' },
-        { word: 'زرافة', icon: '🦒', image: 'https://upload.wikimedia.org/wikipedia/commons/9/9e/Giraffe_Mikumi_National_Park.jpg' },
-        { word: 'حمار', icon: '🐴', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Donkey_in_Algeria.jpg' },
-        { word: 'حصان', icon: '🐎', image: 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Horse_in_field.jpg' },
-        { word: 'بقرة', icon: '🐄', image: 'https://upload.wikimedia.org/wikipedia/commons/0/0e/Cow_%28Fleckvieh_breed%29_Oeschinensee_Slaunger.jpg' },
-        { word: 'خروف', icon: '🐑', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2b/Lamb_in_New_Zealand.jpg' },
-        { word: 'ماعز', icon: '🐐', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Goat_in_the_pasture.jpg' },
-        { word: 'قرد', icon: '🐒', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Bonobo.jpg' },
-        { word: 'ذئب', icon: '🐺', image: 'https://upload.wikimedia.org/wikipedia/commons/8/8a/Gray_wolf.jpg' },
-        { word: 'ثعلب', icon: '🦊', image: 'https://upload.wikimedia.org/wikipedia/commons/f/f9/Red_Fox_%28Vulpes_vulpes%29_%2833932719807%29.jpg' },
-        { word: 'دب', icon: '🐻', image: 'https://upload.wikimedia.org/wikipedia/commons/9/9e/Brown_bear_%28Ursus_arctos%29.jpg' },
-        { word: 'غزال', icon: '🦌', image: 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Gazella_dorcas.jpg' },
-        { word: 'ناقة', icon: '🐫', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Camelus_dromedarius_in_Parc_de_Branf%C3%A9r%C3%A9_01.jpg' }
+        { word: 'أسد', icon: '🦁' }, { word: 'نمر', icon: '🐅' }, { word: 'فيل', icon: '🐘' },
+        { word: 'زرافة', icon: '🦒' }, { word: 'حمار', icon: '🐴' }, { word: 'حصان', icon: '🐎' },
+        { word: 'بقرة', icon: '🐄' }, { word: 'خروف', icon: '🐑' }, { word: 'ماعز', icon: '🐐' },
+        { word: 'قرد', icon: '🐒' }, { word: 'ذئب', icon: '🐺' }, { word: 'ثعلب', icon: '🦊' },
+        { word: 'دب', icon: '🐻' }, { word: 'غزال', icon: '🦌' }, { word: 'ناقة', icon: '🐫' }
       ],
       'النباتات': [
-        { word: 'ورد', icon: '🌹', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5d/Red_rose.jpg' },
-        { word: 'ياسمين', icon: '🌼', image: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Jasminum_polyanthum.jpg' },
-        { word: 'نخلة', icon: '🌴', image: 'https://upload.wikimedia.org/wikipedia/commons/7/7f/Palm_tree.jpg' },
-        { word: 'شجرة', icon: '🌳', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Tree_in_field.jpg' },
-        { word: 'زهرة', icon: '🌸', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Flower_%283506106754%29.jpg' },
-        { word: 'عشب', icon: '🌿', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Grass_%283528516032%29.jpg' },
-        { word: 'أزهار', icon: '🌺', image: 'https://upload.wikimedia.org/wikipedia/commons/6/64/Flowers_%283556060010%29.jpg' },
-        { word: 'بابونج', icon: '🌼', image: 'https://upload.wikimedia.org/wikipedia/commons/4/41/Chamomile_%28Matricaria_chamomilla%29.jpg' },
-        { word: 'نعناع', icon: '🍃', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/Mentha_spicata.jpg' },
-        { word: 'ريحان', icon: '🌱', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Ocimum_basilicum.jpg' },
-        { word: 'صبار', icon: '🌵', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Cactus_%283329970084%29.jpg' },
-        { word: 'خيزران', icon: '🎋', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Bamboo_forest.jpg' },
-        { word: 'سرخس', icon: '🌿', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Fern_%283382736433%29.jpg' },
-        { word: 'طحلب', icon: '🪴', image: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Moss_%283338225749%29.jpg' },
-        { word: 'قرنفل', icon: '🌸', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Cloves_%28Syzygium_aromaticum%29.jpg' }
+        { word: 'ورد', icon: '🌹' }, { word: 'ياسمين', icon: '🌼' }, { word: 'نخلة', icon: '🌴' },
+        { word: 'شجرة', icon: '🌳' }, { word: 'زهرة', icon: '🌸' }, { word: 'عشب', icon: '🌿' },
+        { word: 'أزهار', icon: '🌺' }, { word: 'بابونج', icon: '🌼' }, { word: 'نعناع', icon: '🍃' },
+        { word: 'ريحان', icon: '🌱' }, { word: 'صبار', icon: '🌵' }, { word: 'خيزران', icon: '🎋' },
+        { word: 'سرخس', icon: '🌿' }, { word: 'طحلب', icon: '🪴' }, { word: 'قرنفل', icon: '🌸' }
       ],
       'أعضاء الجسم': [
-        { word: 'رأس', icon: '👤', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Human_head.jpg' },
-        { word: 'عين', icon: '👁️', image: 'https://upload.wikimedia.org/wikipedia/commons/8/8f/Human_eye.jpg' },
-        { word: 'أنف', icon: '👃', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5d/Human_nose.jpg' },
-        { word: 'فم', icon: '👄', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Human_mouth.jpg' },
-        { word: 'أذن', icon: '👂', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Human_ear.jpg' },
-        { word: 'يد', icon: '✋', image: 'https://upload.wikimedia.org/wikipedia/commons/4/40/Human_hand.jpg' },
-        { word: 'قدم', icon: '🦶', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1c/Foot_%283299821204%29.jpg' },
-        { word: 'قلب', icon: '🫀', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Heart_%28organ%29.jpg' },
-        { word: 'رئة', icon: '🫁', image: 'https://upload.wikimedia.org/wikipedia/commons/9/96/Lungs.jpg' },
-        { word: 'كبد', icon: '🧬', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Liver.jpg' },
-        { word: 'كلية', icon: '🧬', image: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/Kidney.jpg' },
-        { word: 'معدة', icon: '🫃', image: 'https://upload.wikimedia.org/wikipedia/commons/7/76/Stomach.jpg' },
-        { word: 'أمعاء', icon: '🧬', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Intestines.jpg' },
-        { word: 'عظام', icon: '🦴', image: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Bone.jpg' },
-        { word: 'جلد', icon: '🧴', image: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/Skin.jpg' }
+        { word: 'رأس', icon: '👤' }, { word: 'عين', icon: '👁️' }, { word: 'أنف', icon: '👃' },
+        { word: 'فم', icon: '👄' }, { word: 'أذن', icon: '👂' }, { word: 'يد', icon: '✋' },
+        { word: 'قدم', icon: '🦶' }, { word: 'قلب', icon: '🫀' }, { word: 'رئة', icon: '🫁' },
+        { word: 'كبد', icon: '🧬' }, { word: 'كلية', icon: '🧬' }, { word: 'معدة', icon: '🫃' },
+        { word: 'أمعاء', icon: '🧬' }, { word: 'عظام', icon: '🦴' }, { word: 'جلد', icon: '🧴' }
       ],
       'الأثاث': [
-        { word: 'كرسي', icon: '🪑', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5c/Chair_%28furniture%29.jpg' },
-        { word: 'طاولة', icon: '🪑', image: 'https://upload.wikimedia.org/wikipedia/commons/3/36/Table_%28furniture%29.jpg' },
-        { word: 'سرير', icon: '🛏️', image: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Bed_%28furniture%29.jpg' },
-        { word: 'خزانة', icon: '🗄️', image: 'https://upload.wikimedia.org/wikipedia/commons/5/58/Cupboard_%28furniture%29.jpg' },
-        { word: 'رف كتب', icon: '📚', image: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Bookshelf.jpg' },
-        { word: 'سجادة', icon: '🧶', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Carpet.jpg' },
-        { word: 'ستارة', icon: '🪟', image: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Curtain.jpg' },
-        { word: 'مرآة', icon: '🪞', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3b/Mirror.jpg' },
-        { word: 'ساعة', icon: '🕰️', image: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/Clock.jpg' },
-        { word: 'مصباح', icon: '💡', image: 'https://upload.wikimedia.org/wikipedia/commons/4/45/Lamp.jpg' },
-        { word: 'مكتب', icon: '🪑', image: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Desk_%28furniture%29.jpg' },
-        { word: 'أريكة', icon: '🛋️', image: 'https://upload.wikimedia.org/wikipedia/commons/9/9d/Sofa.jpg' },
-        { word: 'دولاب', icon: '🗄️', image: 'https://upload.wikimedia.org/wikipedia/commons/5/58/Cabinet_%28furniture%29.jpg' },
-        { word: 'طاولة جانبية', icon: '🪑', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2b/Side_table.jpg' },
-        { word: 'شماعة', icon: '🧥', image: 'https://upload.wikimedia.org/wikipedia/commons/9/94/Clothes_hanger.jpg' }
+        { word: 'كرسي', icon: '🪑' }, { word: 'طاولة', icon: '🪑' }, { word: 'سرير', icon: '🛏️' },
+        { word: 'خزانة', icon: '🗄️' }, { word: 'رف كتب', icon: '📚' }, { word: 'سجادة', icon: '🧶' },
+        { word: 'ستارة', icon: '🪟' }, { word: 'مرآة', icon: '🪞' }, { word: 'ساعة', icon: '🕰️' },
+        { word: 'مصباح', icon: '💡' }, { word: 'مكتب', icon: '🪑' }, { word: 'أريكة', icon: '🛋️' },
+        { word: 'دولاب', icon: '🗄️' }, { word: 'طاولة جانبية', icon: '🪑' }, { word: 'شماعة', icon: '🧥' }
       ],
       'الحشرات': [
-        { word: 'نحلة', icon: '🐝', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Honey_bee_%28Apis_mellifera%29.jpg' },
-        { word: 'فراشة', icon: '🦋', image: 'https://upload.wikimedia.org/wikipedia/commons/9/9c/Butterfly_%282855410879%29.jpg' },
-        { word: 'ذبابة', icon: '🪰', image: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/Fly_%283332650549%29.jpg' },
-        { word: 'بعوضة', icon: '🪟', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Mosquito_%283333418706%29.jpg' },
-        { word: 'نملة', icon: '🐜', image: 'https://upload.wikimedia.org/wikipedia/commons/6/61/Ant_%283335398159%29.jpg' },
-        { word: 'خنفساء', icon: '🪲', image: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/Beetle_%283334042854%29.jpg' },
-        { word: 'صرصور', icon: '🪳', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5c/Cockroach.jpg' },
-        { word: 'جندب', icon: '🦗', image: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Grasshopper.jpg' },
-        { word: 'يعسوب', icon: '🪰', image: 'https://upload.wikimedia.org/wikipedia/commons/a/a7/Dragonfly.jpg' },
-        { word: 'دعسوقة', icon: '🐞', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Ladybug.jpg' },
-        { word: 'أبو مقص', icon: '🪲', image: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Earwig.jpg' },
-        { word: 'نمل أبيض', icon: '🐜', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4f/Termite.jpg' },
-        { word: 'برغوث', icon: '🐜', image: 'https://upload.wikimedia.org/wikipedia/commons/6/63/Flea.jpg' },
-        { word: 'قراد', icon: '🪲', image: 'https://upload.wikimedia.org/wikipedia/commons/7/70/Tick.jpg' },
-        { word: 'عنكبوت', icon: '🕷️', image: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Spider.jpg' }
+        { word: 'نحلة', icon: '🐝' }, { word: 'فراشة', icon: '🦋' }, { word: 'ذبابة', icon: '🪰' },
+        { word: 'بعوضة', icon: '🪟' }, { word: 'نملة', icon: '🐜' }, { word: 'خنفساء', icon: '🪲' },
+        { word: 'صرصور', icon: '🪳' }, { word: 'جندب', icon: '🦗' }, { word: 'يعسوب', icon: '🪰' },
+        { word: 'دعسوقة', icon: '🐞' }, { word: 'أبو مقص', icon: '🪲' }, { word: 'نمل أبيض', icon: '🐜' },
+        { word: 'برغوث', icon: '🐜' }, { word: 'قراد', icon: '🪲' }, { word: 'عنكبوت', icon: '🕷️' }
       ],
       'الطيور': [
-        { word: 'عصفور', icon: '🐦', image: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/House_sparrow_male.jpg' },
-        { word: 'حمامة', icon: '🕊️', image: 'https://upload.wikimedia.org/wikipedia/commons/8/86/Rock_dove.jpg' },
-        { word: 'غراب', icon: '🐦', image: 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Carrion_crow.jpg' },
-        { word: 'نسر', icon: '🦅', image: 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Eagle.jpg' },
-        { word: 'صقر', icon: '🦅', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Falco_cherrug_1.jpg' },
-        { word: 'بومة', icon: '🦉', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5d/Owl.jpg' },
-        { word: 'بطريق', icon: '🐧', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2d/Penguin.jpg' },
-        { word: 'بلبل', icon: '🐦', image: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/Bulbul.jpg' },
-        { word: 'طاووس', icon: '🦚', image: 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Peacock.jpg' },
-        { word: 'نعامة', icon: '🦩', image: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Ostrich.jpg' },
-        { word: 'بطة', icon: '🦆', image: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Mallard_drake_swimming.jpg' },
-        { word: 'دجاجة', icon: '🐔', image: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Rooster_portrait.jpg' },
-        { word: 'وروار', icon: '🐦', image: 'https://upload.wikimedia.org/wikipedia/commons/5/5a/Bee_eater.jpg' },
-        { word: 'هدهد', icon: '🐦', image: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Hoopoe.jpg' },
-        { word: 'باز', icon: '🦅', image: 'https://upload.wikimedia.org/wikipedia/commons/7/76/Hawk.jpg' }
+        { word: 'عصفور', icon: '🐦' }, { word: 'حمامة', icon: '🕊️' }, { word: 'غراب', icon: '🐦' },
+        { word: 'نسر', icon: '🦅' }, { word: 'صقر', icon: '🦅' }, { word: 'بومة', icon: '🦉' },
+        { word: 'بطريق', icon: '🐧' }, { word: 'بلبل', icon: '🐦' }, { word: 'طاووس', icon: '🦚' },
+        { word: 'نعامة', icon: '🦩' }, { word: 'بطة', icon: '🦆' }, { word: 'دجاجة', icon: '🐔' },
+        { word: 'وروار', icon: '🐦' }, { word: 'هدهد', icon: '🐦' }, { word: 'باز', icon: '🦅' }
       ]
     };
     const VOCAB_CATEGORIES = Object.keys(VOCAB_LISTS);
@@ -1095,6 +995,9 @@
       if (closeBtn) closeBtn.onclick = () => modal.remove();
       modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     }
+  </script>
+</body>
+</html>
  
 
         
