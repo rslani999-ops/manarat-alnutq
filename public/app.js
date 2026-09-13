@@ -3387,7 +3387,7 @@ function renderSingleSession(app) {
     };
   }
 
-  // قسم الذكاء الاصطناعي - AI Section
+  // قسم الذكاء الاصطناعي
   if (state.role === 'teacher' || state.role === 'admin') {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
@@ -3464,9 +3464,7 @@ function renderSingleSession(app) {
     if (resetEvalBtn) resetEvalBtn.onclick = async () => {
       try {
         await updateDoc(doc(db, "sessions", sess.id), {
-          evaluation: 'none',
-          successRate: 0,
-          recommendations: ''
+          evaluation: 'none', successRate: 0, recommendations: ''
         });
         showToast('تم إعادة ضبط التقييم');
         state.currentSession = { ...sess, evaluation: 'none', successRate: 0, recommendations: '' };
@@ -3904,6 +3902,7 @@ function initApp() {
   });
 }
 
+initApp();
 initApp();
       render();
     }
