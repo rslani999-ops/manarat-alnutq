@@ -1378,3 +1378,41 @@ body.larger-text .exercise-box li {
     padding: 8px 2px 16px;
   }
   
+  .btn-nav {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand h1 {
+    font-size: 15px;
+  }
+  
+  .game-question {
+    font-size: 22px;
+  }
+  
+  .game-option {
+    font-size: 18px;
+    padding: 12px;
+  }
+  
+  .vocab-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+  }
+  
+  .vocab-item {
+    min-height: 120px;
+    padding: 12px 8px;
+  }
+  
+  .vocab-item .icon {
+    font-size: 42px;
+  }
+  
+  .vocab-item .word {
+    font-size: 15px;
+  }
+}
