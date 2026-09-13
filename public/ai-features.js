@@ -1,7 +1,7 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v3.0 — 3 features available
+   v4.0 — 3 features available
    ======================================== */
 
 /* ========================================
@@ -132,14 +132,13 @@ async function generateHomeworkExercises(sessionData, studentData) {
 }
 
 /* ========================================
-   4. 🆕 تحليل تقدم الطالب
+   4. 🆕 توليد تحليل تقدم الطالب
    ======================================== */
 async function generateProgressAnalysis(studentData, sessionsData) {
   if (!sessionsData || sessionsData.length === 0) {
     throw new Error('لا توجد جلسات لتحليلها');
   }
 
-  // حساب إحصائيات
   const totalSessions = sessionsData.length;
   const evaluatedSessions = sessionsData.filter(s => s.evaluation && s.evaluation !== 'none');
   const passedCount = sessionsData.filter(s => s.evaluation === 'passed').length;
@@ -150,11 +149,9 @@ async function generateProgressAnalysis(studentData, sessionsData) {
     ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
     : 0;
 
-  // حساب الحروف
   const lettersSet = new Set(sessionsData.map(s => s.letter));
   const lettersList = Array.from(lettersSet);
 
-  // الحروف الأكثر نجاحاً
   const letterStats = {};
   lettersList.forEach(letter => {
     const ls = sessionsData.filter(s => s.letter === letter);
@@ -163,12 +160,10 @@ async function generateProgressAnalysis(studentData, sessionsData) {
     letterStats[letter] = { total: ls.length, success: successL, avg: avgL };
   });
 
-  // تحويل للقراءة
   const lettersSummary = Object.entries(letterStats).map(([letter, stats]) => 
     `- حرف (${letter}): ${stats.total} جلسة، ${stats.success} ناجحة، متوسط ${stats.avg}%`
   ).join('\n');
 
-  // التقييمات الأخيرة
   const sortedSessions = [...sessionsData].sort((a, b) => {
     const dateA = new Date(a.date || 0);
     const dateB = new Date(b.date || 0);
@@ -309,9 +304,13 @@ function showHomeworkModal(homeworkText, sessionData) {
   };
   
   modal.querySelector('#sendHWToParentBtn').onclick = () => {
-    if (typeof sendSessionToParent === 'function' && sessionData && window.__currentStudent) {
+    if (typeof sendSessionToParent === 'function' && sessionData) {
       const sessionWithHW = { ...sessionData, recommendations: `📝 التمارين المنزلية:\n\n${homeworkText}` };
-      sendSessionToParent(sessionWithHW, window.__currentStudent);
+      if (window.state && window.state.currentStudent) {
+        sendSessionToParent(sessionWithHW, window.state.currentStudent);
+      } else {
+        if (typeof showToast === 'function') showToast('⚠️ اختر طالباً أولاً');
+      }
     } else {
       if (typeof showToast === 'function') showToast('⚠️ لا يمكن الإرسال');
     }
@@ -516,9 +515,11 @@ function createProgressAnalysisButton(studentData) {
     btn.innerHTML = '⏳ جاري التحليل...';
     
     try {
-      // جلب جلسات الطالب من Firebase
-      const fbDb = window.db, fbDoc = window.doc, fbGetDoc = window.getDoc;
-      const fbCollection = window.collection, fbQuery = window.query, fbWhere = window.where, fbGetDocs = window.getDocs;
+      const fbDb = window.db;
+      const fbCollection = window.collection;
+      const fbQuery = window.query;
+      const fbWhere = window.where;
+      const fbGetDocs = window.getDocs;
       
       let sessionsData = [];
       if (fbDb && fbCollection && fbQuery && fbWhere && fbGetDocs) {
@@ -531,7 +532,6 @@ function createProgressAnalysisButton(studentData) {
         throw new Error('لا توجد جلسات لهذا الطالب لتحليلها');
       }
       
-      // حساب الإحصائيات للعرض
       const stats = {
         totalSessions: sessionsData.length,
         passedCount: sessionsData.filter(s => s.evaluation === 'passed').length,
