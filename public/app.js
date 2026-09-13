@@ -3387,28 +3387,24 @@ function renderSingleSession(app) {
     };
   }
 
-  // ==========================================
-  // 🤖 قسم الذكاء الاصطناعي - AI Section
-  // ==========================================
+  // قسم الذكاء الاصطناعي - AI Section
   if (state.role === 'teacher' || state.role === 'admin') {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
       aiSection.className = 'card';
       aiSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
       aiSection.innerHTML = `
-        <h3 style="color:#6D28D9;margin-bottom:8px;">🤖 توصيات الذكاء الاصطناعي</h3>
+        <h3 style="color:#6D28D9;margin-bottom:8px;">🤖 أدوات الذكاء الاصطناعي</h3>
         <p style="font-size:13px;color:#555;margin-bottom:12px;">
-          احصل على تحليل ذكي لأداء الطالب وتوصيات مخصصة للجلسة القادمة
+          احصل على تحليل ذكي، توصيات مخصصة، وتمارين منزلية لأداء أفضل
         </p>
         <div id="aiButtonsContainer" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;"></div>
       `;
       const buttonsContainer = aiSection.querySelector('#aiButtonsContainer');
       
-      // زر التوصيات الذكية
       const aiBtn = window.createAIButton(sess, state.currentStudent || {});
       buttonsContainer.appendChild(aiBtn);
       
-      // ✨ زر التمارين المنزلية الجديد
       if (typeof window.createHomeworkButton === 'function') {
         const hwBtn = window.createHomeworkButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(hwBtn);
@@ -3870,7 +3866,8 @@ function printIEP(student, iepData) {
 }
 
 /* ========================================
-   38. عرض الحروف - Letter Display   ======================================== */
+   38. عرض الحروف - Letter Display
+   ======================================== */
 function renderLetterDisplay(app) {
   renderTopbar(app, '🔤 الحروف الأبجدية', '28 حرفاً مع الصور', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -3902,6 +3899,12 @@ function initApp() {
       state.user = null;
       state.role = null;
       state.view = 'home';
+      render();
+    }
+  });
+}
+
+initApp();
       render();
     }
   });
