@@ -1,1 +1,1380 @@
+/* ========================================
+   منارة النطق - التنسيقات الرئيسية
+   Manarat Al-Nutq - Main Stylesheet
+   ======================================== */
 
+/* ========================================
+   1. المتغيرات العامة - CSS Variables
+   ======================================== */
+:root {
+  /* الألوان الأساسية - Core Colors */
+  --ink: #1E2A47;
+  --paper: #EFF5FB;
+  --mint: #4FB6A8;
+  --mint-deep: #357E74;
+  --coral: #EF6F5B;
+  --line: rgba(30, 42, 71, 0.10);
+  --success: #10B981;
+  --fail: #EF6F5B;
+  --gold: #F59E0B;
+  
+  /* ألوان الواجهة - UI Colors */
+  --bg: #EFF5FB;
+  --card-bg: #ffffff;
+  --text: #1E2A47;
+  --muted: #6B7A99;
+  --btn-bg: #ffffff;
+  --btn-border: rgba(30, 42, 71, 0.10);
+  --btn-text: #1E2A47;
+  --input-bg: #FBFDFE;
+  --shadow: 0 4px 10px rgba(79, 182, 168, 0.35);
+}
+
+/* ========================================
+   2. إعادة الضبط - Reset & Base
+   ======================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+}
+
+#app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  flex: 1;
+  width: 100%;
+}
+
+/* ========================================
+   3. الشريط العلوي - Topbar
+   ======================================== */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 10px 4px 24px;
+  gap: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.brand .mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--mint), var(--mint-deep));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.brand h1 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.brand span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: -2px;
+}
+
+.nav-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn-nav {
+  border: none;
+  background: var(--btn-bg);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--btn-border);
+  font-size: 13px;
+  color: var(--btn-text);
+  transition: 0.15s;
+}
+
+.btn-nav:hover {
+  background: #F5F8FC;
+}
+
+/* ========================================
+   4. أزرار إمكانية الوصول - Accessibility Buttons
+   ======================================== */
+.accessibility-btns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+}
+
+.btn-icon:hover {
+  background: #F5F8FC;
+}
+
+/* ========================================
+   5. البطاقات - Cards
+   ======================================== */
+.card {
+  background: var(--card-bg);
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  padding: 20px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  color: var(--text);
+}
+
+.card h2, .card h3 {
+  font-family: 'Baloo Bhaijaan 2', sans-serif;
+}
+
+.card h3 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ========================================
+   6. الأزرار - Buttons
+   ======================================== */
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--mint-deep);
+  color: white;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn-soft {
+  background: #EAF6F4;
+  color: var(--mint-deep);
+}
+
+.btn-soft:hover {
+  background: #DDF0ED;
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-danger {
+  background: var(--coral);
+  color: white;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ========================================
+   7. أزرار التسجيل الصوتي - Recording Buttons
+   ======================================== */
+.btn-record {
+  background: #E8F0FE;
+  color: #1A73E8;
+  border: 2px solid #1A73E8;
+  border-radius: 50px;
+  padding: 6px 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 12px;
+}
+
+.btn-record:hover {
+  background: #D2E3FC;
+}
+
+.btn-record.recording {
+  background: #FEE8E8;
+  color: #D93025;
+  border-color: #D93025;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* ========================================
+   8. التغذية الراجعة - Feedback
+   ======================================== */
+.feedback-correct {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.feedback-wrong {
+  color: var(--fail);
+  font-weight: bold;
+}
+
+/* ========================================
+   9. النماذج - Forms
+   ======================================== */
+input, select, textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 15px;
+  background: var(--input-bg);
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--mint);
+}
+
+/* ========================================
+   10. نماذج المصادقة - Auth Forms
+   ======================================== */
+.auth-form {
+  max-width: 400px;
+  margin: 20px auto;
+  background: var(--card-bg);
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+}
+
+.auth-form h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-toggle {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 13px;
+  color: #5B6A88;
+}
+
+.auth-toggle span {
+  color: var(--mint-deep);
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* ========================================
+   11. الإشعارات المنبثقة - Toast Notifications
+   ======================================== */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  z-index: 999;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* ========================================
+   12. صفوف الطلاب - Student Rows
+   ======================================== */
+.student-row {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ========================================
+   13. الشارات - Badges
+   ======================================== */
+.badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  display: inline-block;
+  margin: 2px;
+}
+
+.badge-assigned {
+  background: #E1F5FE;
+  color: #0288D1;
+}
+
+.badge-free {
+  background: #E8F5E9;
+  color: #388E3C;
+}
+
+.badge-passed {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.badge-trained {
+  background: #E0F2FE;
+  color: #0288D1;
+  border: 1px solid #0288D1;
+}
+
+.badge-need {
+  background: #FFF8E1;
+  color: #F57F17;
+}
+
+.badge-unclear {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+/* ========================================
+   14. عناوين المجموعات - Group Titles
+   ======================================== */
+.group-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--mint-deep);
+  margin: 20px 0 10px 0;
+  padding: 8px 16px;
+  background: #EAF6F4;
+  border-radius: 30px;
+  display: inline-block;
+  border-right: 4px solid var(--mint-deep);
+}
+
+/* ========================================
+   15. شبكة التشخيص - Diagnostic Grid
+   ======================================== */
+.diag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+
+/* ========================================
+   16. بطاقة الحرف - Letter Card
+   ======================================== */
+.letter-card {
+  background: #F8FAFC;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.letter-card .letter-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4FB6A8, #357E74);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 4px auto;
+  font-size: 30px;
+  font-weight: bold;
+  color: white;
+  box-shadow: 0 4px 10px rgba(79, 182, 168, 0.3);
+  border: 2px solid white;
+  cursor: pointer;
+}
+
+.letter-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--mint-deep);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.audio-btn {
+  background: var(--mint);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+/* ========================================
+   17. أزرار التقييم - Evaluation Buttons
+   ======================================== */
+.eval-btns {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.eval-btn {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.eval-btn.passed {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.eval-btn.trained {
+  background: #E0F2FE;
+  color: #0288D1;
+}
+
+.eval-btn.need {
+  background: #FFF8E1;
+  color: #F57F17;
+}
+
+.eval-btn.unclear {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.eval-btn.active {
+  outline: 2px solid var(--text);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   18. تفاصيل الحرف - Letter Details
+   ======================================== */
+.letter-details-toggle {
+  background: none;
+  border: none;
+  color: var(--mint-deep);
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.letter-details-toggle:hover {
+  text-decoration: underline;
+}
+
+.letter-details {
+  display: none;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  text-align: right;
+  font-size: 13px;
+}
+
+.letter-details.open {
+  display: block;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin-bottom: 6px;
+}
+
+.detail-row .label {
+  font-weight: bold;
+  color: var(--text);
+}
+
+.detail-row select,
+.detail-row input,
+.detail-row textarea {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  background: white;
+  width: 100%;
+  color: var(--text);
+}
+
+.detail-row textarea {
+  resize: vertical;
+  min-height: 40px;
+}
+
+.detail-row .radio-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.detail-row .radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: normal;
+}
+
+/* ========================================
+   19. بطاقات الجلسات - Session Cards
+   ======================================== */
+.session-card {
+  background: #FAFDFC;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vowel-box {
+  background: #F4F9F8;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+
+/* ========================================
+   20. التذييل - Footer
+   ======================================== */
+footer {
+  background: var(--card-bg);
+  border-top: 1px solid var(--line);
+  text-align: center;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+footer .footer-main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+footer .footer-main .sep {
+  color: var(--line);
+}
+
+footer .footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 20px;
+}
+
+footer a {
+  color: var(--mint-deep);
+  text-decoration: none;
+  font-weight: 700;
+  transition: 0.2s;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+footer .school-info {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* ========================================
+   21. الشبكات - Grids
+   ======================================== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+/* ========================================
+   22. خيارات التشخيص - Diagnostic Options
+   ======================================== */
+.diag-option-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.diag-option {
+  padding: 6px 16px;
+  border-radius: 30px;
+  border: 2px solid #ddd;
+  background: #f9f9f9;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: 0.2s;
+  color: #555;
+  user-select: none;
+}
+
+.diag-option:hover {
+  transform: scale(1.02);
+}
+
+.diag-option.selected-green {
+  background: #E8F5E9;
+  border-color: #2E7D32;
+  color: #2E7D32;
+}
+
+.diag-option.selected-red {
+  background: #FFEBEE;
+  border-color: #C62828;
+  color: #C62828;
+}
+
+.diag-option.selected-gray {
+  background: #F5F5F5;
+  border-color: #aaa;
+  color: #616161;
+}
+
+.diag-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 6px;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.input-sm {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 4px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+#comprehensiveContainer .card {
+  border-right: 6px solid var(--mint-deep);
+}
+
+/* ========================================
+   23. الطباعة - Print Area
+   ======================================== */
+#iep-print-area {
+  display: none;
+}
+
+/* ========================================
+   24. جداول الجلسات - Sessions Tables
+   ======================================== */
+.sessions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.sessions-table th,
+.sessions-table td {
+  border: 1px solid var(--line);
+  padding: 10px 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sessions-table th {
+  background: #EAF6F4;
+  color: var(--mint-deep);
+  font-weight: 700;
+}
+
+.sessions-table tr:nth-child(even) {
+  background: #F8FAFC;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+/* ========================================
+   25. شبكة المفردات - Vocabulary Grid
+   ======================================== */
+.vocab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.vocab-item {
+  background: #F8FAFC;
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  padding: 20px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 150px;
+  justify-content: center;
+}
+
+.vocab-item:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--mint);
+}
+
+.vocab-item .icon {
+  font-size: 56px;
+  line-height: 1.2;
+}
+
+.vocab-item .word {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ========================================
+   26. قوائم IEP - IEP Lists
+   ======================================== */
+.iep-student-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.iep-student-item {
+  background: #F8FAFC;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.iep-student-item:hover {
+  transform: translateY(-4px);
+  border-color: var(--mint-deep);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.iep-student-item .student-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.iep-student-item .student-email {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ========================================
+   27. أزرار التسجيل - Record Buttons Group
+   ======================================== */
+.record-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.record-buttons .btn-record {
+  font-size: 11px;
+  padding: 4px 12px;
+}
+
+/* ========================================
+   28. الألعاب - Games
+   ======================================== */
+.game-container {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 2px solid var(--mint);
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--mint-deep);
+}
+
+.game-score {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--gold);
+}
+
+.game-question {
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.game-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.game-option {
+  padding: 15px;
+  border-radius: 14px;
+  border: 2px solid #ddd;
+  background: #f9f9f9;
+  cursor: pointer;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.game-option:hover {
+  transform: scale(1.05);
+  border-color: var(--mint);
+}
+
+.game-option.correct {
+  background: #E8F5E9;
+  border-color: #2E7D32;
+  color: #2E7D32;
+}
+
+.game-option.wrong {
+  background: #FFEBEE;
+  border-color: #C62828;
+  color: #C62828;
+}
+
+.game-feedback {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  min-height: 30px;
+}
+
+/* ========================================
+   29. شريط التقدم - Progress Bar
+   ======================================== */
+.progress-bar-container {
+  width: 100%;
+  background: #e0e0e0;
+  border-radius: 20px;
+  height: 20px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4FB6A8, #357E74);
+  border-radius: 20px;
+  transition: width 0.5s ease;
+  text-align: center;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 20px;
+  min-width: 30px;
+}
+
+/* ========================================
+   30. الإشعارات الجانبية - Notifications
+   ======================================== */
+.notification-container {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.notification-item {
+  background: white;
+  border-right: 4px solid var(--mint-deep);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.notification-item.success {
+  border-right-color: #2E7D32;
+}
+
+.notification-item.info {
+  border-right-color: #0288D1;
+}
+
+.notification-item.warning {
+  border-right-color: #F57F17;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ========================================
+   31. لوحة الملخص - Summary Dashboard
+   ======================================== */
+.summary-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.summary-item {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 15px;
+  text-align: center;
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.summary-item .number {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--mint-deep);
+}
+
+.summary-item .label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ========================================
+   32. توجيهات أولياء الأمور - Parent Guide
+   ======================================== */
+.parent-guide-section {
+  margin-bottom: 25px;
+}
+
+.parent-guide-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--mint-deep);
+  margin-bottom: 10px;
+  border-bottom: 2px solid var(--mint);
+  padding-bottom: 5px;
+}
+
+.parent-guide-tip {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.parent-guide-tip .icon {
+  font-size: 24px;
+}
+
+.exercise-box {
+  background: #F0FDFA;
+  border: 1px solid var(--mint);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 12px;
+}
+
+.exercise-box h4 {
+  margin: 0 0 8px 0;
+  color: var(--mint-deep);
+}
+
+.exercise-box ul {
+  list-style: disc;
+  padding-right: 20px;
+}
+
+.exercise-box li {
+  margin-bottom: 6px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.print-btn-guide {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* ========================================
+   33. التباين العالي - High Contrast Mode
+   ======================================== */
+body.high-contrast {
+  --bg: #000000;
+  --card-bg: #1a1a1a;
+  --text: #ffffff;
+  --muted: #cccccc;
+  --line: #ffffff;
+  --mint: #00ffcc;
+  --mint-deep: #00cc99;
+  --btn-bg: #000000;
+  --btn-border: #ffffff;
+  --btn-text: #ffffff;
+  --input-bg: #000000;
+  --shadow: 0 0 10px #00ffcc;
+}
+
+body.high-contrast .btn-primary {
+  background: #ffffff;
+  color: #000000;
+}
+
+body.high-contrast .btn-soft {
+  background: #000000;
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+}
+
+body.high-contrast .letter-circle {
+  background: #ffffff;
+  color: #000000;
+}
+
+body.high-contrast .audio-btn {
+  background: #00ffcc;
+  color: #000000;
+}
+
+body.high-contrast .eval-btn.passed,
+body.high-contrast .eval-btn.trained,
+body.high-contrast .eval-btn.need,
+body.high-contrast .eval-btn.unclear {
+  background: #000000;
+  border: 1px solid #ffffff;
+}
+
+body.high-contrast .eval-btn.passed {
+  color: #00ff00;
+}
+
+body.high-contrast .eval-btn.trained {
+  color: #00ccff;
+}
+
+body.high-contrast .eval-btn.need {
+  color: #ffcc00;
+}
+
+body.high-contrast .eval-btn.unclear {
+  color: #ff6666;
+}
+
+body.high-contrast .group-title,
+body.high-contrast .sessions-table th {
+  background: #000000;
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+}
+
+body.high-contrast .game-container {
+  background: #000000;
+  border-color: #00ffcc;
+}
+
+body.high-contrast .game-option {
+  background: #000000;
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+body.high-contrast .progress-bar-container {
+  background: #333;
+}
+
+body.high-contrast .summary-item {
+  background: #000000;
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+body.high-contrast .exercise-box {
+  background: #000000;
+  border-color: #00ffcc;
+  color: #ffffff;
+}
+
+/* ========================================
+   34. تكبير الخط - Larger Text Mode
+   ======================================== */
+body.larger-text {
+  font-size: 18px;
+}
+
+body.larger-text .btn,
+body.larger-text .btn-nav,
+body.larger-text input,
+body.larger-text select,
+body.larger-text textarea {
+  font-size: 16px;
+}
+
+body.larger-text .card h3 {
+  font-size: 22px;
+}
+
+body.larger-text .brand h1 {
+  font-size: 26px;
+}
+
+body.larger-text .letter-circle {
+  width: 80px;
+  height: 80px;
+  font-size: 40px;
+}
+
+body.larger-text .letter-title {
+  font-size: 16px;
+}
+
+body.larger-text .eval-btn {
+  font-size: 12px;
+}
+
+body.larger-text .vocab-item .word {
+  font-size: 22px;
+}
+
+body.larger-text .muted {
+  font-size: 15px;
+}
+
+body.larger-text .game-question {
+  font-size: 32px;
+}
+
+body.larger-text .game-option {
+  font-size: 26px;
+}
+
+body.larger-text .parent-guide-title {
+  font-size: 24px;
+}
+
+body.larger-text .parent-guide-tip {
+  font-size: 18px;
+}
+
+body.larger-text .exercise-box li {
+  font-size: 17px;
+}
+
+/* ========================================
+   35. الطباعة - Print Styles
+   ======================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #iep-print-area,
+  #iep-print-area * {
+    visibility: visible;
+  }
+  
+  #iep-print-area {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    background: white;
+    padding: 20px;
+    display: block !important;
+  }
+  
+  .topbar,
+  .btn,
+  .nav-btns,
+  footer,
+  .no-print,
+  #app {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   36. استجابة الجوال - Mobile Responsive
+   ======================================== */
+@media (max-width: 768px) {
+  #app {
+    padding: 15px 12px 30px;
+  }
+  
+  .brand h1 {
+    font-size: 17px;
+  }
+  
+  .brand .mark {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 15px;
+    border-radius: 14px;
+  }
+  
+  .diag-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .game-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .summary-dashboard {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .topbar {
+    padding: 8px 2px 16px;
+  }
+  
