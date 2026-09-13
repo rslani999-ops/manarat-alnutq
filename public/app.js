@@ -38,6 +38,7 @@ import {
 /* ========================================
    2. إعدادات Firebase - Firebase Config
    ======================================== */
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
   authDomain: "manarat-alnutq.firebaseapp.com",
