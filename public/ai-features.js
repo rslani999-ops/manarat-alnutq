@@ -38,7 +38,13 @@ async function callGeminiAI(prompt, type = 'general') {
    2. توليد توصيات ذكية بعد جلسة
    ======================================== */
 async function generateSessionRecommendations(sessionData, studentData) {
-  const typeInfo = SESSION_TYPES.find(t => t.id === sessionData.sessionType) || SESSION_TYPES[0];
+   const sessionTypes = window.SESSION_TYPES || [
+    { id: 1, name: 'الحرف مجرداً' },
+    { id: 2, name: 'الحرف مع الحركات' },
+    { id: 3, name: 'الحرف في كلمات' },
+    { id: 4, name: 'الحرف في جمل' }
+  ];
+  const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
   
   const prompt = `
 أنت مساعد تعليمي متخصص في تدريب النطق للأطفال (4-12 سنة).
@@ -89,7 +95,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
       
       <div style="background:#F0FDFA;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid var(--mint-deep);">
         <div style="font-size:13px;color:#555;margin-bottom:6px;">
-          <strong>📋 جلسة:</strong> حرف (${sessionData.letter}) - ${SESSION_TYPES.find(t => t.id === sessionData.sessionType)?.name || ''}
+          <strong>📋 جلسة:</strong> حرف (${sessionData.letter}) - ${(window.SESSION_TYPES || []).find(t => t.id === sessionData.sessionType)?.name || ''}
         </div>
         <div style="font-size:13px;color:#555;">
           <strong>📊 نسبة النجاح:</strong> ${sessionData.successRate || 0}%
@@ -148,7 +154,16 @@ function showAIRecommendationsModal(recommendations, sessionData) {
    ======================================== */
 async function saveAIToSession(sessionId, recommendations) {
   try {
-    await updateDoc(doc(db, "sessions", sessionId), {
+      const fbDb = window.db;
+    const fbDoc = window.doc;
+    const fbUpdateDoc = window.updateDoc;
+    
+    if (!fbDb || !fbDoc || !fbUpdateDoc) {
+      showToast('⚠️ Firebase غير جاهز');
+      return;
+    }
+    
+    await fbUpdateDoc(fbDoc(fbDb, "sessions", sessionId), {
       aiRecommendations: recommendations,
       aiGeneratedAt: new Date().toISOString()
     });
