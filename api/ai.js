@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     }
 
     // Determine AI model and settings based on type
-    const model = 'gemini-2.0-flash-lite';
+    const model = 'gemini-3.5-flash-lite';
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
 
     const requestBody = {
