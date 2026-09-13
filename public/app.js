@@ -3400,9 +3400,20 @@ function renderSingleSession(app) {
         <p style="font-size:13px;color:#555;margin-bottom:12px;">
           احصل على تحليل ذكي لأداء الطالب وتوصيات مخصصة للجلسة القادمة
         </p>
+        <div id="aiButtonsContainer" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;"></div>
       `;
+      const buttonsContainer = aiSection.querySelector('#aiButtonsContainer');
+      
+      // زر التوصيات الذكية
       const aiBtn = window.createAIButton(sess, state.currentStudent || {});
-      aiSection.appendChild(aiBtn);
+      buttonsContainer.appendChild(aiBtn);
+      
+      // ✨ زر التمارين المنزلية الجديد
+      if (typeof window.createHomeworkButton === 'function') {
+        const hwBtn = window.createHomeworkButton(sess, state.currentStudent || {});
+        buttonsContainer.appendChild(hwBtn);
+      }
+      
       app.appendChild(aiSection);
     }
   }
@@ -3859,8 +3870,7 @@ function printIEP(student, iepData) {
 }
 
 /* ========================================
-   38. عرض الحروف - Letter Display
-   ======================================== */
+   38. عرض الحروف - Letter Display   ======================================== */
 function renderLetterDisplay(app) {
   renderTopbar(app, '🔤 الحروف الأبجدية', '28 حرفاً مع الصور', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
