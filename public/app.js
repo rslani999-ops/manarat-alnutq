@@ -787,12 +787,9 @@ async function loadProfileData(container) {
     } catch(e) { console.warn(e); }
     
     let studentsCount = 0;
-    if (isTeacher) {
-      studentsCount = state.myStudents.length;
-    }
+    if (isTeacher) studentsCount = state.myStudents.length;
     
     const points = isTeacher ? 0 : calculateStudentPoints(userData);
-    
     const diag = userData.diagnostic || {};
     const passedLetters = isTeacher ? 0 : ALL_LETTERS.filter(l => diag[l]?.status === 'passed').length;
     
@@ -1479,6 +1476,7 @@ async function renderTeacherDashboard(app) {
           <button class="btn btn-primary btn-sm" id="diag_${st.id}">التشخيص</button>
           <button class="btn btn-soft btn-sm" id="prof_${st.id}">الجلسات</button>
           <button class="btn btn-success btn-sm" id="achv_${st.id}">الإنجاز</button>
+          <button class="btn btn-sm" id="prog_${st.id}" style="background:#0891B2;color:white;">📊 تحليل AI</button>
           <button class="btn btn-danger btn-sm" id="rem_${st.id}">إزالة</button>
         </div>
       `;
@@ -1504,6 +1502,16 @@ async function renderTeacherDashboard(app) {
           state.currentStudent = st;
           state.view = 'achievement';
           render();
+        };
+        const progBtn = document.getElementById(`prog_${st.id}`);
+        if (progBtn) progBtn.onclick = () => {
+          state.currentStudent = st;
+          if (typeof window.createProgressAnalysisButton === 'function') {
+            const tempBtn = window.createProgressAnalysisButton(st);
+            tempBtn.click();
+          } else {
+            showToast('⚠️ ميزة التحليل غير متوفرة');
+          }
         };
         const remBtn = document.getElementById(`rem_${st.id}`);
         if (remBtn) remBtn.onclick = () => window.removeStudent(st.id);
@@ -1775,12 +1783,7 @@ function renderParentGuide(app) {
   exercises.forEach(ex => {
     const box = document.createElement('div');
     box.className = 'exercise-box';
-    box.innerHTML = `
-      <h4>${ex.title}</h4>
-      <ul>
-        ${ex.items.map(item => `<li>${item}</li>`).join('')}
-      </ul>
-    `;
+    box.innerHTML = `<h4>${ex.title}</h4><ul>${ex.items.map(item => `<li>${item}</li>`).join('')}</ul>`;
     exercisesSection.appendChild(box);
   });
   container.appendChild(exercisesSection);
@@ -1792,9 +1795,7 @@ function renderParentGuide(app) {
   weeklyTable.className = 'card';
   weeklyTable.innerHTML = `
     <table class="sessions-table" style="font-size:13px;">
-      <thead>
-        <tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr>
-      </thead>
+      <thead><tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr></thead>
       <tbody>
         <tr><td>السبت</td><td>تمارين اللسان + تكرار الحرف المستهدف</td><td>10 دقائق</td></tr>
         <tr><td>الأحد</td><td>قراءة قصة + مناقشة الصور</td><td>10 دقائق</td></tr>
@@ -1833,11 +1834,7 @@ function renderParentGuide(app) {
   app.appendChild(container);
 
   const printBtn = container.querySelector('#printGuideBtn');
-  if (printBtn) {
-    printBtn.onclick = () => {
-      printParentGuide(container.innerHTML);
-    };
-  }
+  if (printBtn) printBtn.onclick = () => printParentGuide(container.innerHTML);
 }
 
 function printParentGuide(contentHTML) {
@@ -1861,7 +1858,6 @@ function printParentGuide(contentHTML) {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
-
 
 
 
