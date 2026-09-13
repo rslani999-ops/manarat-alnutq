@@ -787,12 +787,9 @@ async function loadProfileData(container) {
     } catch(e) { console.warn(e); }
     
     let studentsCount = 0;
-    if (isTeacher) {
-      studentsCount = state.myStudents.length;
-    }
+    if (isTeacher) studentsCount = state.myStudents.length;
     
     const points = isTeacher ? 0 : calculateStudentPoints(userData);
-    
     const diag = userData.diagnostic || {};
     const passedLetters = isTeacher ? 0 : ALL_LETTERS.filter(l => diag[l]?.status === 'passed').length;
     
@@ -901,10 +898,7 @@ async function loadProfileData(container) {
     if (saveProfileBtn) {
       saveProfileBtn.onclick = async () => {
         const newName = container.querySelector('#profileFullName').value.trim();
-        if (!newName) {
-          showToast('❌ الاسم لا يمكن أن يكون فارغاً');
-          return;
-        }
+        if (!newName) { showToast('❌ الاسم لا يمكن أن يكون فارغاً'); return; }
         saveProfileBtn.disabled = true;
         saveProfileBtn.textContent = '⏳ جاري الحفظ...';
         try {
@@ -929,19 +923,12 @@ async function loadProfileData(container) {
         const parentName = container.querySelector('#profileParentName').value.trim();
         const parentEmail = container.querySelector('#profileParentEmail').value.trim();
         const parentPhone = container.querySelector('#profileParentPhone').value.trim();
-        
-        if (parentEmail && !parentEmail.includes('@')) {
-          showToast('❌ البريد الإلكتروني غير صحيح');
-          return;
-        }
-        
+        if (parentEmail && !parentEmail.includes('@')) { showToast('❌ البريد الإلكتروني غير صحيح'); return; }
         saveParentProfileBtn.disabled = true;
         saveParentProfileBtn.textContent = '⏳ جاري الحفظ...';
         try {
           await updateDoc(doc(db, "users", state.user.uid), {
-            parentName: parentName,
-            parentEmail: parentEmail,
-            parentPhone: parentPhone
+            parentName, parentEmail, parentPhone
           });
           showToast('✅ تم حفظ بيانات ولي الأمر');
           saveParentProfileBtn.disabled = false;
@@ -957,13 +944,11 @@ async function loadProfileData(container) {
     const resetPasswordProfileBtn = container.querySelector('#resetPasswordProfileBtn');
     if (resetPasswordProfileBtn) {
       resetPasswordProfileBtn.onclick = async () => {
-        if (!confirm('هل تريد إرسال رابط تغيير كلمة المرور إلى بريدك الإلكتروني؟')) return;
+        if (!confirm('هل تريد إرسال رابط تغيير كلمة المرور؟')) return;
         try {
           await sendPasswordResetEmail(auth, email);
-          showToast('✅ تم إرسال الرابط إلى بريدك الإلكتروني');
-        } catch(e) {
-          showToast('❌ فشل الإرسال: ' + e.message);
-        }
+          showToast('✅ تم إرسال الرابط');
+        } catch(e) { showToast('❌ فشل الإرسال: ' + e.message); }
       };
     }
     
@@ -1029,8 +1014,7 @@ function renderLetterTraining(app) {
     btn.onmouseover = () => { btn.style.background = '#EAF6F4'; btn.style.transform = 'scale(1.1)'; };
     btn.onmouseout = () => { btn.style.background = 'white'; btn.style.transform = 'scale(1)'; };
     btn.onclick = () => {
-      const letter = btn.dataset.letter;
-      showTrainingSession(trainingArea, letter);
+      showTrainingSession(trainingArea, btn.dataset.letter);
     };
   });
 }
@@ -1101,7 +1085,7 @@ function showTrainingSession(area, letter) {
       feedbackEl.innerHTML = '🎤 جاري الاستماع...';
       startRecording(l, (transcript, analysis) => {
         if (!transcript) {
-          feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
+          feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت.';
           feedbackEl.style.color = 'var(--fail)';
           return;
         }
@@ -1345,10 +1329,10 @@ function renderResetPassword(app) {
     if (!email) return showToast('يرجى كتابة البريد الإلكتروني');
     try {
       await sendPasswordResetEmail(auth, email);
-      showToast('تم إرسال رابط إعادة التعيين لبريدك الإلكتروني');
+      showToast('تم إرسال رابط إعادة التعيين');
       state.view = 'auth';
       render();
-    } catch (e) { showToast('تعذر الإرسال: تأكد من صحة البريد الإلكتروني'); }
+    } catch (e) { showToast('تعذر الإرسال: تأكد من صحة البريد'); }
   };
   const backBtn = card.querySelector('#backToLogin');
   if (backBtn) backBtn.onclick = () => { state.view = 'auth'; render(); };
@@ -1408,9 +1392,7 @@ async function renderTeacherDashboard(app) {
       const sessionsSnap = await getDocs(sessionsQuery);
       totalSessionsCount = sessionsSnap.size;
       sessionsSnap.forEach(d => allSessionsForTeacher.push({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn('تعذر جلب عدد الجلسات:', e);
-    }
+    } catch (e) { console.warn('تعذر جلب عدد الجلسات:', e); }
   }
 
   const summaryDashboard = document.createElement('div');
@@ -1446,9 +1428,7 @@ async function renderTeacherDashboard(app) {
     if (state.currentStudent) {
       state.diagEval = state.currentStudent.diagnostic || {};
       state.view = 'speech-sessions';
-    } else {
-      showToast('لا يوجد طلاب مضافون');
-    }
+    } else { showToast('لا يوجد طلاب مضافون'); }
     render();
   };
   const btnSessionsLog = actCard.querySelector('#btnSessionsLog');
@@ -1479,6 +1459,7 @@ async function renderTeacherDashboard(app) {
           <button class="btn btn-primary btn-sm" id="diag_${st.id}">التشخيص</button>
           <button class="btn btn-soft btn-sm" id="prof_${st.id}">الجلسات</button>
           <button class="btn btn-success btn-sm" id="achv_${st.id}">الإنجاز</button>
+          <button class="btn btn-info btn-sm" id="prog_${st.id}" style="background:#0891B2;color:white;">📊 تحليل AI</button>
           <button class="btn btn-danger btn-sm" id="rem_${st.id}">إزالة</button>
         </div>
       `;
@@ -1505,6 +1486,22 @@ async function renderTeacherDashboard(app) {
           state.view = 'achievement';
           render();
         };
+        
+        // ✨ زر تحليل التقدم الجديد
+        const progBtn = document.getElementById(`prog_${st.id}`);
+        if (progBtn) {
+          progBtn.onclick = () => {
+            state.currentStudent = st;
+            // استدعاء دالة التحليل من ai-features.js
+            if (typeof window.createProgressAnalysisButton === 'function') {
+              const tempBtn = window.createProgressAnalysisButton(st);
+              tempBtn.click();
+            } else {
+              showToast('⚠️ ميزة التحليل غير متوفرة');
+            }
+          };
+        }
+        
         const remBtn = document.getElementById(`rem_${st.id}`);
         if (remBtn) remBtn.onclick = () => window.removeStudent(st.id);
       }, 0);
@@ -1775,12 +1772,7 @@ function renderParentGuide(app) {
   exercises.forEach(ex => {
     const box = document.createElement('div');
     box.className = 'exercise-box';
-    box.innerHTML = `
-      <h4>${ex.title}</h4>
-      <ul>
-        ${ex.items.map(item => `<li>${item}</li>`).join('')}
-      </ul>
-    `;
+    box.innerHTML = `<h4>${ex.title}</h4><ul>${ex.items.map(item => `<li>${item}</li>`).join('')}</ul>`;
     exercisesSection.appendChild(box);
   });
   container.appendChild(exercisesSection);
@@ -1792,9 +1784,7 @@ function renderParentGuide(app) {
   weeklyTable.className = 'card';
   weeklyTable.innerHTML = `
     <table class="sessions-table" style="font-size:13px;">
-      <thead>
-        <tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr>
-      </thead>
+      <thead><tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr></thead>
       <tbody>
         <tr><td>السبت</td><td>تمارين اللسان + تكرار الحرف المستهدف</td><td>10 دقائق</td></tr>
         <tr><td>الأحد</td><td>قراءة قصة + مناقشة الصور</td><td>10 دقائق</td></tr>
@@ -1833,11 +1823,7 @@ function renderParentGuide(app) {
   app.appendChild(container);
 
   const printBtn = container.querySelector('#printGuideBtn');
-  if (printBtn) {
-    printBtn.onclick = () => {
-      printParentGuide(container.innerHTML);
-    };
-  }
+  if (printBtn) printBtn.onclick = () => printParentGuide(container.innerHTML);
 }
 
 function printParentGuide(contentHTML) {
@@ -1861,7 +1847,6 @@ function printParentGuide(contentHTML) {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
-
 
 
 
@@ -2398,11 +2383,13 @@ async function renderAchievement(app) {
       <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
         <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${passedLetters.length} حرف متقن (تحسن ${passedLetters.length} حرف)
       </div>
-      <div style="text-align:center; margin-top:20px;">
+      <div style="text-align:center; margin-top:20px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
         <button class="btn btn-primary" id="printAchievementBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>
+        <button class="btn btn-primary" id="aiProgressAnalysisBtn" style="border-radius:50px;padding:10px 30px;background:linear-gradient(135deg, #06B6D4, #0891B2);">📊 تحليل التقدم (AI)</button>
       </div>
     `;
     app.appendChild(card);
+    
     const printBtn = card.querySelector('#printAchievementBtn');
     if (printBtn) {
       printBtn.onclick = () => {
@@ -2410,6 +2397,19 @@ async function renderAchievement(app) {
           passedLetters, needLetters, trainedLetters, totalSessions, averageSuccess,
           masteryPercentage, achievementLevel, achievementIcon, points, weeklyStats
         });
+      };
+    }
+    
+    // ✨ زر تحليل التقدم بالذكاء الاصطناعي
+    const aiProgressBtn = card.querySelector('#aiProgressAnalysisBtn');
+    if (aiProgressBtn) {
+      aiProgressBtn.onclick = () => {
+        if (typeof window.createProgressAnalysisButton === 'function') {
+          const tempBtn = window.createProgressAnalysisButton(state.currentStudent);
+          tempBtn.click();
+        } else {
+          showToast('⚠️ ميزة التحليل غير متوفرة');
+        }
       };
     }
   } catch (e) {
@@ -2816,11 +2816,11 @@ function renderDiagnosticSession(app) {
           const feedbackEl = document.getElementById(`feedback_${l}`);
           startRecording(l, (transcript, analysis, audioUrl) => {
             if (!transcript) {
-              if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
+              if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت.';
               return;
             }
             if (analysis.isMatch) {
-              if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح. (النص: "${transcript}")`;
+              if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح.`;
               if (!state.diagEval[l]) state.diagEval[l] = {};
               state.diagEval[l].status = 'passed';
               state.diagEval[l].disorderType = 'طبيعي';
@@ -2847,11 +2847,11 @@ function renderDiagnosticSession(app) {
           const feedbackEl = document.getElementById(`feedback_${l}`);
           startRecording(word, (transcript, analysis, audioUrl) => {
             if (!transcript) {
-              if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
+              if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت.';
               return;
             }
             if (analysis.isMatch) {
-              if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${word}) صحيح. (النص: "${transcript}")`;
+              if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${word}) صحيح.`;
               showToast('🎉 أحسنت! نطق صحيح');
             } else {
               const similarity = analysis.similarityPercent !== undefined ? ` | التشابه: ${analysis.similarityPercent}%` : '';
@@ -3268,7 +3268,6 @@ async function renderSpeechSessions(app) {
   }
   app.appendChild(listCard);
 }
-
 
 
 
