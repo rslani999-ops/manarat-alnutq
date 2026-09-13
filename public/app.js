@@ -1,4 +1,3 @@
-
 /* ========================================
    منارة النطق - التطبيق الرئيسي
    Manarat Al-Nutq - Main Application
@@ -1500,24 +1499,15 @@ async function renderTeacherDashboard(app) {
           state.view = 'speech-sessions';
           render();
         };
-  const achvBtn = document.getElementById(`achv_${st.id}`);
-if (achvBtn) achvBtn.onclick = () => {
-  state.currentStudent = st;
-  state.view = 'achievement';
-  render();
-};
-const progBtn = document.getElementById(`prog_${st.id}`);
-if (progBtn) progBtn.onclick = () => {
-  state.currentStudent = st;
-  if (typeof window.createProgressAnalysisButton === 'function') {
-    const tempBtn = window.createProgressAnalysisButton(st);
-    tempBtn.click();
-  } else {
-    showToast('⚠️ ميزة التحليل غير متوفرة');
-  }
-};
-const remBtn = document.getElementById(`rem_${st.id}`);
-if (remBtn) remBtn.onclick = () => window.removeStudent(st.id);
+        const achvBtn = document.getElementById(`achv_${st.id}`);
+        if (achvBtn) achvBtn.onclick = () => {
+          state.currentStudent = st;
+          state.view = 'achievement';
+          render();
+        };
+        const remBtn = document.getElementById(`rem_${st.id}`);
+        if (remBtn) remBtn.onclick = () => window.removeStudent(st.id);
+      }, 0);
     });
   }
   app.appendChild(myCard);
@@ -1562,15 +1552,9 @@ if (remBtn) remBtn.onclick = () => window.removeStudent(st.id);
     state.freeStudents.forEach(st => {
       const row = document.createElement('div');
       row.className = 'student-row';
-     row.innerHTML = `
-        <div><strong>${st.fullName || st.email}</strong> <span class="badge badge-assigned">طالبك المباشر</span></div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="btn btn-primary btn-sm" id="diag_${st.id}">التشخيص</button>
-          <button class="btn btn-soft btn-sm" id="prof_${st.id}">الجلسات</button>
-          <button class="btn btn-success btn-sm" id="achv_${st.id}">الإنجاز</button>
-          <button class="btn btn-sm" id="prog_${st.id}" style="background:#0891B2;color:white;">📊 تحليل AI</button>
-          <button class="btn btn-danger btn-sm" id="rem_${st.id}">إزالة</button>
-        </div>
+      row.innerHTML = `
+        <div><strong>${st.fullName || st.email}</strong> <span class="badge badge-free">متاح للإضافة</span></div>
+        <button class="btn btn-success btn-sm" id="claim_${st.id}">إضافة لقائمتي</button>
       `;
       freeCard.appendChild(row);
       setTimeout(() => {
