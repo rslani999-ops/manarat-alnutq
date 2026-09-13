@@ -2766,6 +2766,25 @@ async function renderSpeechSessions(app) {
   app.appendChild(listCard);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ========================================
    30. عرض جلسة واحدة - Single Session
    ======================================== */
@@ -2862,6 +2881,24 @@ function renderSingleSession(app) {
       };
       sendSessionToParent(sessionData, studentData);
     };
+  }
+
+  // زر التوصيات الذكية AI
+  if (state.role === 'teacher' || state.role === 'admin') {
+    if (typeof window.createAIButton === 'function') {
+      const aiSection = document.createElement('div');
+      aiSection.className = 'card';
+      aiSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
+      aiSection.innerHTML = `
+        <h3 style="color:#6D28D9;margin-bottom:8px;">🤖 توصيات الذكاء الاصطناعي</h3>
+        <p style="font-size:13px;color:#555;margin-bottom:12px;">
+          احصل على تحليل ذكي لأداء الطالب وتوصيات مخصصة للجلسة القادمة
+        </p>
+      `;
+      const aiBtn = window.createAIButton(sess, state.currentStudent || {});
+      aiSection.appendChild(aiBtn);
+      app.appendChild(aiSection);
+    }
   }
 
   if (state.role === 'teacher' || state.role === 'admin') {
@@ -3353,5 +3390,13 @@ function initApp() {
     }
   });
 }
+
+/* ========================================
+   AI Integration - ربط الذكاء الاصطناعي
+   (يُضاف تلقائياً في صفحة الجلسة)
+   ======================================== */
+(function initAIIntegration() {
+  console.log('✅ AI Integration initialized');
+})();
 
 initApp();
