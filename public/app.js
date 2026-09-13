@@ -36,6 +36,21 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 
 /* ========================================
+   تصدير استيرادات Firebase للاستخدام الخارجي
+   Export Firebase Functions for External Modules
+   ======================================== */
+window.doc = doc;
+window.updateDoc = updateDoc;
+window.getDoc = getDoc;
+window.setDoc = setDoc;
+window.addDoc = addDoc;
+window.getDocs = getDocs;
+window.query = query;
+window.where = where;
+window.collection = collection;
+window.deleteDoc = deleteDoc;
+
+/* ========================================
    2. إعدادات Firebase - Firebase Config
    ======================================== */
 const firebaseConfig = {
@@ -53,6 +68,14 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+/* ========================================
+   تصدير نسخ Firebase للاستخدام الخارجي
+   Export Firebase Instances for External Modules
+   ======================================== */
+window.db = db;
+window.auth = auth;
+window.storage = storage;
 
 /* ========================================
    3. دوال مساعدة لـ Firebase - Firebase Helpers
@@ -554,6 +577,22 @@ function getWeeklyStats(sessions) {
 window.getWeeklyStats = getWeeklyStats;
 
 /* ========================================
+   تصدير البيانات والدوال للوحدة الذكاء الاصطناعي
+   Export Data & Functions for AI Module
+   ======================================== */
+window.SESSION_TYPES = SESSION_TYPES;
+window.ALL_LETTERS = ALL_LETTERS;
+window.VOCAB_LISTS = VOCAB_LISTS;
+window.VOCAB_CATEGORIES = VOCAB_CATEGORIES;
+window.LETTER_GROUPS = LETTER_GROUPS;
+window.DISORDER_TYPES = DISORDER_TYPES;
+window.alphabetData = alphabetData;
+window.letterTitleMap = letterTitleMap;
+window.showToast = showToast;
+window.getDefaultGoal = getDefaultGoal;
+window.analyzePronunciation = analyzePronunciation;
+
+/* ========================================
    13. الشريط العلوي - Topbar Renderer
    ======================================== */
 function renderTopbar(appContainer, title, sub, onBack) {
@@ -594,7 +633,6 @@ function renderTopbar(appContainer, title, sub, onBack) {
     };
     actions.appendChild(btnDash);
     
-    // زر الملف الشخصي الجديد - New Profile Button
     const btnProfile = document.createElement('button');
     btnProfile.className = 'btn-nav';
     btnProfile.textContent = '👤 ملفي';
@@ -689,6 +727,27 @@ function showPrivacyPolicy() {
   if (closeBtn) closeBtn.onclick = () => modal.remove();
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ========================================
    15. التصيير الرئيسي - Main Renderer
