@@ -3383,9 +3383,7 @@ function renderSingleSession(app) {
     };
   }
 
-  // ==========================================
-  // 🤖 قسم الذكاء الاصطناعي - AI Section
-  // ==========================================
+  // قسم الذكاء الاصطناعي
   if (state.role === 'teacher' || state.role === 'admin') {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
@@ -3400,11 +3398,9 @@ function renderSingleSession(app) {
       `;
       const buttonsContainer = aiSection.querySelector('#aiButtonsContainer');
       
-      // زر التوصيات الذكية
       const aiBtn = window.createAIButton(sess, state.currentStudent || {});
       buttonsContainer.appendChild(aiBtn);
       
-      // ✨ زر التمارين المنزلية الجديد
       if (typeof window.createHomeworkButton === 'function') {
         const hwBtn = window.createHomeworkButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(hwBtn);
@@ -3866,7 +3862,8 @@ function printIEP(student, iepData) {
 }
 
 /* ========================================
-   38. عرض الحروف - Letter Display   ======================================== */
+   38. عرض الحروف - Letter Display
+   ======================================== */
 function renderLetterDisplay(app) {
   renderTopbar(app, '🔤 الحروف الأبجدية', '28 حرفاً مع الصور', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -3902,5 +3899,23 @@ function initApp() {
     }
   });
 }
+
+/* ========================================
+   تصدير Firebase للذكاء الاصطناعي
+   Export Firebase for AI Features
+   ======================================== */
+window.db = db;
+window.auth = auth;
+window.storage = storage;
+window.doc = doc;
+window.getDoc = getDoc;
+window.setDoc = setDoc;
+window.updateDoc = updateDoc;
+window.addDoc = addDoc;
+window.getDocs = getDocs;
+window.deleteDoc = deleteDoc;
+window.collection = collection;
+window.query = query;
+window.where = where;
 
 initApp();
