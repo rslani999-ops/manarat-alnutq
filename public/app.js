@@ -36,21 +36,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 
 /* ========================================
-   تصدير استيرادات Firebase للاستخدام الخارجي
-   Export Firebase Functions for External Modules
-   ======================================== */
-window.doc = doc;
-window.updateDoc = updateDoc;
-window.getDoc = getDoc;
-window.setDoc = setDoc;
-window.addDoc = addDoc;
-window.getDocs = getDocs;
-window.query = query;
-window.where = where;
-window.collection = collection;
-window.deleteDoc = deleteDoc;
-
-/* ========================================
    2. إعدادات Firebase - Firebase Config
    ======================================== */
 const firebaseConfig = {
@@ -68,14 +53,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-
-/* ========================================
-   تصدير نسخ Firebase للاستخدام الخارجي
-   Export Firebase Instances for External Modules
-   ======================================== */
-window.db = db;
-window.auth = auth;
-window.storage = storage;
 
 /* ========================================
    3. دوال مساعدة لـ Firebase - Firebase Helpers
@@ -577,22 +554,6 @@ function getWeeklyStats(sessions) {
 window.getWeeklyStats = getWeeklyStats;
 
 /* ========================================
-   تصدير البيانات والدوال للوحدة الذكاء الاصطناعي
-   Export Data & Functions for AI Module
-   ======================================== */
-window.SESSION_TYPES = SESSION_TYPES;
-window.ALL_LETTERS = ALL_LETTERS;
-window.VOCAB_LISTS = VOCAB_LISTS;
-window.VOCAB_CATEGORIES = VOCAB_CATEGORIES;
-window.LETTER_GROUPS = LETTER_GROUPS;
-window.DISORDER_TYPES = DISORDER_TYPES;
-window.alphabetData = alphabetData;
-window.letterTitleMap = letterTitleMap;
-window.showToast = showToast;
-window.getDefaultGoal = getDefaultGoal;
-window.analyzePronunciation = analyzePronunciation;
-
-/* ========================================
    13. الشريط العلوي - Topbar Renderer
    ======================================== */
 function renderTopbar(appContainer, title, sub, onBack) {
@@ -728,27 +689,6 @@ function showPrivacyPolicy() {
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ========================================
    15. التصيير الرئيسي - Main Renderer
    ======================================== */
@@ -777,6 +717,8 @@ function render() {
   if (state.view === 'student-profile') return renderStudentProfile(app);
   if (state.view === 'letter-training') return renderLetterTraining(app);
 }
+
+
 
 
 
@@ -835,7 +777,6 @@ async function loadProfileData(container) {
     const email = userData.email || state.user.email || '';
     const roleLabel = state.role === 'teacher' ? 'معلم' : state.role === 'admin' ? 'مدير' : 'طالب';
     
-    // عدد الجلسات
     let sessionsCount = 0;
     try {
       const qS = isTeacher
@@ -845,22 +786,18 @@ async function loadProfileData(container) {
       sessionsCount = snap.size;
     } catch(e) { console.warn(e); }
     
-    // عدد الطلاب (للمعلم)
     let studentsCount = 0;
     if (isTeacher) {
       studentsCount = state.myStudents.length;
     }
     
-    // النقاط (للطالب)
     const points = isTeacher ? 0 : calculateStudentPoints(userData);
     
-    // الحروف المتقنة (للطالب)
     const diag = userData.diagnostic || {};
     const passedLetters = isTeacher ? 0 : ALL_LETTERS.filter(l => diag[l]?.status === 'passed').length;
     
     container.innerHTML = '';
     
-    // بطاقة الهوية
     const identityCard = document.createElement('div');
     identityCard.className = 'card';
     identityCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
@@ -874,7 +811,6 @@ async function loadProfileData(container) {
     `;
     container.appendChild(identityCard);
     
-    // الإحصائيات
     const statsCard = document.createElement('div');
     statsCard.className = 'card';
     statsCard.innerHTML = `
@@ -903,7 +839,6 @@ async function loadProfileData(container) {
     `;
     container.appendChild(statsCard);
     
-    // تعديل البيانات الأساسية
     const editCard = document.createElement('div');
     editCard.className = 'card';
     editCard.innerHTML = `
@@ -921,7 +856,6 @@ async function loadProfileData(container) {
     `;
     container.appendChild(editCard);
     
-    // بيانات ولي الأمر (للطالب فقط)
     if (!isTeacher) {
       const parentCard = document.createElement('div');
       parentCard.className = 'card';
@@ -944,7 +878,6 @@ async function loadProfileData(container) {
       container.appendChild(parentCard);
     }
     
-    // تغيير كلمة المرور
     const passwordCard = document.createElement('div');
     passwordCard.className = 'card';
     passwordCard.innerHTML = `
@@ -954,7 +887,6 @@ async function loadProfileData(container) {
     `;
     container.appendChild(passwordCard);
     
-    // زر تسجيل الخروج
     const logoutCard = document.createElement('div');
     logoutCard.className = 'card';
     logoutCard.style.borderRight = '4px solid var(--coral)';
@@ -965,9 +897,6 @@ async function loadProfileData(container) {
     `;
     container.appendChild(logoutCard);
     
-    // ===== ربط الأحداث =====
-    
-    // حفظ البيانات الأساسية
     const saveProfileBtn = container.querySelector('#saveProfileBtn');
     if (saveProfileBtn) {
       saveProfileBtn.onclick = async () => {
@@ -994,7 +923,6 @@ async function loadProfileData(container) {
       };
     }
     
-    // حفظ بيانات ولي الأمر
     const saveParentProfileBtn = container.querySelector('#saveParentProfileBtn');
     if (saveParentProfileBtn) {
       saveParentProfileBtn.onclick = async () => {
@@ -1026,7 +954,6 @@ async function loadProfileData(container) {
       };
     }
     
-    // إعادة تعيين كلمة المرور
     const resetPasswordProfileBtn = container.querySelector('#resetPasswordProfileBtn');
     if (resetPasswordProfileBtn) {
       resetPasswordProfileBtn.onclick = async () => {
@@ -1040,7 +967,6 @@ async function loadProfileData(container) {
       };
     }
     
-    // تسجيل الخروج
     const logoutProfileBtn = container.querySelector('#logoutProfileBtn');
     if (logoutProfileBtn) {
       logoutProfileBtn.onclick = async () => {
@@ -1074,7 +1000,6 @@ function renderLetterTraining(app) {
   const container = document.createElement('div');
   app.appendChild(container);
   
-  // شريط اختيار الحرف
   const selectorCard = document.createElement('div');
   selectorCard.className = 'card';
   selectorCard.innerHTML = `
@@ -1088,12 +1013,10 @@ function renderLetterTraining(app) {
   `;
   container.appendChild(selectorCard);
   
-  // منطقة التدريب
   const trainingArea = document.createElement('div');
   trainingArea.id = 'trainingArea';
   container.appendChild(trainingArea);
   
-  // عرض رسالة افتراضية
   trainingArea.innerHTML = `
     <div class="card" style="text-align:center; padding:40px;">
       <div style="font-size:60px;">👆</div>
@@ -1102,7 +1025,6 @@ function renderLetterTraining(app) {
     </div>
   `;
   
-  // ربط الأزرار
   container.querySelectorAll('.training-letter-btn').forEach(btn => {
     btn.onmouseover = () => { btn.style.background = '#EAF6F4'; btn.style.transform = 'scale(1.1)'; };
     btn.onmouseout = () => { btn.style.background = 'white'; btn.style.transform = 'scale(1)'; };
@@ -1171,7 +1093,6 @@ function showTrainingSession(area, letter) {
     </div>
   `;
   
-  // زر التسجيل
   const recordBtn = area.querySelector('#trainRecordBtn');
   if (recordBtn) {
     recordBtn.onclick = function() {
@@ -1196,7 +1117,6 @@ function showTrainingSession(area, letter) {
     };
   }
   
-  // زر الرجوع
   const backBtn = area.querySelector('#backToTrainingBtn');
   if (backBtn) {
     backBtn.onclick = () => {
@@ -1212,24 +1132,6 @@ function showTrainingSession(area, letter) {
   
   area.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ========================================
    18. الصفحة الرئيسية - Home Page
@@ -1439,7 +1341,7 @@ function renderResetPassword(app) {
   `;
   const resetBtn = card.querySelector('#resetBtn');
   if (resetBtn) resetBtn.onclick = async () => {
-    const email = document.getElementById('resetEmail').value.trim();
+    const email = card.querySelector('#resetEmail').value.trim();
     if (!email) return showToast('يرجى كتابة البريد الإلكتروني');
     try {
       await sendPasswordResetEmail(auth, email);
@@ -1864,42 +1766,10 @@ function renderParentGuide(app) {
   exercisesSection.innerHTML = `<div class="parent-guide-title">🏋️ تمارين منزلية بسيطة</div>`;
 
   const exercises = [
-    {
-      title: 'تمارين اللسان',
-      items: [
-        'أخرج اللسان ثم أدخله ببطء (10 مرات).',
-        'حرك اللسان يميناً ويساراً (10 مرات).',
-        'المس طرف الأنف باللسان (5 مرات).',
-        'المس الذقن باللسان (5 مرات).'
-      ]
-    },
-    {
-      title: 'تمارين الشفاه',
-      items: [
-        'ضم الشفاه وانفخ خديك (5 ثوانٍ).',
-        'ابتسم ابتسامة عريضة (5 ثوانٍ).',
-        'قل "ووو" مع ضم الشفاه بقوة.',
-        'قل "إييي" مع توسيع الفم.'
-      ]
-    },
-    {
-      title: 'تمارين التنفس',
-      items: [
-        'نفخ بالونات أو ريشة خفيفة.',
-        'شم زهرة (شهيق عميق) ثم إطفاء شمعة (زفير بطيء).',
-        'نفخ فقاعات صابون.',
-        'تكرار أصوات الحروف مع الزفير مثل: سسسس، شششش، فففف.'
-      ]
-    },
-    {
-      title: 'تمارين التمييز السمعي',
-      items: [
-        'لعبة "اسمع وكرر": قل كلمة واطلب من طفلك تكرارها.',
-        'لعبة "من يجد الصورة؟": اعرض صوراً واطلب تحديد الصورة التي تبدأ بحرف معين.',
-        'لعبة "صوت الحيوان": قلد صوت حيوان واطلب من الطفل تخمينه.',
-        'استمع لأغاني أطفال تحتوي على تكرار الحروف.'
-      ]
-    }
+    { title: 'تمارين اللسان', items: ['أخرج اللسان ثم أدخله ببطء (10 مرات).', 'حرك اللسان يميناً ويساراً (10 مرات).', 'المس طرف الأنف باللسان (5 مرات).', 'المس الذقن باللسان (5 مرات).'] },
+    { title: 'تمارين الشفاه', items: ['ضم الشفاه وانفخ خديك (5 ثوانٍ).', 'ابتسم ابتسامة عريضة (5 ثوانٍ).', 'قل "ووو" مع ضم الشفاه بقوة.', 'قل "إييي" مع توسيع الفم.'] },
+    { title: 'تمارين التنفس', items: ['نفخ بالونات أو ريشة خفيفة.', 'شم زهرة (شهيق عميق) ثم إطفاء شمعة (زفير بطيء).', 'نفخ فقاعات صابون.', 'تكرار أصوات الحروف مع الزفير مثل: سسسس، شششش، فففف.'] },
+    { title: 'تمارين التمييز السمعي', items: ['لعبة "اسمع وكرر": قل كلمة واطلب من طفلك تكرارها.', 'لعبة "من يجد الصورة؟": اعرض صوراً واطلب تحديد الصورة التي تبدأ بحرف معين.', 'لعبة "صوت الحيوان": قلد صوت حيوان واطلب من الطفل تخمينه.', 'استمع لأغاني أطفال تحتوي على تكرار الحروف.'] }
   ];
 
   exercises.forEach(ex => {
@@ -2012,7 +1882,581 @@ function printParentGuide(contentHTML) {
 
 
 /* ========================================
-   25. التشخيص الشامل - Comprehensive Diagnosis
+   25. الخطة الأسبوعية الذكية - Smart Weekly Plan
+   ======================================== */
+async function renderWeeklyPlan(app) {
+  renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
+    state.view = 'teacher-dashboard';
+    render();
+  });
+
+  const container = document.createElement('div');
+  container.innerHTML = `
+    <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep); margin-bottom:15px;">
+      <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 الخطة الأسبوعية المقترحة</h3>
+      <p class="muted" style="text-align:center;">تتحدث تلقائياً حسب الجلسات المكتملة وشدة الحالة</p>
+      <div style="text-align:center;margin-top:10px;">
+        <button class="btn btn-primary btn-sm" id="printWeeklyPlanBtn" style="border-radius:50px;">🖨️ طباعة / حفظ PDF</button>
+      </div>
+    </div>
+  `;
+  app.appendChild(container);
+
+  const printBtn = container.querySelector('#printWeeklyPlanBtn');
+  if (printBtn) printBtn.onclick = () => printWeeklyPlan();
+
+  if (!state.myStudents.length) {
+    const emptyCard = document.createElement('div');
+    emptyCard.className = 'card';
+    emptyCard.innerHTML = '<p class="muted">لا يوجد طلاب لعرض الخطة.</p>';
+    app.appendChild(emptyCard);
+    return;
+  }
+
+  const allSessionsSnap = await getDocs(collection(db, "sessions"));
+  const allSessions = [];
+  allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+
+  const nonConsecutiveDays = ['السبت', 'الإثنين', 'الأربعاء'];
+  const singleDay = ['الأحد'];
+
+  function getWeeklySessions(studentData) {
+    const diag = studentData.diagnostic || {};
+    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+    const severeTypes = ['حذف', 'قلب', 'خنف', 'تأتأة / تلعثم', 'حبسة'];
+    let severity = 0;
+    needLetters.forEach(letter => {
+      const info = diag[letter] || {};
+      if (severeTypes.includes(info.disorderType)) severity += 2;
+      else severity += 1;
+    });
+    if (severity <= 2) return 1;
+    else if (severity <= 4) return 2;
+    else return 3;
+  }
+
+  function getCompletedSessions(letter, studentId) {
+    return allSessions.filter(s => s.studentId === studentId && s.letter === letter && (s.evaluation === 'passed' || s.evaluation === 'trained')).length;
+  }
+
+  for (const student of state.myStudents) {
+    const studentDoc = await getDoc(doc(db, "users", student.id));
+    const studentData = studentDoc.exists() ? studentDoc.data() : {};
+    const diag = studentData.diagnostic || {};
+    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+
+    if (needLetters.length === 0) {
+      const okCard = document.createElement('div');
+      okCard.className = 'card';
+      okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً.</p>`;
+      app.appendChild(okCard);
+      continue;
+    }
+
+    const sessionsPerWeek = getWeeklySessions(studentData);
+    const daysForStudent = sessionsPerWeek === 1 ? singleDay : nonConsecutiveDays.slice(0, sessionsPerWeek);
+
+    const planCard = document.createElement('div');
+    planCard.className = 'card';
+    planCard.style.borderRight = '4px solid var(--mint-deep)';
+    planCard.innerHTML = `
+      <h4 style="margin:0;color:var(--mint-deep);">👤 ${student.fullName || student.email}</h4>
+      <p style="font-size:13px;color:#555;margin:4px 0;">
+        الجلسات الأسبوعية الموصى بها: <strong>${sessionsPerWeek}</strong> - الأيام: ${daysForStudent.join(' و ')}
+      </p>
+      <div style="margin-top:8px;">
+        ${needLetters.slice(0, 4).map(letter => {
+          const completed = getCompletedSessions(letter, student.id);
+          const totalNeeded = 4;
+          return `
+            <div style="display:flex; gap:10px; align-items:center; padding:4px 0; border-bottom:1px solid #eee;">
+              <span style="min-width:70px;">حرف ${letter}</span>
+              <span style="color:${completed >= totalNeeded ? 'green' : '#F57F17'};">${completed}/${totalNeeded} جلسات</span>
+              <button class="btn btn-soft btn-sm" onclick="speakText('${letter}')">🔊</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الجلسات الفردية فقط، دون دمج الطلاب.</p>
+    `;
+    app.appendChild(planCard);
+  }
+}
+
+function printWeeklyPlan() {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  const planContent = document.getElementById('app').innerText;
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <pre style="white-space:pre-wrap;font-size:14px;line-height:1.8;">${planContent}</pre>
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذه الخطة تلقائياً بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+
+/* ========================================
+   26. قائمة ملفات إنجاز الطلاب - Achievement List
+   ======================================== */
+async function renderStudentAchievementList(app) {
+  renderTopbar(app, '🏆 ملفات إنجاز الطلاب', 'اختر طالباً لعرض ملف إنجازه', () => {
+    state.view = 'teacher-dashboard';
+    render();
+  });
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>👥 الطلاب</h3>';
+  app.appendChild(card);
+  if (!state.myStudents.length) {
+    card.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
+    return;
+  }
+  const list = document.createElement('div');
+  list.className = 'iep-student-list';
+  card.appendChild(list);
+  state.myStudents.forEach(st => {
+    const item = document.createElement('div');
+    item.className = 'iep-student-item';
+    item.innerHTML = `
+      <div style="font-size:40px;">🧒</div>
+      <div class="student-name">${st.fullName || st.email}</div>
+      <div class="student-email">${st.email}</div>
+    `;
+    item.onclick = () => {
+      state.currentStudent = st;
+      state.view = 'achievement';
+      render();
+    };
+    list.appendChild(item);
+  });
+}
+
+/* ========================================
+   27. ملف إنجاز المعلم - Teacher Achievement
+   ======================================== */
+const TEACHER_STANDARDS = [
+  { id: 1, title: 'أداء الواجبات الوظيفية', evidences: 'سجل الدوام، سجل المناوبة والإشراف، سجل الانتظار، خطة توزيع المنهج.' },
+  { id: 2, title: 'التفاعل مع المجتمع المحلي', evidences: 'سجل مجتمعات التعلم، سجل تبادل الزيارات، تقرير درس تطبيقي، شهادات حضور.' },
+  { id: 3, title: 'التفاعل مع أولياء الأمور', evidences: 'صور من الجمعية العمومية، تقرير اجتماع مع ولي الأمر، نسخة من الخطة الأسبوعية.' },
+  { id: 4, title: 'التنويع في استراتيجيات التدريس', evidences: 'تقرير عن تطبيق استراتيجية، ملف إنجاز المعلم.' },
+  { id: 5, title: 'تحسين نتائج المتعلمين', evidences: 'نتائج الاختبارات القبلية والبعدية، كشف متابعة الطلاب.' },
+  { id: 6, title: 'إعداد وتنفيذ خطة التعلم', evidences: 'خطة توزيع المنهج، نماذج من إعداد الدروس، نماذج من الواجبات والاختبارات.' },
+  { id: 7, title: 'توظيف تقنيات ووسائل التعلم', evidences: 'صور من الوسائل التعليمية، تقرير عن برنامج تقني.' },
+  { id: 8, title: 'تهيئة البيئة التعليمية', evidences: 'تقرير تصنيف الطلاب حسب أنماط التعلم، نماذج من التحفيز المادي والمعنوي.' },
+  { id: 9, title: 'الإدارة الصفية', evidences: 'كشف المتابعة، تطبيق إدارة الصف.' },
+  { id: 10, title: 'تحليل نتائج المتعلمين', evidences: 'تقرير تحليل نتائج الطلاب، سجل معالجة الفاقد التعليمي.' },
+  { id: 11, title: 'تنوع أساليب التقويم', evidences: 'نماذج من الاختبارات، ملفات إنجاز الطلاب، نماذج من المهام الأدائية والمشاريع.' }
+];
+
+async function renderTeacherAchievement(app) {
+  renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
+    state.view = 'teacher-dashboard';
+    render();
+  });
+  if (!state.user) {
+    showToast('يجب تسجيل الدخول');
+    state.view = 'auth';
+    return render();
+  }
+  const teacherId = state.user.uid;
+  let teacherData = {};
+  try {
+    const teacherDoc = await getDoc(doc(db, "users", teacherId));
+    if (teacherDoc.exists()) teacherData = teacherDoc.data();
+  } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
+  const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
+
+  let existingFiles = {};
+  try {
+    const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
+    const filesSnap = await getDocs(filesQuery);
+    filesSnap.forEach(d => {
+      const data = d.data();
+      const standardId = data.standardId;
+      if (!existingFiles[standardId]) existingFiles[standardId] = [];
+      existingFiles[standardId].push({ id: d.id, ...data });
+    });
+  } catch (e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
+
+  const headerCard = document.createElement('div');
+  headerCard.className = 'card';
+  headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+  headerCard.style.border = '2px solid var(--mint-deep)';
+  headerCard.innerHTML = `
+    <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
+    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+      <button class="btn btn-primary btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">🖨️ طباعة / حفظ PDF</button>
+      <button class="btn btn-soft btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:8px 20px;">📄 توليد الشواهد تلقائياً</button>
+    </div>
+  `;
+  app.appendChild(headerCard);
+
+  const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
+  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
+  const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
+  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
+
+  TEACHER_STANDARDS.forEach(standard => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginBottom = '12px';
+    card.innerHTML = `
+      <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
+      <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+        <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
+        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
+        <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
+      </div>
+      <div id="filesList_${standard.id}" style="margin-top:8px;">
+        ${(existingFiles[standard.id] || []).map(file => `
+          <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
+            <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
+            <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    app.appendChild(card);
+
+    const fileInput = card.querySelector(`#fileInput_${standard.id}`);
+    const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
+    const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
+    if (uploadBtn && fileInput) {
+      uploadBtn.onclick = () => fileInput.click();
+      fileInput.onchange = async () => {
+        if (!fileInput.files || fileInput.files.length === 0) return;
+        fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
+        const uploadPromises = Array.from(fileInput.files).map(file => uploadTeacherFile(teacherId, standard.id, file));
+        const results = await Promise.all(uploadPromises);
+        const success = results.filter(r => r !== null);
+        if (success.length > 0) {
+          for (const fileInfo of success) {
+            try {
+              await addDoc(collection(db, "teacher_files"), {
+                teacherId,
+                standardId: standard.id,
+                name: fileInfo.name,
+                url: fileInfo.url,
+                type: fileInfo.type,
+                uploadedAt: fileInfo.uploadedAt
+              });
+            } catch (e) { console.error('خطأ في حفظ الملف:', e); }
+          }
+          showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
+          renderTeacherAchievement(app);
+        } else {
+          showToast('❌ فشل رفع الملفات');
+        }
+        fileInput.value = '';
+      };
+    }
+  });
+}
+
+async function generateEvidenceReport(teacherName) {
+  showToast('⏳ جاري توليد الشواهد تلقائياً...');
+  try {
+    const teacherId = state.user.uid;
+    const allSessionsSnap = await getDocs(collection(db, "sessions"));
+    const allSessions = [];
+    allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+    const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
+    const totalSessions = teacherSessions.length;
+    const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
+    const averageSuccess = evaluatedSessions.length > 0
+      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+      : 0;
+    const totalStudents = state.myStudents.length;
+    const studentSummaries = [];
+    for (const student of state.myStudents) {
+      const studentDoc = await getDoc(doc(db, "users", student.id));
+      const studentData = studentDoc.exists() ? studentDoc.data() : {};
+      const diag = studentData.diagnostic || {};
+      const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
+      const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+      const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
+      const studentSessions = allSessions.filter(s => s.studentId === student.id && s.evaluation && s.evaluation !== 'none');
+      const studentAvg = studentSessions.length > 0
+        ? Math.round(studentSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / studentSessions.length)
+        : 0;
+      studentSummaries.push({
+        name: student.fullName || student.email,
+        passed: passedLetters.length,
+        need: needLetters.length,
+        trained: trainedLetters.length,
+        sessions: studentSessions.length,
+        avg: studentAvg
+      });
+    }
+    let printArea = document.getElementById('iep-print-area');
+    if (!printArea) {
+      printArea = document.createElement('div');
+      printArea.id = 'iep-print-area';
+      document.body.appendChild(printArea);
+    }
+    printArea.innerHTML = `
+      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+          <p style="margin:5px 0 0;font-size:14px;color:#555;">شواهد إنجاز المعلم - تقرير تلقائي</p>
+          <hr style="border:1px solid #ddd;margin:10px 0;">
+        </div>
+        <div style="margin-bottom:15px;text-align:center;">
+          <strong>اسم المعلم:</strong> ${teacherName}<br>
+          <strong>تاريخ التوليد:</strong> ${new Date().toLocaleDateString('ar-SA')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;background:#f5f5f5;padding:15px;border-radius:8px;">
+          <div><strong>عدد الطلاب:</strong> ${totalStudents}</div>
+          <div><strong>عدد الجلسات المنفذة:</strong> ${totalSessions}</div>
+          <div><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
+          <div><strong>عدد الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
+        </div>
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">ملخص أداء الطلاب</h3>
+        ${studentSummaries.length > 0 ? `
+          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+            <thead><tr style="background:#f0f0f0;">
+              <th style="border:1px solid #ddd;padding:8px;">الطالب</th>
+              <th style="border:1px solid #ddd;padding:8px;">حروف متقنة</th>
+              <th style="border:1px solid #ddd;padding:8px;">تحتاج تدريب</th>
+              <th style="border:1px solid #ddd;padding:8px;">جلسات</th>
+              <th style="border:1px solid #ddd;padding:8px;">متوسط النجاح</th>
+            </tr></thead>
+            <tbody>
+              ${studentSummaries.map(s => `
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px;">${s.name}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.passed}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.need}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.sessions}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.avg}%</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض بياناتهم.</p>'}
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">الشواهد المتاحة من المنصة</h3>
+        <div style="margin-bottom:10px;font-size:14px;">
+          <p>✅ سجل الجلسات السحابي (${totalSessions} جلسة)</p>
+          <p>✅ التقارير الفردية للطلاب</p>
+          <p>✅ التشخيص الشامل للحروف</p>
+          <p>✅ التسجيل الصوتي والتغذية الراجعة</p>
+          <p>✅ ملفات إنجاز الطلاب</p>
+          <p>✅ الخطط الفردية (IEP)</p>
+          <p>✅ قوائم المفردات التفاعلية</p>
+          <p>✅ أدوات التقييم المتنوعة (أتقن/تدريب/غير واضح)</p>
+        </div>
+        <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذا التقرير تلقائياً من منصة منارة النطق</div>
+      </div>
+    `;
+    window.print();
+    setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+  } catch (e) {
+    console.error('خطأ في توليد الشواهد:', e);
+    showToast('❌ فشل توليد الشواهد');
+  }
+}
+
+function printTeacherAchievement(teacherName, existingFiles) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز المعلم</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <div style="margin-bottom:15px;text-align:center;"><strong>اسم المعلم:</strong> ${teacherName}</div>
+      ${TEACHER_STANDARDS.map(standard => `
+        <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
+          <strong>${standard.id}. ${standard.title}</strong>
+          <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
+          ${(existingFiles[standard.id] || []).map(file => `<div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>`).join('')}
+        </div>
+      `).join('')}
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+
+/* ========================================
+   28. ملف الإنجاز الرقمي للطالب - Student Achievement
+   ======================================== */
+async function renderAchievement(app) {
+  if (!state.currentStudent) {
+    showToast('اختر طالباً أولاً');
+    state.view = 'teacher-dashboard';
+    return render();
+  }
+  renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
+    render();
+  });
+  try {
+    const studentRef = doc(db, "users", state.currentStudent.id);
+    const studentDoc = await getDoc(studentRef);
+    const studentData = studentDoc.exists() ? studentDoc.data() : {};
+    const diag = studentData.diagnostic || {};
+    const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
+    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+    const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
+    const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+    const sessionsSnap = await getDocs(sessionsQuery);
+    const sessions = [];
+    sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
+    sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
+    const totalSessions = sessions.length;
+    const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
+    const averageSuccess = evaluatedSessions.length > 0
+      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+      : 0;
+    const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
+    const points = calculateStudentPoints(studentData);
+    let achievementLevel = '';
+    let achievementIcon = '';
+    if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
+    else if (masteryPercentage >= 50) { achievementLevel = 'جيد جداً'; achievementIcon = '⭐'; }
+    else if (masteryPercentage >= 30) { achievementLevel = 'جيد'; achievementIcon = '👍'; }
+    else { achievementLevel = 'يحتاج متابعة'; achievementIcon = '💪'; }
+
+    const weeklyStats = getWeeklyStats(sessions);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+    card.style.border = '2px solid var(--mint-deep)';
+    card.innerHTML = `
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:60px;">${achievementIcon}</div>
+        <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
+        <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${passedLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">حروف متقنة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:#F57F17;">${needLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">تحتاج تدريب</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${totalSessions}</div>
+          <div style="font-size:13px;color:#6B7A99;">جلسة منفذة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${averageSuccess}%</div>
+          <div style="font-size:13px;color:#6B7A99;">متوسط النجاح</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${masteryPercentage}%</div>
+          <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
+          <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
+        </div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>نسبة الإتقان:</strong>
+        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${masteryPercentage}%;">${masteryPercentage}%</div></div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>📅 ملخص هذا الأسبوع:</strong><br>
+        الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
+        متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
+        الحروف المتدرب عليها: ${Object.keys(weeklyStats.lettersTrained).length ? Object.keys(weeklyStats.lettersTrained).join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف المتقنة:</strong> ${passedLetters.length ? passedLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف التي تحتاج تدريب:</strong> ${needLetters.length ? needLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف التي أتقنها بعد تدريب:</strong> ${trainedLetters.length ? trainedLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${passedLetters.length} حرف متقن (تحسن ${passedLetters.length} حرف)
+      </div>
+      <div style="text-align:center; margin-top:20px;">
+        <button class="btn btn-primary" id="printAchievementBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>
+      </div>
+    `;
+    app.appendChild(card);
+    const printBtn = card.querySelector('#printAchievementBtn');
+    if (printBtn) {
+      printBtn.onclick = () => {
+        printAchievement(state.currentStudent, {
+          passedLetters, needLetters, trainedLetters, totalSessions, averageSuccess,
+          masteryPercentage, achievementLevel, achievementIcon, points, weeklyStats
+        });
+      };
+    }
+  } catch (e) {
+    const errorCard = document.createElement('div');
+    errorCard.className = 'card';
+    errorCard.innerHTML = `<p class="muted">⚠️ خطأ في تحميل ملف الإنجاز: ${e.message}</p>`;
+    app.appendChild(errorCard);
+  }
+}
+
+function printAchievement(student, data) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز الطالب</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <div style="margin-bottom:15px;text-align:center;"><strong>اسم الطالب:</strong> ${student.fullName || student.email}<br><strong>المستوى:</strong> ${data.achievementLevel} ${data.achievementIcon}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+        <div><strong>الحروف المتقنة:</strong> ${data.passedLetters.length}</div>
+        <div><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length}</div>
+        <div><strong>عدد الجلسات:</strong> ${data.totalSessions}</div>
+        <div><strong>متوسط النجاح:</strong> ${data.averageSuccess}%</div>
+        <div><strong>نسبة الإتقان:</strong> ${data.masteryPercentage}%</div>
+        <div><strong>النقاط:</strong> ${data.points}</div>
+      </div>
+      <div style="margin-bottom:10px;"><strong>ملخص هذا الأسبوع:</strong><br>الجلسات: ${data.weeklyStats.totalThisWeek} | متوسط النجاح: ${data.weeklyStats.avgSuccess}%</div>
+      <div style="margin-bottom:10px;"><strong>الحروف المتقنة:</strong> ${data.passedLetters.length ? data.passedLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length ? data.needLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>الحروف التي أتقنها بعد تدريب:</strong> ${data.trainedLetters.length ? data.trainedLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${data.passedLetters.length} حرف متقن</div>
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+
+/* ========================================
+   29. التشخيص الشامل - Comprehensive Diagnosis
    ======================================== */
 function renderComprehensiveDiagnosis(container) {
   container.innerHTML = '';
@@ -2159,7 +2603,7 @@ function renderComprehensiveDiagnosis(container) {
 }
 
 /* ========================================
-   26. التشخيص المتقدم - Advanced Diagnostic
+   30. التشخيص المتقدم - Advanced Diagnostic
    ======================================== */
 let diagnosticAudio = { letters: {}, words: {} };
 
@@ -2479,7 +2923,7 @@ function renderDiagnosticSession(app) {
 }
 
 /* ========================================
-   27. توليد الخطة الفردية - IEP Generator
+   31. توليد الخطة الفردية - IEP Generator
    ======================================== */
 function generateIEP(passed, trained, need, unclear, student) {
   const studentName = student?.fullName || student?.email || 'الطالب';
@@ -2537,7 +2981,7 @@ function generateIEP(passed, trained, need, unclear, student) {
 }
 
 /* ========================================
-   28. صفحة الطالب - Student Menu
+   32. صفحة الطالب - Student Menu
    ======================================== */
 async function renderStudentMenu(app) {
   renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
@@ -2617,7 +3061,7 @@ async function renderStudentMenu(app) {
 }
 
 /* ========================================
-   29. إدارة جلسات التدريب - Speech Sessions
+   33. إدارة جلسات التدريب - Speech Sessions
    ======================================== */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
@@ -2844,8 +3288,9 @@ async function renderSpeechSessions(app) {
 
 
 
+
 /* ========================================
-   30. عرض جلسة واحدة - Single Session
+   34. عرض جلسة واحدة - Single Session
    ======================================== */
 function renderSingleSession(app) {
   const sess = state.currentSession;
@@ -2942,7 +3387,9 @@ function renderSingleSession(app) {
     };
   }
 
-  // زر التوصيات الذكية AI
+  // ==========================================
+  // 🤖 قسم الذكاء الاصطناعي - AI Section
+  // ==========================================
   if (state.role === 'teacher' || state.role === 'admin') {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
@@ -3181,7 +3628,7 @@ function renderSingleSession(app) {
 }
 
 /* ========================================
-   31. اقتراح الإتقان - Mastery Suggestion
+   35. اقتراح الإتقان - Mastery Suggestion
    ======================================== */
 async function checkAndSuggestMastery(studentId, letter) {
   try {
@@ -3213,7 +3660,7 @@ async function checkAndSuggestMastery(studentId, letter) {
 }
 
 /* ========================================
-   32. سجل الجلسات - Sessions Log
+   36. سجل الجلسات - Sessions Log
    ======================================== */
 async function renderSessionsLog(app) {
   renderTopbar(app, '📊 جدول سجل الجلسات', 'عرض جميع الجلسات المسجلة', () => {
@@ -3320,7 +3767,7 @@ async function renderSessionsLog(app) {
 }
 
 /* ========================================
-   33. قائمة IEP - IEP Session List
+   37. قائمة IEP - IEP Session List
    ======================================== */
 async function renderIEPSession(app) {
   renderTopbar(app, '📋 الخطط الفردية (IEP)', 'اختر طالباً لعرض خطته', () => {
@@ -3412,7 +3859,7 @@ function printIEP(student, iepData) {
 }
 
 /* ========================================
-   34. عرض الحروف - Letter Display
+   38. عرض الحروف - Letter Display
    ======================================== */
 function renderLetterDisplay(app) {
   renderTopbar(app, '🔤 الحروف الأبجدية', '28 حرفاً مع الصور', () => { state.view = 'home'; render(); });
@@ -3433,7 +3880,7 @@ function renderLetterDisplay(app) {
 }
 
 /* ========================================
-   35. التهيئة النهائية - Final Init
+   39. التهيئة النهائية - Final Init
    ======================================== */
 function initApp() {
   initAccessibility();
@@ -3449,13 +3896,5 @@ function initApp() {
     }
   });
 }
-
-/* ========================================
-   AI Integration - ربط الذكاء الاصطناعي
-   (يُضاف تلقائياً في صفحة الجلسة)
-   ======================================== */
-(function initAIIntegration() {
-  console.log('✅ AI Integration initialized');
-})();
 
 initApp();
