@@ -787,7 +787,9 @@ async function loadProfileData(container) {
     } catch(e) { console.warn(e); }
     
     let studentsCount = 0;
-    if (isTeacher) studentsCount = state.myStudents.length;
+    if (isTeacher) {
+      studentsCount = state.myStudents.length;
+    }
     
     const points = isTeacher ? 0 : calculateStudentPoints(userData);
     const diag = userData.diagnostic || {};
@@ -898,10 +900,7 @@ async function loadProfileData(container) {
     if (saveProfileBtn) {
       saveProfileBtn.onclick = async () => {
         const newName = container.querySelector('#profileFullName').value.trim();
-        if (!newName) {
-          showToast('❌ الاسم لا يمكن أن يكون فارغاً');
-          return;
-        }
+        if (!newName) { showToast('❌ الاسم لا يمكن أن يكون فارغاً'); return; }
         saveProfileBtn.disabled = true;
         saveProfileBtn.textContent = '⏳ جاري الحفظ...';
         try {
@@ -926,19 +925,12 @@ async function loadProfileData(container) {
         const parentName = container.querySelector('#profileParentName').value.trim();
         const parentEmail = container.querySelector('#profileParentEmail').value.trim();
         const parentPhone = container.querySelector('#profileParentPhone').value.trim();
-        
-        if (parentEmail && !parentEmail.includes('@')) {
-          showToast('❌ البريد الإلكتروني غير صحيح');
-          return;
-        }
-        
+        if (parentEmail && !parentEmail.includes('@')) { showToast('❌ البريد الإلكتروني غير صحيح'); return; }
         saveParentProfileBtn.disabled = true;
         saveParentProfileBtn.textContent = '⏳ جاري الحفظ...';
         try {
           await updateDoc(doc(db, "users", state.user.uid), {
-            parentName: parentName,
-            parentEmail: parentEmail,
-            parentPhone: parentPhone
+            parentName, parentEmail, parentPhone
           });
           showToast('✅ تم حفظ بيانات ولي الأمر');
           saveParentProfileBtn.disabled = false;
@@ -954,13 +946,11 @@ async function loadProfileData(container) {
     const resetPasswordProfileBtn = container.querySelector('#resetPasswordProfileBtn');
     if (resetPasswordProfileBtn) {
       resetPasswordProfileBtn.onclick = async () => {
-        if (!confirm('هل تريد إرسال رابط تغيير كلمة المرور إلى بريدك الإلكتروني؟')) return;
+        if (!confirm('هل تريد إرسال رابط تغيير كلمة المرور؟')) return;
         try {
           await sendPasswordResetEmail(auth, email);
-          showToast('✅ تم إرسال الرابط إلى بريدك الإلكتروني');
-        } catch(e) {
-          showToast('❌ فشل الإرسال: ' + e.message);
-        }
+          showToast('✅ تم إرسال الرابط');
+        } catch(e) { showToast('❌ فشل الإرسال: ' + e.message); }
       };
     }
     
@@ -1026,8 +1016,7 @@ function renderLetterTraining(app) {
     btn.onmouseover = () => { btn.style.background = '#EAF6F4'; btn.style.transform = 'scale(1.1)'; };
     btn.onmouseout = () => { btn.style.background = 'white'; btn.style.transform = 'scale(1)'; };
     btn.onclick = () => {
-      const letter = btn.dataset.letter;
-      showTrainingSession(trainingArea, letter);
+      showTrainingSession(trainingArea, btn.dataset.letter);
     };
   });
 }
@@ -1443,9 +1432,7 @@ async function renderTeacherDashboard(app) {
     if (state.currentStudent) {
       state.diagEval = state.currentStudent.diagnostic || {};
       state.view = 'speech-sessions';
-    } else {
-      showToast('لا يوجد طلاب مضافون');
-    }
+    } else { showToast('لا يوجد طلاب مضافون'); }
     render();
   };
   const btnSessionsLog = actCard.querySelector('#btnSessionsLog');
@@ -1477,6 +1464,7 @@ async function renderTeacherDashboard(app) {
           <button class="btn btn-soft btn-sm" id="prof_${st.id}">الجلسات</button>
           <button class="btn btn-success btn-sm" id="achv_${st.id}">الإنجاز</button>
           <button class="btn btn-sm" id="prog_${st.id}" style="background:#0891B2;color:white;">📊 تحليل AI</button>
+          <button class="btn btn-sm" id="plan_${st.id}" style="background:#7C3AED;color:white;">🎯 خطة مخصصة</button>
           <button class="btn btn-danger btn-sm" id="rem_${st.id}">إزالة</button>
         </div>
       `;
@@ -1503,6 +1491,8 @@ async function renderTeacherDashboard(app) {
           state.view = 'achievement';
           render();
         };
+        
+        // زر تحليل التقدم AI
         const progBtn = document.getElementById(`prog_${st.id}`);
         if (progBtn) progBtn.onclick = () => {
           state.currentStudent = st;
@@ -1513,6 +1503,19 @@ async function renderTeacherDashboard(app) {
             showToast('⚠️ ميزة التحليل غير متوفرة');
           }
         };
+        
+        // ✨ زر خطة مخصصة AI
+        const planBtn = document.getElementById(`plan_${st.id}`);
+        if (planBtn) planBtn.onclick = () => {
+          state.currentStudent = st;
+          if (typeof window.createCustomPlanButton === 'function') {
+            const tempBtn = window.createCustomPlanButton(st);
+            tempBtn.click();
+          } else {
+            showToast('⚠️ ميزة الخطة المخصصة غير متوفرة');
+          }
+        };
+        
         const remBtn = document.getElementById(`rem_${st.id}`);
         if (remBtn) remBtn.onclick = () => window.removeStudent(st.id);
       }, 0);
@@ -1783,7 +1786,12 @@ function renderParentGuide(app) {
   exercises.forEach(ex => {
     const box = document.createElement('div');
     box.className = 'exercise-box';
-    box.innerHTML = `<h4>${ex.title}</h4><ul>${ex.items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+    box.innerHTML = `
+      <h4>${ex.title}</h4>
+      <ul>
+        ${ex.items.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    `;
     exercisesSection.appendChild(box);
   });
   container.appendChild(exercisesSection);
@@ -1795,7 +1803,9 @@ function renderParentGuide(app) {
   weeklyTable.className = 'card';
   weeklyTable.innerHTML = `
     <table class="sessions-table" style="font-size:13px;">
-      <thead><tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr></thead>
+      <thead>
+        <tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr>
+      </thead>
       <tbody>
         <tr><td>السبت</td><td>تمارين اللسان + تكرار الحرف المستهدف</td><td>10 دقائق</td></tr>
         <tr><td>الأحد</td><td>قراءة قصة + مناقشة الصور</td><td>10 دقائق</td></tr>
@@ -1834,7 +1844,11 @@ function renderParentGuide(app) {
   app.appendChild(container);
 
   const printBtn = container.querySelector('#printGuideBtn');
-  if (printBtn) printBtn.onclick = () => printParentGuide(container.innerHTML);
+  if (printBtn) {
+    printBtn.onclick = () => {
+      printParentGuide(container.innerHTML);
+    };
+  }
 }
 
 function printParentGuide(contentHTML) {
@@ -1858,7 +1872,6 @@ function printParentGuide(contentHTML) {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
-
 
 
 
