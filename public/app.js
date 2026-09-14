@@ -1452,9 +1452,23 @@ async function renderTeacherDashboard(app) {
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
-  myCard.innerHTML = '<h3>📋 قائمة طلابك المضافين</h3>';
+  
+  // 🆕 رأس البطاقة مع زر التصفية الذكية
+  myCard.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+      <h3 style="margin:0;">📋 قائمة طلابك المضافين (${state.myStudents.length})</h3>
+      <button class="btn btn-sm" id="smartFilterBtn" style="background:linear-gradient(135deg, #0891B2, #06B6D4); color:white; border-radius:50px; padding:8px 20px; font-weight:bold;">
+        🔍 تصفية ذكية
+      </button>
+    </div>
+    <div id="studentsListContainer"></div>
+  `;
+  app.appendChild(myCard);
+  
+  const studentsContainer = myCard.querySelector('#studentsListContainer');
+  
   if (!state.myStudents.length) {
-    myCard.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
+    studentsContainer.innerHTML = '<p class="muted">لا يوجد طلاب مضافون.</p>';
   } else {
     state.myStudents.forEach(st => {
       const ageGroup = st.ageGroup || '';
@@ -1487,7 +1501,7 @@ async function renderTeacherDashboard(app) {
           <button class="btn btn-danger btn-sm" id="rem_${st.id}">إزالة</button>
         </div>
       `;
-      myCard.appendChild(row);
+      studentsContainer.appendChild(row);
       setTimeout(() => {
         const diagBtn = document.getElementById(`diag_${st.id}`);
         if (diagBtn) diagBtn.onclick = () => {
@@ -1551,7 +1565,12 @@ async function renderTeacherDashboard(app) {
       }, 0);
     });
   }
-  app.appendChild(myCard);
+  
+  // 🆕 ربط زر التصفية الذكية
+  const smartFilterBtn = myCard.querySelector('#smartFilterBtn');
+  if (smartFilterBtn) {
+    smartFilterBtn.onclick = () => showSmartFilterModal();
+  }
 
   const adaptiveCard = document.createElement('div');
   adaptiveCard.className = 'card';
@@ -1605,6 +1624,229 @@ async function renderTeacherDashboard(app) {
     });
   }
   app.appendChild(freeCard);
+}
+
+/* ========================================
+   🆕 دالة عرض نافذة التصفية الذكية
+   ======================================== */
+function showSmartFilterModal() {
+  const modal = document.createElement('div');
+  modal.id = 'smartFilterModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;color:#0891B2;">🔍 التصفية الذكية للطلاب</h3>
+        <button id="closeFilterModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+      </div>
+      
+      <div style="background:#ECFEFF;padding:16px;border-radius:12px;margin-bottom:20px;border-right:4px solid #0891B2;">
+        <p style="margin:0;font-size:13px;color:#155E75;">
+          💡 اختر معايير التصفية (الحرف + الفئة العمرية + يوم الجلسة) لعرض الطلاب المتشابهين
+        </p>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px;">
+        <div>
+          <label style="font-weight:bold;display:block;margin-bottom:6px;font-size:14px;">🔤 الحرف المستهدف:</label>
+          <select id="filterLetter" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;background:white;">
+            <option value="">الكل</option>
+            ${ALL_LETTERS.map(l => `<option value="${l}">حرف ${l}</option>`).join('')}
+          </select>
+        </div>
+        
+        <div>
+          <label style="font-weight:bold;display:block;margin-bottom:6px;font-size:14px;">👶 الفئة العمرية:</label>
+          <select id="filterAge" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;background:white;">
+            <option value="">الكل</option>
+            <option value="6-7">6-7 سنوات</option>
+            <option value="7-8">7-8 سنوات</option>
+            <option value="8-9">8-9 سنوات</option>
+            <option value="9-10">9-10 سنوات</option>
+            <option value="10-11">10-11 سنة</option>
+            <option value="11-12">11-12 سنة</option>
+          </select>
+        </div>
+        
+        <div>
+          <label style="font-weight:bold;display:block;margin-bottom:6px;font-size:14px;">📅 يوم الجلسة:</label>
+          <select id="filterDay" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;background:white;">
+            <option value="">الكل</option>
+            <option value="sunday-tuesday">الأحد + الثلاثاء</option>
+            <option value="monday-wednesday">الاثنين + الأربعاء</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
+        <button class="btn" id="applyFilterBtn" style="background:#0891B2;color:white;border-radius:50px;padding:10px 30px;font-weight:bold;border:none;cursor:pointer;font-family:'Tajawal';font-size:14px;">
+          ✅ تطبيق التصفية
+        </button>
+        <button class="btn" id="resetFilterBtn" style="background:#F0F0F0;color:#333;border-radius:50px;padding:10px 30px;font-weight:bold;border:none;cursor:pointer;font-family:'Tajawal';font-size:14px;">
+          🔄 إعادة تعيين
+        </button>
+      </div>
+      
+      <div id="filterResults" style="border-top:2px dashed var(--line);padding-top:20px;">
+        <p style="text-align:center;color:#6B7A99;font-size:14px;">اختر المعايير ثم اضغط "تطبيق التصفية"</p>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const closeModal = () => modal.remove();
+  modal.querySelector('#closeFilterModal').onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  
+  const applyBtn = modal.querySelector('#applyFilterBtn');
+  applyBtn.onclick = () => {
+    const letter = modal.querySelector('#filterLetter').value;
+    const age = modal.querySelector('#filterAge').value;
+    const day = modal.querySelector('#filterDay').value;
+    renderFilteredStudents(letter, age, day);
+  };
+  
+  const resetBtn = modal.querySelector('#resetFilterBtn');
+  resetBtn.onclick = () => {
+    modal.querySelector('#filterLetter').value = '';
+    modal.querySelector('#filterAge').value = '';
+    modal.querySelector('#filterDay').value = '';
+    const resultsDiv = modal.querySelector('#filterResults');
+    resultsDiv.innerHTML = '<p style="text-align:center;color:#6B7A99;font-size:14px;">اختر المعايير ثم اضغط "تطبيق التصفية"</p>';
+  };
+}
+
+/* ========================================
+   🆕 دالة عرض الطلاب المُصفّين
+   ======================================== */
+async function renderFilteredStudents(letterFilter, ageFilter, dayFilter) {
+  const resultsDiv = document.getElementById('filterResults');
+  if (!resultsDiv) return;
+  
+  resultsDiv.innerHTML = '<p style="text-align:center;color:#6B7A99;">⏳ جاري التصفية...</p>';
+  
+  try {
+    // جلب بيانات الطلاب الكاملة من Firebase
+    const allStudentsData = [];
+    for (const st of state.myStudents) {
+      try {
+        const studentDoc = await getDoc(doc(db, "users", st.id));
+        if (studentDoc.exists()) {
+          allStudentsData.push({ id: st.id, ...studentDoc.data() });
+        }
+      } catch (e) { console.warn('خطأ في جلب بيانات طالب:', e); }
+    }
+    
+    // تصفية حسب الحرف
+    let filtered = allStudentsData;
+    
+    if (letterFilter) {
+      filtered = filtered.filter(st => {
+        const diag = st.diagnostic || {};
+        const letterStatus = diag[letterFilter]?.status;
+        return letterStatus === 'need' || letterStatus === 'unclear';
+      });
+    }
+    
+    if (ageFilter) {
+      filtered = filtered.filter(st => st.ageGroup === ageFilter);
+    }
+    
+    // التصفية حسب يوم الجلسة
+    if (dayFilter) {
+      filtered = filtered.filter(st => {
+        return st.sessionDay === dayFilter;
+      });
+    }
+    
+    if (filtered.length === 0) {
+      resultsDiv.innerHTML = `
+        <div style="text-align:center;padding:30px;background:#FFF8E1;border-radius:12px;border:2px dashed #F57F17;">
+          <div style="font-size:40px;margin-bottom:10px;">🔍</div>
+          <p style="color:#F57F17;font-weight:bold;margin:0;">لا يوجد طلاب مطابقون للمعايير المحددة</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // تجميع النتائج حسب الحرف ثم العمر
+    const grouped = {};
+    filtered.forEach(st => {
+      const diag = st.diagnostic || {};
+      let letters = [];
+      if (letterFilter) {
+        letters = [letterFilter];
+      } else {
+        letters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+      }
+      if (letters.length === 0) return;
+      
+      const primaryLetter = letters[0];
+      const ageGroup = st.ageGroup || 'غير محدد';
+      
+      if (!grouped[primaryLetter]) grouped[primaryLetter] = {};
+      if (!grouped[primaryLetter][ageGroup]) grouped[primaryLetter][ageGroup] = [];
+      grouped[primaryLetter][ageGroup].push(st);
+    });
+    
+    let html = `
+      <div style="background:#F0F9FF;padding:12px;border-radius:10px;margin-bottom:15px;text-align:center;">
+        <strong style="color:#0891B2;">📊 النتائج: ${filtered.length} طالب</strong>
+      </div>
+    `;
+    
+    Object.keys(grouped).sort().forEach(letter => {
+      const letterTitle = letterTitleMap[letter] || '';
+      html += `
+        <div style="margin-bottom:20px;">
+          <div style="background:linear-gradient(135deg, #0891B2, #06B6D4);color:white;padding:10px 16px;border-radius:12px;font-weight:bold;font-size:16px;margin-bottom:12px;">
+            🔤 حرف (${letter}) — ${letterTitle}
+          </div>
+      `;
+      
+      Object.keys(grouped[letter]).sort().forEach(ageGroup => {
+        const students = grouped[letter][ageGroup];
+        html += `
+          <div style="margin-bottom:15px;padding:12px;background:#F9FDFC;border-radius:10px;border-right:4px solid #0891B2;">
+            <div style="font-weight:bold;color:#155E75;margin-bottom:8px;font-size:14px;">
+              👶 ${ageGroup === 'غير محدد' ? 'غير محدد' : ageGroup + ' سنوات'} (${students.length} ${students.length === 1 ? 'طالب' : 'طلاب'})
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+        `;
+        
+        students.forEach(st => {
+          const status = st.diagnostic?.[letter]?.status;
+          const statusLabels = {
+            'need': '⚠️ يحتاج تدريب',
+            'unclear': '❓ غير واضح',
+            'passed': '✅ أتقن',
+            'trained': '🔄 اجتاز بعد تدريب'
+          };
+          const statusText = statusLabels[status] || 'غير محدد';
+          
+          html += `
+            <div style="background:white;padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;">
+              <span style="font-weight:bold;">${st.fullName || st.email}</span>
+              <span style="color:#6B7A99;">${statusText}</span>
+            </div>
+          `;
+        });
+        
+        html += `
+            </div>
+          </div>
+        `;
+      });
+      
+      html += `</div>`;
+    });
+    
+    resultsDiv.innerHTML = html;
+  } catch (e) {
+    resultsDiv.innerHTML = `<p style="text-align:center;color:var(--coral);">⚠️ خطأ: ${e.message}</p>`;
+  }
 }
 
 window.claimStudent = async function(studentId) {
@@ -1902,7 +2144,6 @@ function printParentGuide(contentHTML) {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
-
 
 
 
