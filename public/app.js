@@ -807,6 +807,7 @@ async function loadProfileData(container) {
       <h2 style="margin:8px 0; color:var(--mint-deep);">${fullName || email}</h2>
       <p style="font-size:14px; color:#555; margin:4px 0;">${email}</p>
       <span class="badge badge-assigned" style="font-size:14px; padding:6px 16px;">${roleLabel}</span>
+      ${!isTeacher && userData.ageGroup ? `<div style="margin-top:8px;"><span class="badge" style="background:#FFF8E1; color:#F57F17; font-size:13px; padding:4px 12px;">👶 ${userData.ageGroup} سنوات</span></div>` : ''}
     `;
     container.appendChild(identityCard);
     
@@ -1300,6 +1301,7 @@ function renderRegister(app) {
         role: role,
         teacherId: null,
         diagnostic: {},
+        ageGroup: '',
         parentName: '',
         parentEmail: '',
         parentPhone: ''
@@ -1455,11 +1457,28 @@ async function renderTeacherDashboard(app) {
     myCard.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
   } else {
     state.myStudents.forEach(st => {
+      const ageGroup = st.ageGroup || '';
       const row = document.createElement('div');
       row.className = 'student-row';
+      row.style.flexDirection = 'column';
+      row.style.alignItems = 'flex-start';
       row.innerHTML = `
-        <div><strong>${st.fullName || st.email}</strong> <span class="badge badge-assigned">طالبك المباشر</span></div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:8px;">
+          <div><strong>${st.fullName || st.email}</strong> <span class="badge badge-assigned">طالبك المباشر</span></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; padding:6px 10px; background:#F9FDFC; border-radius:8px;">
+          <span style="color:#6B7A99; font-size:13px;">👶 الفئة العمرية:</span>
+          <select id="age_${st.id}" style="padding:4px 10px; border-radius:8px; border:1px solid var(--line); font-family:'Tajawal'; font-size:13px; background:white; width:auto; cursor:pointer;">
+            <option value="" ${!ageGroup ? 'selected' : ''}>غير محدد</option>
+            <option value="6-7" ${ageGroup === '6-7' ? 'selected' : ''}>6-7 سنوات</option>
+            <option value="7-8" ${ageGroup === '7-8' ? 'selected' : ''}>7-8 سنوات</option>
+            <option value="8-9" ${ageGroup === '8-9' ? 'selected' : ''}>8-9 سنوات</option>
+            <option value="9-10" ${ageGroup === '9-10' ? 'selected' : ''}>9-10 سنوات</option>
+            <option value="10-11" ${ageGroup === '10-11' ? 'selected' : ''}>10-11 سنة</option>
+            <option value="11-12" ${ageGroup === '11-12' ? 'selected' : ''}>11-12 سنة</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
           <button class="btn btn-primary btn-sm" id="diag_${st.id}">التشخيص</button>
           <button class="btn btn-soft btn-sm" id="prof_${st.id}">الجلسات</button>
           <button class="btn btn-success btn-sm" id="achv_${st.id}">الإنجاز</button>
@@ -1491,8 +1510,6 @@ async function renderTeacherDashboard(app) {
           state.view = 'achievement';
           render();
         };
-        
-        // زر تحليل التقدم AI
         const progBtn = document.getElementById(`prog_${st.id}`);
         if (progBtn) progBtn.onclick = () => {
           state.currentStudent = st;
@@ -1503,8 +1520,6 @@ async function renderTeacherDashboard(app) {
             showToast('⚠️ ميزة التحليل غير متوفرة');
           }
         };
-        
-        // ✨ زر خطة مخصصة AI
         const planBtn = document.getElementById(`plan_${st.id}`);
         if (planBtn) planBtn.onclick = () => {
           state.currentStudent = st;
@@ -1515,9 +1530,24 @@ async function renderTeacherDashboard(app) {
             showToast('⚠️ ميزة الخطة المخصصة غير متوفرة');
           }
         };
-        
         const remBtn = document.getElementById(`rem_${st.id}`);
         if (remBtn) remBtn.onclick = () => window.removeStudent(st.id);
+        const ageSelect = document.getElementById(`age_${st.id}`);
+        if (ageSelect) {
+          ageSelect.onchange = async () => {
+            const newAgeGroup = ageSelect.value;
+            try {
+              await updateDoc(doc(db, "users", st.id), {
+                ageGroup: newAgeGroup
+              });
+              st.ageGroup = newAgeGroup;
+              showToast('✅ تم حفظ الفئة العمرية');
+            } catch (e) {
+              showToast('❌ فشل الحفظ: ' + e.message);
+              ageSelect.value = ageGroup;
+            }
+          };
+        }
       }, 0);
     });
   }
@@ -1872,7 +1902,6 @@ function printParentGuide(contentHTML) {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
-
 
 
 
