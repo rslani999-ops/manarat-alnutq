@@ -1,7 +1,7 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v4.0 — 3 features available
+   v5.0 — 4 features available
    ======================================== */
 
 /* ========================================
@@ -132,7 +132,7 @@ async function generateHomeworkExercises(sessionData, studentData) {
 }
 
 /* ========================================
-   4. 🆕 توليد تحليل تقدم الطالب
+   4. توليد تحليل تقدم الطالب
    ======================================== */
 async function generateProgressAnalysis(studentData, sessionsData) {
   if (!sessionsData || sessionsData.length === 0) {
@@ -164,15 +164,6 @@ async function generateProgressAnalysis(studentData, sessionsData) {
     `- حرف (${letter}): ${stats.total} جلسة، ${stats.success} ناجحة، متوسط ${stats.avg}%`
   ).join('\n');
 
-  const sortedSessions = [...sessionsData].sort((a, b) => {
-    const dateA = new Date(a.date || 0);
-    const dateB = new Date(b.date || 0);
-    return dateB - dateA;
-  });
-  const recent5 = sortedSessions.slice(0, 5).map(s => 
-    `- ${s.date}: حرف (${s.letter}) - ${s.evaluation || 'غير مقيم'} - ${s.successRate || 0}%`
-  ).join('\n');
-
   const prompt = `
 أنت محلل تعليمي متخصص في تدريب النطق للأطفال.
 لا تقدم تشخيصاً طبياً — فقط تحليل تعليمي.
@@ -192,9 +183,6 @@ async function generateProgressAnalysis(studentData, sessionsData) {
 📌 **الحروف المتدرب عليها (${lettersList.length}):**
 ${lettersSummary}
 
-📅 **آخر 5 جلسات:**
-${recent5}
-
 المطلوب منك:
 
 🎯 **الملخص التنفيذي** (3-4 أسطر)
@@ -209,19 +197,143 @@ ${recent5}
 
 ⏱️ **التوقع الزمني** (كم من الوقت يحتاج لإتقان الحروف المتبقية)
 
-اكتب بأسلوب:
-- احترافي ومشجع
-- عملي ومبني على البيانات
-- بدون مقدمات
-- بالعربية الفصحى
-- استخدم الأرقام والنسب
+اكتب بأسلوب احترافي ومشجع، بالعربية الفصحى.
 `;
 
   return await callGeminiAI(prompt, 'progress-analysis');
 }
 
 /* ========================================
-   5. عرض توصيات AI
+   5. 🆕 توليد خطة تدريب مخصصة
+   ======================================== */
+async function generateCustomPlan(studentData, sessionsData) {
+  const diag = studentData.diagnostic || {};
+  const allLetters = window.ALL_LETTERS || [];
+  
+  // تصنيف الحروف
+  const passedLetters = allLetters.filter(l => diag[l]?.status === 'passed');
+  const trainedLetters = allLetters.filter(l => diag[l]?.status === 'trained');
+  const needLetters = allLetters.filter(l => diag[l]?.status === 'need');
+  const unclearLetters = allLetters.filter(l => diag[l]?.status === 'unclear');
+  
+  // تحليل أنواع العيوب
+  const disorderSummary = {};
+  needLetters.concat(unclearLetters).forEach(letter => {
+    const disorderType = diag[letter]?.disorderType || 'غير محدد';
+    if (!disorderSummary[disorderType]) disorderSummary[disorderType] = [];
+    disorderSummary[disorderType].push(letter);
+  });
+  
+  const disorderText = Object.entries(disorderSummary)
+    .map(([type, letters]) => `- ${type}: ${letters.join('، ')}`)
+    .join('\n');
+  
+  // إحصائيات الجلسات
+  const totalSessions = sessionsData?.length || 0;
+  const avgSuccess = totalSessions > 0 
+    ? Math.round(sessionsData.filter(s => s.successRate).reduce((sum, s) => sum + (s.successRate || 0), 0) / sessionsData.filter(s => s.successRate).length)
+    : 0;
+
+  const prompt = `
+أنت أخصائي نطق تعليمي متخصص في تصميم خطط تدريب فردية للأطفال (4-12 سنة).
+المطلوب: إنشاء خطة تدريب شاملة ومخصصة لكل طالب بناءً على بياناته.
+
+👤 **بيانات الطالب:**
+- الاسم: ${studentData.fullName || 'الطالب'}
+- تاريخ الميلاد: ${studentData.birthDate || 'غير محدد'}
+
+📋 **التشخيص الحالي:**
+- ✅ حروف متقنة (${passedLetters.length}): ${passedLetters.join('، ') || 'لا يوجد'}
+- 🔄 حروف اجتازها بعد تدريب (${trainedLetters.length}): ${trainedLetters.join('، ') || 'لا يوجد'}
+- ⚠️ حروف تحتاج تدريب (${needLetters.length}): ${needLetters.join('، ') || 'لا يوجد'}
+- ❓ حروف غير واضحة (${unclearLetters.length}): ${unclearLetters.join('، ') || 'لا يوجد'}
+
+🔍 **أنواع العيوب:**
+${disorderText || 'لا توجد عيوب محددة'}
+
+📊 **إحصائيات الجلسات:**
+- إجمالي الجلسات: ${totalSessions}
+- متوسط النجاح: ${avgSuccess}%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+المطلوب منك خطة تدريب شاملة بالتنسيق التالي:
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 **الهدف الرئيسي للخطة**
+[هدف عام واضح ومحدد]
+
+📅 **خطة 4 أسابيع**
+
+**📌 الأسبوع الأول: [عنوان]**
+- 🎯 الأهداف: ...
+- 📋 الجلسات: ... جلسات
+- 🔤 الحروف المستهدفة: ...
+- 📝 الأنشطة: ...
+- ⏱️ المدة اليومية: ...
+
+**📌 الأسبوع الثاني: [عنوان]**
+- 🎯 الأهداف: ...
+- 📋 الجلسات: ... جلسات
+- 🔤 الحروف المستهدفة: ...
+- 📝 الأنشطة: ...
+- ⏱️ المدة اليومية: ...
+
+**📌 الأسبوع الثالث: [عنوان]**
+- 🎯 الأهداف: ...
+- 📋 الجلسات: ... جلسات
+- 🔤 الحروف المستهدفة: ...
+- 📝 الأنشطة: ...
+- ⏱️ المدة اليومية: ...
+
+**📌 الأسبوع الرابع: [عنوان]**
+- 🎯 الأهداف: ...
+- 📋 الجلسات: ... جلسات
+- 🔤 الحروف المستهدفة: ...
+- 📝 الأنشطة: ...
+- ⏱️ المدة اليومية: ...
+
+🎯 **أولويات التدريب**
+1. [الأهم]
+2. [المهم]
+3. [المساند]
+
+📝 **أنشطة مخصصة لكل حرف**
+- حرف (X): [نشاط مخصص]
+- حرف (Y): [نشاط مخصص]
+- حرف (Z): [نشاط مخصص]
+
+🏠 **التمارين المنزلية الأسبوعية**
+- [تمرين 1]
+- [تمرين 2]
+- [تمرين 3]
+
+📊 **مؤشرات قياس التقدم**
+- [كيف نقيس التقدم]
+- [ما هي النتائج المتوقعة]
+
+⚠️ **تحذيرات وتنبيهات**
+- [ما يجب تجنبه]
+- [ما يجب الانتباه له]
+
+🎉 **المكافآت والتحفيز**
+- [أفكار للمكافآت]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+اكتب بأسلوب:
+- عملي وقابل للتطبيق
+- مبني على البيانات المقدمة
+- بالعربية الفصحى المبسطة
+- مع أرقام محددة (عدد الجلسات، المدد)
+- بدون مقدمات أو خواتيم طويلة
+- استخدم الرموز التعبيرية بشكل معتدل
+`;
+
+  return await callGeminiAI(prompt, 'custom-plan');
+}
+
+/* ========================================
+   6. عرض توصيات AI
    ======================================== */
 function showAIRecommendationsModal(recommendations, sessionData) {
   const modal = document.createElement('div');
@@ -265,7 +377,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
 }
 
 /* ========================================
-   6. عرض التمارين المنزلية
+   7. عرض التمارين المنزلية
    ======================================== */
 function showHomeworkModal(homeworkText, sessionData) {
   const modal = document.createElement('div');
@@ -323,7 +435,7 @@ function showHomeworkModal(homeworkText, sessionData) {
 }
 
 /* ========================================
-   7. 🆕 عرض تحليل التقدم
+   8. عرض تحليل التقدم
    ======================================== */
 function showProgressAnalysisModal(analysisText, studentData, stats) {
   const modal = document.createElement('div');
@@ -365,10 +477,6 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
         <button class="btn btn-soft" id="printProgBtn" style="border-radius:50px;padding:10px 24px;">🖨️ طباعة</button>
         <button class="btn btn-soft" id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;">إغلاق</button>
       </div>
-      
-      <p style="font-size:11px;color:#999;text-align:center;margin-top:16px;">
-        📊 التحليل مبني على بيانات الطالب في المنصة
-      </p>
     </div>
   `;
   
@@ -410,7 +518,76 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
 }
 
 /* ========================================
-   8. حفظ التوصيات في الجلسة
+   9. 🆕 عرض خطة التدريب المخصصة
+   ======================================== */
+function showCustomPlanModal(planText, studentData) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;color:#7C3AED;">🎯 خطة التدريب المخصصة</h3>
+        <button id="closePlanModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+      </div>
+      
+      <div style="background:#F3E8FF;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #7C3AED;">
+        <div style="font-size:14px;color:#6D28D9;font-weight:bold;margin-bottom:6px;">👤 ${studentData.fullName || 'الطالب'}</div>
+        <div style="font-size:12px;color:#6D28D9;">📅 خطة مخصصة بالذكاء الاصطناعي • 4 أسابيع</div>
+      </div>
+      
+      <div style="font-size:15px;line-height:2;color:var(--text);white-space:pre-wrap;background:#FAF5FF;padding:18px;border-radius:12px;">${planText}</div>
+      
+      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
+        <button class="btn btn-primary" id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;">📋 نسخ</button>
+        <button class="btn btn-soft" id="printPlanBtn" style="border-radius:50px;padding:10px 24px;">🖨️ طباعة</button>
+        <button class="btn btn-soft" id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;">إغلاق</button>
+      </div>
+      
+      <p style="font-size:11px;color:#999;text-align:center;margin-top:16px;">
+        💡 هذه الخطة مقترحة من الذكاء الاصطناعي — راجعها قبل التطبيق
+      </p>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  const closeModal = () => modal.remove();
+  modal.querySelector('#closePlanModal').onclick = closeModal;
+  modal.querySelector('#closePlanModalBtn').onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  
+  modal.querySelector('#copyPlanBtn').onclick = () => {
+    navigator.clipboard.writeText(planText).then(() => {
+      if (typeof showToast === 'function') showToast('✅ تم نسخ الخطة');
+    });
+  };
+  
+  modal.querySelector('#printPlanBtn').onclick = () => {
+    let printArea = document.getElementById('iep-print-area');
+    if (!printArea) {
+      printArea = document.createElement('div');
+      printArea.id = 'iep-print-area';
+      document.body.appendChild(printArea);
+    }
+    printArea.innerHTML = `
+      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <h1 style="font-size:24px;color:#7C3AED;margin:0;">منارة النطق</h1>
+          <p style="margin:5px 0 0;font-size:14px;color:#555;">خطة التدريب المخصصة</p>
+          <hr style="border:1px solid #ddd;margin:10px 0;">
+        </div>
+        <div style="margin-bottom:15px;"><strong>الطالب:</strong> ${studentData.fullName || 'الطالب'}</div>
+        <div style="white-space:pre-wrap;font-size:14px;line-height:1.8;">${planText}</div>
+        <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+      </div>
+    `;
+    window.print();
+    setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+  };
+}
+
+/* ========================================
+   10. حفظ التوصيات في الجلسة
    ======================================== */
 async function saveAIToSession(sessionId, recommendations) {
   try {
@@ -430,7 +607,7 @@ async function saveAIToSession(sessionId, recommendations) {
 }
 
 /* ========================================
-   9. حفظ التمارين المنزلية
+   11. حفظ التمارين المنزلية
    ======================================== */
 async function saveHomeworkToSession(sessionId, homeworkText) {
   try {
@@ -450,7 +627,7 @@ async function saveHomeworkToSession(sessionId, homeworkText) {
 }
 
 /* ========================================
-   10. زر توليد التوصيات
+   12. زر توليد التوصيات
    ======================================== */
 function createAIButton(sessionData, studentData) {
   const btn = document.createElement('button');
@@ -476,7 +653,7 @@ function createAIButton(sessionData, studentData) {
 }
 
 /* ========================================
-   11. زر التمارين المنزلية
+   13. زر التمارين المنزلية
    ======================================== */
 function createHomeworkButton(sessionData, studentData) {
   const btn = document.createElement('button');
@@ -502,7 +679,7 @@ function createHomeworkButton(sessionData, studentData) {
 }
 
 /* ========================================
-   12. 🆕 زر تحليل التقدم
+   14. زر تحليل التقدم
    ======================================== */
 function createProgressAnalysisButton(studentData) {
   const btn = document.createElement('button');
@@ -556,19 +733,62 @@ function createProgressAnalysisButton(studentData) {
 }
 
 /* ========================================
-   13. تصدير الدوال للنطاق العام
+   15. 🆕 زر خطة التدريب المخصصة
+   ======================================== */
+function createCustomPlanButton(studentData) {
+  const btn = document.createElement('button');
+  btn.id = 'generatePlanBtn';
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
+  btn.innerHTML = '🎯 خطة مخصصة (AI)';
+  
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ جاري التوليد...';
+    
+    try {
+      const fbDb = window.db;
+      const fbCollection = window.collection;
+      const fbQuery = window.query;
+      const fbWhere = window.where;
+      const fbGetDocs = window.getDocs;
+      
+      let sessionsData = [];
+      if (fbDb && fbCollection && fbQuery && fbWhere && fbGetDocs) {
+        const q = fbQuery(fbCollection(fbDb, "sessions"), fbWhere("studentId", "==", studentData.id));
+        const snap = await fbGetDocs(q);
+        snap.forEach(d => sessionsData.push({ id: d.id, ...d.data() }));
+      }
+      
+      const plan = await generateCustomPlan(studentData, sessionsData);
+      showCustomPlanModal(plan, studentData);
+      btn.disabled = false;
+      btn.innerHTML = '🎯 خطة مخصصة (AI)';
+    } catch (error) {
+      btn.disabled = false;
+      btn.innerHTML = '🎯 خطة مخصصة (AI)';
+      if (typeof showToast === 'function') showToast('❌ ' + error.message);
+    }
+  };
+  return btn;
+}
+
+/* ========================================
+   16. تصدير الدوال للنطاق العام
    ======================================== */
 window.callGeminiAI = callGeminiAI;
 window.generateSessionRecommendations = generateSessionRecommendations;
 window.generateHomeworkExercises = generateHomeworkExercises;
 window.generateProgressAnalysis = generateProgressAnalysis;
+window.generateCustomPlan = generateCustomPlan;
 window.showAIRecommendationsModal = showAIRecommendationsModal;
 window.showHomeworkModal = showHomeworkModal;
 window.showProgressAnalysisModal = showProgressAnalysisModal;
+window.showCustomPlanModal = showCustomPlanModal;
 window.saveAIToSession = saveAIToSession;
 window.saveHomeworkToSession = saveHomeworkToSession;
 window.createAIButton = createAIButton;
 window.createHomeworkButton = createHomeworkButton;
 window.createProgressAnalysisButton = createProgressAnalysisButton;
+window.createCustomPlanButton = createCustomPlanButton;
 
-console.log('✅ AI Features loaded — 3 features available');
+console.log('✅ AI Features loaded — 4 features available');
