@@ -1,8 +1,10 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v7.0 — 6 features available
+   v7.0 — 6 features
    ======================================== */
+
+console.log('🚀 Starting ai-features.js v7.0...');
 
 /* ========================================
    1. الدالة الرئيسية لاستدعاء Gemini AI
@@ -32,7 +34,7 @@ async function callGeminiAI(prompt, type = 'general') {
 }
 
 /* ========================================
-   2. توليد توصيات ذكية بعد جلسة
+   2. توليد توصيات ذكية
    ======================================== */
 async function generateSessionRecommendations(sessionData, studentData) {
   const sessionTypes = window.SESSION_TYPES || [
@@ -166,7 +168,6 @@ async function generateProgressAnalysis(studentData, sessionsData) {
 
   const prompt = `
 أنت محلل تعليمي متخصص في تدريب النطق للأطفال.
-لا تقدم تشخيصاً طبياً — فقط تحليل تعليمي.
 
 📊 بيانات الطالب:
 - الاسم: ${studentData.fullName || 'الطالب'}
@@ -228,7 +229,6 @@ async function generateCustomPlan(studentData, sessionsData) {
 
   const prompt = `
 أنت أخصائي نطق تعليمي متخصص في تصميم خطط تدريب فردية للأطفال (4-12 سنة).
-المطلوب: إنشاء خطة تدريب شاملة ومخصصة لكل طالب.
 
 👤 بيانات الطالب:
 - الاسم: ${studentData.fullName || 'الطالب'}
@@ -247,38 +247,9 @@ ${disorderText || 'لا توجد عيوب محددة'}
 - إجمالي الجلسات: ${totalSessions}
 - متوسط النجاح: ${avgSuccess}%
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-المطلوب منك خطة تدريب شاملة بالتنسيق التالي:
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🎯 الهدف الرئيسي للخطة
-
-📅 خطة 4 أسابيع
-
-📌 الأسبوع الأول
-- 🎯 الأهداف: ...
-- 📋 الجلسات: ... جلستان (الأحد + الثلاثاء)
-- 🔤 الحروف المستهدفة: ...
-- 📝 الأنشطة: ...
-
-📌 الأسبوع الثاني
-- 🎯 الأهداف: ...
-- 📋 الجلسات: ... جلستان (الاثنين + الأربعاء)
-- 🔤 الحروف المستهدفة: ...
-- 📝 الأنشطة: ...
-
-📌 الأسبوع الثالث
-- 🎯 الأهداف: ...
-- 📋 الجلسات: ... جلستان (الأحد + الثلاثاء)
-- 🔤 الحروف المستهدفة: ...
-- 📝 الأنشطة: ...
-
-📌 الأسبوع الرابع
-- 🎯 الأهداف: ...
-- 📋 الجلسات: ... جلستان (الاثنين + الأربعاء)
-- 🔤 الحروف المستهدفة: ...
-- 📝 الأنشطة: ...
-
+المطلوب: خطة تدريب شاملة تشمل:
+🎯 الهدف الرئيسي
+📅 خطة 4 أسابيع (كل أسبوع: أهداف + جلستان: الأحد+الثلاثاء / الاثنين+الأربعاء + حروف + أنشطة)
 🎯 أولويات التدريب
 📝 أنشطة مخصصة لكل حرف
 🏠 التمارين المنزلية الأسبوعية
@@ -307,7 +278,7 @@ async function generateShortStory(sessionData, studentData) {
   
   const prompt = `
 أنت كاتب قصص أطفال تعليمية متخصص في تدريب النطق.
-المطلوب: قصة قصيرة ممتعة تحتوي على تكرار الحرف المستهدف لتسهيل التدريب.
+المطلوب: قصة قصيرة ممتعة تحتوي على تكرار الحرف المستهدف.
 
 📋 معلومات:
 - الطالب: ${studentData.fullName || 'الطالب'}
@@ -335,24 +306,19 @@ async function generateShortStory(sessionData, studentData) {
 **⭐ نصيحة لولي الأمر:**
 اقرأ القصة بصوت واضح، واطلب من الطفل تكرار الكلمات.
 
-الشروط:
-- القصة مناسبة لعمر 4-12 سنة
-- كلمات بسيطة
-- قيمة تربوية
-- بالعربية الفصحى المبسطة
+الشروط: مناسبة لعمر 4-12 سنة، كلمات بسيطة، قيمة تربوية، بالعربية الفصحى.
 `;
 
   return await callGeminiAI(prompt, 'short-story');
 }
 
 /* ========================================
-   7. 🆕 توليد بيانات 28 حرفاً كاملة
+   7. توليد بيانات 28 حرفاً كاملة
    ======================================== */
 async function generateAllLettersData() {
   const allLetters = window.ALL_LETTERS || [];
   const alphabetData = window.alphabetData || [];
   
-  // بناء قائمة الحروف مع كلماتها
   const letterTitles = {};
   alphabetData.forEach(item => { letterTitles[item.letter] = item.title; });
   
@@ -360,7 +326,7 @@ async function generateAllLettersData() {
   
   const prompt = `
 أنت خبير في اللغة العربية وتعليم النطق للأطفال.
-المطلوب: توليد بيانات كاملة لـ 28 حرفاً عربياً للاستخدام في جلسات تدريب النطق.
+المطلوب: توليد بيانات كاملة لـ 28 حرفاً عربياً.
 
 📋 الحروف المطلوبة:
 ${lettersList}
@@ -369,25 +335,17 @@ ${lettersList}
 المطلوب لكل حرف:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. 📍 مخرج الحرف (وصف مختصر: مثلاً "انطباق الشفتين")
-2. 📖 الحرف مع الحركات الأربعة:
-   - فتحة (مثل: بَ)
-   - ضمة (مثل: بُ)
-   - كسرة (مثل: بِ)
-   - سكون (مثل: بْ)
-3. 📝 3 كلمات:
-   - بداية الكلمة (مثل: بَاب)
-   - وسط الكلمة (مثل: جَبَل)
-   - نهاية الكلمة (مثل: عِنَب)
-4. ✍️ 3 جمل بسيطة تحتوي على الحرف (مناسبة للأطفال 4-12 سنة)
+1. 📍 مخرج الحرف (وصف مختصر)
+2. 📖 الحرف مع الحركات الأربعة (فتحة، ضمة، كسرة، سكون)
+3. 📝 3 كلمات: بداية، وسط، نهاية
+4. ✍️ 3 جمل بسيطة
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚠️ مهم جداً:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- أرجع الإجابة **بصيغة JSON صحيحة فقط** (بدون شرح أو نص إضافي)
-- استخدم المفاتيح التالية بالضبط
-- لا تستخدم علامات ``` أو أي تنسيق آخر
+- أرجع الإجابة بصيغة JSON صحيحة فقط (بدون شرح أو نص إضافي)
+- لا تستخدم علامات \`\`\` أو أي تنسيق آخر
 
 الصيغة المطلوبة:
 
@@ -397,33 +355,21 @@ ${lettersList}
     "vowels": {"fatha": "أَ", "damma": "أُ", "kasra": "أِ", "sukoon": "أْ"},
     "words": {"start": ["أَسَد", "أَب", "أُم"], "middle": ["سَأَل", "رَأَى", "قَرَأَ"], "end": ["مَاء", "سَمَاء", "دُعَاء"]},
     "sentences": ["أَحْمَدُ يَلْعَبُ.", "أُمِّي طَيِّبَة.", "أَبِي فِي البَيْت."]
-  },
-  "ب": {
-    "place": "انطباق الشفتين",
-    "vowels": {"fatha": "بَ", "damma": "بُ", "kasra": "بِ", "sukoon": "بْ"},
-    "words": {"start": ["بَاب", "بَيْت", "بَقَرَة"], "middle": ["جَبَل", "حَبْل", "مَكْتَب"], "end": ["عِنَب", "كَلْب", "حَلِيب"]},
-    "sentences": ["بَنَى بَاسِمٌ بَيْتاً.", "أَكَلَ بَدْرٌ العِنَبَ.", "الكَلْبُ عِنْدَ البَابِ."]
   }
   // ... وهكذا لجميع الحروف الـ 28
 }
 
-⚠️ تأكد من:
+تأكد من:
 1. جميع الحروف الـ 28 موجودة
-2. كل حرف له 4 حركات
-3. كل حرف له 3 كلمات (بداية، وسط، نهاية)
-4. كل حرف له 3 جمل
-5. JSON صحيح 100% (بدون أخطاء)
+2. كل حرف له 4 حركات + 3 كلمات + 3 جمل
+3. JSON صحيح 100%
 `;
 
   const response = await callGeminiAI(prompt, 'letters-data');
   
-  // محاولة استخراج JSON
   let jsonText = response.trim();
-  
-  // إزالة أي علامات ```json
   jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
   
-  // البحث عن أول { وآخر }
   const firstBrace = jsonText.indexOf('{');
   const lastBrace = jsonText.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1) {
@@ -435,13 +381,12 @@ ${lettersList}
     return data;
   } catch (e) {
     console.error('❌ فشل تحليل JSON:', e);
-    console.error('النص المُستلم:', jsonText.substring(0, 500));
     throw new Error('فشل تحليل JSON من رد Gemini — حاول مرة أخرى');
   }
 }
 
 /* ========================================
-   8. 🆕 جلب بيانات حرف واحد من Firebase
+   8. جلب بيانات حرف واحد من Firebase
    ======================================== */
 async function getLetterData(letter) {
   try {
@@ -450,7 +395,6 @@ async function getLetterData(letter) {
     const fbGetDoc = window.getDoc;
     
     if (!fbDb || !fbDoc || !fbGetDoc) {
-      // fallback: استخدام LETTER_DATABASE من app.js
       return window.LETTER_DATABASE?.[letter] || null;
     }
     
@@ -461,7 +405,6 @@ async function getLetterData(letter) {
       return snap.data();
     }
     
-    // إذا لم يوجد في Firebase، استخدم LETTER_DATABASE
     return window.LETTER_DATABASE?.[letter] || null;
   } catch (e) {
     console.warn('خطأ في جلب بيانات الحرف:', e);
@@ -470,7 +413,7 @@ async function getLetterData(letter) {
 }
 
 /* ========================================
-   9. 🆕 جلب بيانات جميع الحروف من Firebase
+   9. جلب بيانات جميع الحروف من Firebase
    ======================================== */
 async function getAllLettersData() {
   try {
@@ -478,16 +421,11 @@ async function getAllLettersData() {
     const fbCollection = window.collection;
     const fbGetDocs = window.getDocs;
     
-    if (!fbDb || !fbCollection || !fbGetDocs) {
-      return null;
-    }
+    if (!fbDb || !fbCollection || !fbGetDocs) return null;
     
     const snap = await fbGetDocs(fbCollection(fbDb, "letters_data"));
     const result = {};
-    snap.forEach(d => {
-      result[d.id] = d.data();
-    });
-    
+    snap.forEach(d => { result[d.id] = d.data(); });
     return result;
   } catch (e) {
     console.warn('خطأ في جلب بيانات الحروف:', e);
@@ -496,12 +434,14 @@ async function getAllLettersData() {
 }
 
 /* ========================================
-   10. 🆕 عرض نافذة توليد محتوى الحروف
+   10. عرض نافذة توليد محتوى الحروف
    ======================================== */
 function showGenerateLettersModal() {
+  console.log('📚 فتح نافذة توليد الحروف...');
+  
   const modal = document.createElement('div');
   modal.id = 'generateLettersModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
   
   modal.innerHTML = `
     <div style="background:white;padding:30px;border-radius:20px;max-width:650px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
@@ -572,7 +512,6 @@ function showGenerateLettersModal() {
       statusText.textContent = `✅ تم توليد ${lettersCount} حرفاً`;
       statusSub.textContent = 'جاري الحفظ في Firebase...';
       
-      // حفظ في Firebase
       const fbDb = window.db;
       const fbDoc = window.doc;
       const fbSetDoc = window.setDoc;
@@ -598,14 +537,10 @@ function showGenerateLettersModal() {
         <p style="margin:10px 0 0 0;color:#333;font-size:14px;">
           تم حفظ <strong>${saved}</strong> حرفاً في قاعدة البيانات
         </p>
-        <p style="margin:10px 0 0 0;color:#666;font-size:12px;">
-          البيانات جاهزة الآن لاستخدامها في الجلسات
-        </p>
       `;
       
       startBtn.style.display = 'none';
       
-      // تحديث زر الإغلاق
       const closeBtn = modal.querySelector('#closeGenerateModalBtn');
       closeBtn.textContent = 'إغلاق';
       closeBtn.style.background = 'linear-gradient(135deg, #16A34A, #22C55E)';
@@ -620,7 +555,6 @@ function showGenerateLettersModal() {
         <div style="font-size:60px;margin-bottom:15px;">❌</div>
         <p style="margin:0;color:#DC2626;font-weight:bold;font-size:16px;">فشل التوليد</p>
         <p style="margin:10px 0 0 0;color:#666;font-size:13px;">${error.message}</p>
-        <p style="margin:10px 0 0 0;color:#999;font-size:12px;">حاول مرة أخرى</p>
       `;
       
       startBtn.disabled = false;
@@ -632,13 +566,15 @@ function showGenerateLettersModal() {
 }
 
 /* ========================================
-   11. 🆕 زر توليد محتوى الحروف
+   11. زر توليد محتوى الحروف
    ======================================== */
 function createGenerateLettersButton() {
+  console.log('✅ إنشاء زر توليد الحروف...');
+  
   const btn = document.createElement('button');
   btn.id = 'generateLettersBtn';
   btn.className = 'btn btn-sm';
-  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:8px 20px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:13px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
   btn.innerHTML = '📚 توليد محتوى الحروف (AI)';
   
   btn.onclick = () => showGenerateLettersModal();
@@ -729,7 +665,6 @@ function showHomeworkModal(homeworkText, sessionData) {
     });
   };
   
-  // إرسال لولي الأمر
   modal.querySelector('#sendHWToParentBtn').onclick = () => {
     try {
       const sendFunc = window.sendSessionToParent;
@@ -1194,6 +1129,8 @@ function createShortStoryButton(sessionData, studentData) {
 /* ========================================
    19. تصدير الدوال للنطاق العام
    ======================================== */
+console.log('📤 تصدير الدوال إلى window...');
+
 window.callGeminiAI = callGeminiAI;
 window.generateSessionRecommendations = generateSessionRecommendations;
 window.generateHomeworkExercises = generateHomeworkExercises;
@@ -1220,3 +1157,4 @@ window.createCustomPlanButton = createCustomPlanButton;
 window.createShortStoryButton = createShortStoryButton;
 
 console.log('✅ AI Features loaded — 6 features available');
+console.log('🔍 createGenerateLettersButton:', typeof window.createGenerateLettersButton);
