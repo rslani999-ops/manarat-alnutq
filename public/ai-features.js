@@ -1,10 +1,70 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v8.0 — 6 features
+   v9.0 — 7 features + bug fixes
+   ========================================
+   
+   📋 التغييرات في v9.0:
+   ✅ إضافة createGenerateLettersButton (توليد كل الحروف دفعة واحدة)
+   ✅ إضافة sendSessionToParent كاملة (بريد + واتساب)
+   ✅ إصلاح استدعاء render() ليعمل من خارج app.js
+   ✅ استخدام window.SESSION_TYPES / window.ALL_LETTERS / window.letterTitleMap
+   ✅ إضافة دوال مساعدة آمنة (safeRender, safeToast, safeNotify)
    ======================================== */
 
-console.log('🚀 Starting ai-features.js v8.0...');
+console.log('🚀 Starting ai-features.js v9.0...');
+
+/* ========================================
+   0. دوال مساعدة آمنة (Safe Helpers)
+   ======================================== */
+
+// استدعاء آمن لـ render
+function safeRender() {
+  if (typeof window.render === 'function') {
+    window.render();
+  } else {
+    console.warn('⚠️ render() غير متوفرة في window');
+  }
+}
+
+// استدعاء آمن لـ showToast
+function safeToast(msg) {
+  if (typeof window.showToast === 'function') {
+    window.showToast(msg);
+  } else {
+    console.log('TOAST:', msg);
+  }
+}
+
+// استدعاء آمن لـ showNotification
+function safeNotify(msg, type = 'info') {
+  if (typeof window.showNotification === 'function') {
+    window.showNotification(msg, type);
+  }
+}
+
+// قراءة SESSION_TYPES من window أو fallback
+function getSessionTypes() {
+  return window.SESSION_TYPES || [
+    { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
+    { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
+    { id: 3, name: 'الحرف في كلمات', icon: '📝' },
+    { id: 4, name: 'الحرف في جمل', icon: '✍️' }
+  ];
+}
+
+// قراءة ALL_LETTERS من window أو fallback
+function getAllLetters() {
+  return window.ALL_LETTERS || [
+    'ب','م','و','ف','ت','ث','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ل','ن',
+    'ج','ك','ق','ي','أ','هـ','ع','ح','خ','غ'
+  ];
+}
+
+// قراءة letterTitleMap من window أو fallback
+function getLetterTitle(letter) {
+  return window.letterTitleMap?.[letter] || '';
+}
 
 /* ========================================
    1. الدالة الرئيسية لاستدعاء Gemini AI
@@ -37,12 +97,7 @@ async function callGeminiAI(prompt, type = 'general') {
    2. توليد توصيات ذكية بعد جلسة
    ======================================== */
 async function generateSessionRecommendations(sessionData, studentData) {
-  const sessionTypes = window.SESSION_TYPES || [
-    { id: 1, name: 'الحرف مجرداً' },
-    { id: 2, name: 'الحرف مع الحركات' },
-    { id: 3, name: 'الحرف في كلمات' },
-    { id: 4, name: 'الحرف في جمل' }
-  ];
+  const sessionTypes = getSessionTypes();
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
   
   const prompt = `
@@ -74,12 +129,7 @@ async function generateSessionRecommendations(sessionData, studentData) {
    3. توليد التمارين المنزلية
    ======================================== */
 async function generateHomeworkExercises(sessionData, studentData) {
-  const sessionTypes = window.SESSION_TYPES || [
-    { id: 1, name: 'الحرف مجرداً' },
-    { id: 2, name: 'الحرف مع الحركات' },
-    { id: 3, name: 'الحرف في كلمات' },
-    { id: 4, name: 'الحرف في جمل' }
-  ];
+  const sessionTypes = getSessionTypes();
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
   
   const prompt = `
@@ -204,7 +254,7 @@ ${lettersSummary}
    ======================================== */
 async function generateCustomPlan(studentData, sessionsData) {
   const diag = studentData.diagnostic || {};
-  const allLetters = window.ALL_LETTERS || [];
+  const allLetters = getAllLetters();
   
   const passedLetters = allLetters.filter(l => diag[l]?.status === 'passed');
   const trainedLetters = allLetters.filter(l => diag[l]?.status === 'trained');
@@ -223,8 +273,9 @@ async function generateCustomPlan(studentData, sessionsData) {
     .join('\n');
   
   const totalSessions = sessionsData?.length || 0;
-  const avgSuccess = totalSessions > 0 
-    ? Math.round(sessionsData.filter(s => s.successRate).reduce((sum, s) => sum + (s.successRate || 0), 0) / sessionsData.filter(s => s.successRate).length)
+  const evaluated = sessionsData?.filter(s => s.successRate) || [];
+  const avgSuccess = evaluated.length > 0 
+    ? Math.round(evaluated.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluated.length)
     : 0;
 
   const prompt = `
@@ -267,14 +318,9 @@ ${disorderText || 'لا توجد عيوب محددة'}
    6. توليد قصة قصيرة تعليمية
    ======================================== */
 async function generateShortStory(sessionData, studentData) {
-  const sessionTypes = window.SESSION_TYPES || [
-    { id: 1, name: 'الحرف مجرداً' },
-    { id: 2, name: 'الحرف مع الحركات' },
-    { id: 3, name: 'الحرف في كلمات' },
-    { id: 4, name: 'الحرف في جمل' }
-  ];
+  const sessionTypes = getSessionTypes();
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
-  const letterTitle = window.letterTitleMap?.[sessionData.letter] || '';
+  const letterTitle = getLetterTitle(sessionData.letter);
   
   const prompt = `
 أنت كاتب قصص أطفال تعليمية متخصص في تدريب النطق.
@@ -313,10 +359,10 @@ async function generateShortStory(sessionData, studentData) {
 }
 
 /* ========================================
-   7. 🆕 توليد بيانات حرف واحد
+   7. توليد بيانات حرف واحد
    ======================================== */
 async function generateSingleLetterData(letter) {
-  const letterTitle = window.letterTitleMap?.[letter] || '';
+  const letterTitle = getLetterTitle(letter);
   
   const prompt = `
 أنت خبير في اللغة العربية وتعليم النطق للأطفال.
@@ -366,15 +412,11 @@ async function generateSingleLetterData(letter) {
 
   const response = await callGeminiAI(prompt, 'single-letter-data');
   
-  // استخراج JSON بشكل ذكي
   let jsonText = response.trim();
-  
-  // إزالة أي علامات ```
   jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
-  jsonText = jsonText.replace(/^[^{]*/, ''); // إزالة أي نص قبل {
-  jsonText = jsonText.replace(/[^}]*$/, ''); // إزالة أي نص بعد }
+  jsonText = jsonText.replace(/^[^{]*/, '');
+  jsonText = jsonText.replace(/[^}]*$/, '');
   
-  // البحث عن أول { وآخر }
   const firstBrace = jsonText.indexOf('{');
   const lastBrace = jsonText.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1) {
@@ -383,17 +425,14 @@ async function generateSingleLetterData(letter) {
   
   try {
     const data = JSON.parse(jsonText);
-    
-    // التحقق من البيانات
     if (!data.place || !data.vowels || !data.words || !data.sentences) {
       throw new Error('بيانات الحرف غير مكتملة');
     }
-    
     return data;
   } catch (e) {
     console.error('❌ فشل تحليل JSON:', e);
     console.error('النص المُستلم:', jsonText.substring(0, 300));
-    throw new Error('فشل تحليل JSON من رد Gemini — حاول مرة أخرى');
+    throw new Error('فشل تحليل JSON من Gemini — حاول مرة أخرى');
   }
 }
 
@@ -446,7 +485,7 @@ async function saveLetterData(letter, data) {
 }
 
 /* ========================================
-   10. 🆕 عرض نافذة تأكيد التوليد
+   10. عرض نافذة تأكيد التوليد
    ======================================== */
 function showGenerateLetterConfirmModal(letter) {
   return new Promise((resolve) => {
@@ -502,7 +541,7 @@ function showGenerateLetterConfirmModal(letter) {
 }
 
 /* ========================================
-   11. 🆕 عرض نافذة نجاح التوليد
+   11. عرض نافذة نجاح التوليد
    ======================================== */
 function showLetterSuccessModal(letter) {
   const modal = document.createElement('div');
@@ -528,12 +567,12 @@ function showLetterSuccessModal(letter) {
   
   modal.querySelector('#reloadPageBtn').onclick = () => {
     modal.remove();
-    render();
+    safeRender(); // ✅ إصلاح الخطأ #3
   };
 }
 
 /* ========================================
-   12. 🆕 زر توليد الحرف في صفحة الجلسة
+   12. زر توليد الحرف في صفحة الجلسة
    ======================================== */
 function createGenerateLetterButton(letter, onSuccess) {
   const btn = document.createElement('button');
@@ -543,33 +582,26 @@ function createGenerateLetterButton(letter, onSuccess) {
   
   btn.onclick = async () => {
     try {
-      // 1. نافذة التأكيد
       const confirmed = await showGenerateLetterConfirmModal(letter);
       if (!confirmed) return;
       
-      // 2. تعطيل الزر
       btn.disabled = true;
       btn.style.opacity = '0.6';
       btn.innerHTML = '⏳ جاري التوليد...';
       
-      // 3. التوليد
       const data = await generateSingleLetterData(letter);
-      
-      // 4. الحفظ في Firebase
       await saveLetterData(letter, data);
       
-      // 5. نجاح
       showLetterSuccessModal(letter);
       
-      if (typeof showToast === 'function') showToast(`✅ تم توليد بيانات حرف (${letter})`);
-      if (typeof showNotification === 'function') showNotification(`تم توليد محتوى حرف (${letter})`, 'success');
+      safeToast(`✅ تم توليد بيانات حرف (${letter})`);
+      safeNotify(`تم توليد محتوى حرف (${letter})`, 'success');
+      
+      if (typeof onSuccess === 'function') onSuccess(data);
       
     } catch (error) {
       console.error('❌ فشل التوليد:', error);
-      
-      if (typeof showToast === 'function') showToast('❌ فشل التوليد: ' + error.message);
-      
-      // استعادة الزر
+      safeToast('❌ فشل التوليد: ' + error.message);
       btn.disabled = false;
       btn.style.opacity = '1';
       btn.innerHTML = `📚 إعادة محاولة توليد حرف (${letter})`;
@@ -580,7 +612,418 @@ function createGenerateLetterButton(letter, onSuccess) {
 }
 
 /* ========================================
-   13. عرض توصيات AI
+   13. 🆕 إصلاح الخطأ #1: زر توليد كل الحروف دفعة واحدة
+   (الدالة كانت مفقودة تماماً في v8.0)
+   ======================================== */
+function createGenerateLettersButton() {
+  const btn = document.createElement('button');
+  btn.id = 'generateAllLettersBtn';
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:14px 32px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;transition:0.2s;box-shadow:0 4px 15px rgba(124,58,237,0.3);';
+  btn.innerHTML = '🚀 توليد بيانات جميع الحروف (28 حرفاً)';
+  
+  btn.onclick = async () => {
+    const confirmed = await showGenerateAllLettersConfirmModal();
+    if (!confirmed) return;
+    
+    const letters = getAllLetters();
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    
+    let successCount = 0;
+    let failCount = 0;
+    const failedLetters = [];
+    
+    // عرض نافذة تقدم
+    const progressModal = showProgressModal(letters.length);
+    
+    for (let i = 0; i < letters.length; i++) {
+      const letter = letters[i];
+      try {
+        btn.innerHTML = `⏳ جاري توليد (${letter}) — ${i + 1}/${letters.length}`;
+        progressModal.update(i + 1, letters.length, letter, 'processing');
+        
+        const data = await generateSingleLetterData(letter);
+        await saveLetterData(letter, data);
+        successCount++;
+        progressModal.update(i + 1, letters.length, letter, 'done');
+        
+        // انتظار قصير بين الطلبات لتجنب rate limiting
+        await new Promise(r => setTimeout(r, 800));
+        
+      } catch (error) {
+        console.error(`❌ فشل توليد حرف (${letter}):`, error);
+        failCount++;
+        failedLetters.push(letter);
+        progressModal.update(i + 1, letters.length, letter, 'failed');
+      }
+    }
+    
+    progressModal.close();
+    
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.innerHTML = '🚀 توليد بيانات جميع الحروف (28 حرفاً)';
+    
+    safeToast(`✅ اكتمل التوليد: ${successCount} نجح، ${failCount} فشل`);
+    safeNotify(`تم توليد ${successCount} حرفاً بنجاح`, 'success');
+    
+    showGenerateAllLettersResultsModal(successCount, failCount, failedLetters);
+  };
+  
+  return btn;
+}
+
+/* نافذة تأكيد توليد كل الحروف */
+function showGenerateAllLettersConfirmModal() {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+    
+    modal.innerHTML = `
+      <div style="background:white;padding:30px;border-radius:20px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:60px;margin-bottom:10px;">📚</div>
+          <h2 style="margin:0;color:#7C3AED;">توليد بيانات كل الحروف</h2>
+        </div>
+        
+        <div style="background:#FEF3C7;padding:18px;border-radius:12px;margin-bottom:20px;border-right:4px solid #F59E0B;">
+          <p style="margin:0;font-size:14px;color:#92400E;line-height:1.7;font-weight:bold;">
+            ⚠️ تنبيه مهم:
+          </p>
+          <ul style="margin:10px 0 0 0;padding-right:20px;font-size:13px;color:#333;line-height:1.8;">
+            <li>سيتم توليد بيانات <strong>28 حرفاً</strong></li>
+            <li>سيستغرق ذلك حوالي <strong>5-8 دقائق</strong></li>
+            <li>لا تغلق الصفحة أثناء العملية</li>
+            <li>يمكن استئناف التوليد لاحقاً للحروف الفاشلة فقط</li>
+          </ul>
+        </div>
+        
+        <p style="margin:0 0 15px 0;font-size:13px;color:#555;text-align:center;">
+          هل أنت جاهز للبدء؟
+        </p>
+        
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn" id="confirmAllBtn" style="background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
+            🚀 ابدأ التوليد
+          </button>
+          <button class="btn" id="cancelAllBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
+            إلغاء
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const closeModal = (result) => {
+      modal.remove();
+      resolve(result);
+    };
+    
+    modal.querySelector('#confirmAllBtn').onclick = () => closeModal(true);
+    modal.querySelector('#cancelAllBtn').onclick = () => closeModal(false);
+    modal.onclick = (e) => { if (e.target === modal) closeModal(false); };
+  });
+}
+
+/* نافذة تقدم التوليد */
+function showProgressModal(totalLetters) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+  
+  modal.innerHTML = `
+    <div style="background:white;padding:30px;border-radius:20px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:50px;margin-bottom:10px;">⏳</div>
+        <h2 style="margin:0;color:#7C3AED;">جاري توليد بيانات الحروف</h2>
+      </div>
+      
+      <div style="background:#F3E8FF;padding:16px;border-radius:12px;margin-bottom:20px;">
+        <div style="font-size:16px;font-weight:bold;color:#5B21B6;text-align:center;margin-bottom:8px;" id="progressText">
+          جاري البدء...
+        </div>
+        <div style="background:#E9D5FF;border-radius:20px;height:24px;overflow:hidden;">
+          <div id="progressBar" style="height:100%;background:linear-gradient(90deg, #A855F7, #7C3AED);width:0%;transition:width 0.3s;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:bold;">
+            0%
+          </div>
+        </div>
+      </div>
+      
+      <div id="currentLetterDisplay" style="text-align:center;padding:20px;background:#FAF5FF;border-radius:12px;margin-bottom:15px;">
+        <div style="font-size:14px;color:#6B7A99;">الحرف الحالي:</div>
+        <div style="font-size:40px;font-weight:bold;color:#7C3AED;margin-top:8px;">—</div>
+      </div>
+      
+      <p style="text-align:center;font-size:12px;color:#999;margin:0;">
+        ⚠️ لا تغلق الصفحة
+      </p>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  return {
+    update: (current, total, letter, status) => {
+      const percent = Math.round((current / total) * 100);
+      const bar = modal.querySelector('#progressBar');
+      const text = modal.querySelector('#progressText');
+      const letterDisplay = modal.querySelector('#currentLetterDisplay');
+      
+      if (bar) {
+        bar.style.width = percent + '%';
+        bar.textContent = percent + '%';
+      }
+      if (text) {
+        text.textContent = `${current} / ${total} — ${status === 'done' ? '✅ تم' : status === 'failed' ? '❌ فشل' : '⏳ جاري...'}`;
+      }
+      if (letterDisplay) {
+        letterDisplay.innerHTML = `
+          <div style="font-size:14px;color:#6B7A99;">الحرف الحالي:</div>
+          <div style="font-size:40px;font-weight:bold;color:${status === 'failed' ? '#DC2626' : '#7C3AED'};margin-top:8px;">${letter}</div>
+        `;
+      }
+    },
+    close: () => modal.remove()
+  };
+}
+
+/* نافذة نتائج التوليد */
+function showGenerateAllLettersResultsModal(successCount, failCount, failedLetters) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+  
+  modal.innerHTML = `
+    <div style="background:white;padding:30px;border-radius:20px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:70px;margin-bottom:10px;">${failCount === 0 ? '🎉' : '⚠️'}</div>
+        <h2 style="margin:0;color:${failCount === 0 ? '#16A34A' : '#F59E0B'};">اكتمل التوليد</h2>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div style="background:#DCFCE7;padding:16px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:#16A34A;">${successCount}</div>
+          <div style="font-size:13px;color:#166534;">نجح</div>
+        </div>
+        <div style="background:#FEE2E2;padding:16px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:#DC2626;">${failCount}</div>
+          <div style="font-size:13px;color:#991B1B;">فشل</div>
+        </div>
+      </div>
+      
+      ${failedLetters.length > 0 ? `
+        <div style="background:#FEF3C7;padding:14px;border-radius:12px;margin-bottom:20px;border-right:4px solid #F59E0B;">
+          <p style="margin:0 0 8px 0;font-size:13px;font-weight:bold;color:#92400E;">الحروف التي فشل توليدها:</p>
+          <div style="font-size:20px;font-weight:bold;color:#DC2626;letter-spacing:8px;direction:rtl;">${failedLetters.join(' ')}</div>
+          <p style="margin:8px 0 0 0;font-size:12px;color:#92400E;">يمكنك إعادة توليدها بشكل فردي من صفحة الجلسة</p>
+        </div>
+      ` : ''}
+      
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn" id="closeResultsBtn" style="background:linear-gradient(135deg, #16A34A, #22C55E);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
+          ✅ حسناً
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  modal.querySelector('#closeResultsBtn').onclick = () => {
+    modal.remove();
+    safeRender();
+  };
+}
+
+/* ========================================
+   14. 🆕 إصلاح الخطأ #2: دالة إرسال التقرير لولي الأمر
+   ======================================== */
+async function sendSessionToParent(sessionData, studentData) {
+  try {
+    if (!studentData) {
+      safeToast('⚠️ لا توجد بيانات طالب');
+      return;
+    }
+    
+    const parentEmail = studentData.parentEmail || '';
+    const parentPhone = studentData.parentPhone || '';
+    const parentName = studentData.parentName || 'ولي الأمر';
+    const studentName = studentData.fullName || studentData.email || 'الطالب';
+    
+    if (!parentEmail && !parentPhone) {
+      safeToast('⚠️ لا توجد بيانات ولي الأمر — يرجى إضافتها في الملف الشخصي');
+      safeNotify('لا توجد بيانات ولي أمر مسجلة', 'warning');
+      return;
+    }
+    
+    // عرض نافذة خيارات الإرسال
+    showSendToParentOptionsModal(sessionData, studentData);
+    
+  } catch (e) {
+    console.error('❌ خطأ في إرسال التقرير:', e);
+    safeToast('❌ خطأ: ' + e.message);
+  }
+}
+
+/* نافذة خيارات الإرسال لولي الأمر */
+function showSendToParentOptionsModal(sessionData, studentData) {
+  const parentEmail = studentData.parentEmail || '';
+  const parentPhone = studentData.parentPhone || '';
+  const parentName = studentData.parentName || 'ولي الأمر';
+  const studentName = studentData.fullName || studentData.email || 'الطالب';
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;color:var(--mint-deep);">📤 إرسال التقرير لولي الأمر</h3>
+        <button id="closeSendModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+      </div>
+      
+      <div style="background:#F0FDFA;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid var(--mint-deep);">
+        <div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>👤 الطالب:</strong> ${studentName}</div>
+        <div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>👨‍👩‍👧 ولي الأمر:</strong> ${parentName}</div>
+        ${parentEmail ? `<div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>📧 البريد:</strong> ${parentEmail}</div>` : ''}
+        ${parentPhone ? `<div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>📱 الجوال:</strong> ${parentPhone}</div>` : ''}
+      </div>
+      
+      <div style="background:#FEF3C7;padding:14px;border-radius:12px;margin-bottom:20px;border-right:4px solid #F59E0B;">
+        <p style="margin:0;font-size:13px;color:#92400E;">
+          💡 اختر طريقة الإرسال المناسبة. سيتم توليد نص التقرير تلقائياً.
+        </p>
+      </div>
+      
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn" id="sendViaEmailBtn" style="background:linear-gradient(135deg, #0891B2, #06B6D4);color:white;border:none;border-radius:50px;padding:14px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;${!parentEmail ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!parentEmail ? 'disabled' : ''}>
+          📧 إرسال بالبريد الإلكتروني ${!parentEmail ? '(غير متوفر)' : ''}
+        </button>
+        
+        <button class="btn" id="sendViaWhatsappBtn" style="background:linear-gradient(135deg, #25D366, #128C7E);color:white;border:none;border-radius:50px;padding:14px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;${!parentPhone ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!parentPhone ? 'disabled' : ''}>
+          💬 إرسال عبر واتساب ${!parentPhone ? '(غير متوفر)' : ''}
+        </button>
+        
+        <button class="btn" id="copyReportBtn" style="background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:50px;padding:14px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
+          📋 نسخ نص التقرير
+        </button>
+      </div>
+      
+      <div style="margin-top:20px;padding-top:20px;border-top:2px dashed var(--line);">
+        <details>
+          <summary style="cursor:pointer;font-weight:bold;color:var(--mint-deep);font-size:14px;">👁️ معاينة نص التقرير</summary>
+          <div id="reportPreview" style="margin-top:12px;background:#FAFDFC;padding:14px;border-radius:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto;color:var(--text);"></div>
+        </details>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const closeModal = () => modal.remove();
+  modal.querySelector('#closeSendModal').onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  
+  // توليد نص التقرير
+  const reportText = generateParentReportText(sessionData, studentData);
+  const previewEl = modal.querySelector('#reportPreview');
+  if (previewEl) previewEl.textContent = reportText;
+  
+  // إرسال بالبريد
+  const emailBtn = modal.querySelector('#sendViaEmailBtn');
+  if (emailBtn && !emailBtn.disabled) {
+    emailBtn.onclick = () => {
+      const subject = encodeURIComponent(`تقرير جلسة نطق - ${studentName}`);
+      const body = encodeURIComponent(reportText);
+      window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${body}`;
+      safeToast('📧 جاري فتح البريد...');
+      closeModal();
+    };
+  }
+  
+  // إرسال بواتساب
+  const whatsappBtn = modal.querySelector('#sendViaWhatsappBtn');
+  if (whatsappBtn && !whatsappBtn.disabled) {
+    whatsappBtn.onclick = () => {
+      let phone = parentPhone.replace(/\D/g, '');
+      if (phone.startsWith('0')) phone = '966' + phone.substring(1);
+      if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
+      const message = encodeURIComponent(reportText);
+      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      safeToast('💬 جاري فتح واتساب...');
+      closeModal();
+    };
+  }
+  
+  // نسخ النص
+  const copyBtn = modal.querySelector('#copyReportBtn');
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(reportText).then(() => {
+        safeToast('✅ تم نسخ التقرير');
+        safeNotify('تم نسخ التقرير للحافظة', 'success');
+      }).catch(() => {
+        safeToast('❌ فشل النسخ');
+      });
+    };
+  }
+}
+
+/* توليد نص التقرير لولي الأمر */
+function generateParentReportText(sessionData, studentData) {
+  const studentName = studentData.fullName || studentData.email || 'الطالب';
+  const parentName = studentData.parentName || 'ولي الأمر';
+  const sessionTypes = getSessionTypes();
+  const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
+  const evalLabels = {
+    'passed': '✅ اجتاز بنجاح',
+    'trained': '🔄 اجتاز بعد تدريب',
+    'need': '⚠️ يحتاج مزيداً من التدريب',
+    'unclear': '❌ غير واضح',
+    'none': '⏳ قيد التقييم'
+  };
+  const evalText = evalLabels[sessionData.evaluation] || 'قيد التقييم';
+  
+  const lines = [
+    `السلام عليكم ${parentName} 🌟`,
+    '',
+    `📋 تقرير جلسة نطق`,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `👤 الطالب: ${studentName}`,
+    `🔤 الحرف المستهدف: (${sessionData.letter})`,
+    `📚 نوع الجلسة: ${typeInfo.name}`,
+    `📅 التاريخ: ${sessionData.date || 'غير محدد'}`,
+    `⏱️ المدة: ${sessionData.duration || '30 دقيقة'}`,
+    '',
+    `🎯 الهدف:`,
+    `${sessionData.goal || 'غير محدد'}`,
+    '',
+    `📊 التقييم: ${evalText}`,
+    `📈 نسبة النجاح: ${sessionData.successRate || 0}%`,
+    ''
+  ];
+  
+  if (sessionData.recommendations) {
+    lines.push(
+      `💡 التوصيات:`,
+      `${sessionData.recommendations}`,
+      ''
+    );
+  }
+  
+  lines.push(
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `🏠 نرجو متابعة التدريب المنزلي بانتظام`,
+    `📞 للاستفسار: منصة منارة النطق`,
+    '',
+    `مع تمنياتنا بالتوفيق 🌸`,
+    `منارة النطق - منصة تدريب النطق`
+  );
+  
+  return lines.join('\n');
+}
+
+/* ========================================
+   15. عرض توصيات AI
    ======================================== */
 function showAIRecommendationsModal(recommendations, sessionData) {
   const modal = document.createElement('div');
@@ -613,7 +1056,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
   
   modal.querySelector('#copyAIBtn').onclick = () => {
     navigator.clipboard.writeText(recommendations).then(() => {
-      if (typeof showToast === 'function') showToast('✅ تم نسخ التوصيات');
+      safeToast('✅ تم نسخ التوصيات');
     });
   };
   
@@ -624,7 +1067,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
 }
 
 /* ========================================
-   14. عرض التمارين المنزلية
+   16. عرض التمارين المنزلية
    ======================================== */
 function showHomeworkModal(homeworkText, sessionData) {
   const modal = document.createElement('div');
@@ -658,18 +1101,12 @@ function showHomeworkModal(homeworkText, sessionData) {
   
   modal.querySelector('#copyHWBtn').onclick = () => {
     navigator.clipboard.writeText(homeworkText).then(() => {
-      if (typeof showToast === 'function') showToast('✅ تم نسخ التمارين');
+      safeToast('✅ تم نسخ التمارين');
     });
   };
   
   modal.querySelector('#sendHWToParentBtn').onclick = () => {
     try {
-      const sendFunc = window.sendSessionToParent;
-      if (typeof sendFunc !== 'function') {
-        if (typeof showToast === 'function') showToast('⚠️ دالة الإرسال غير متوفرة');
-        return;
-      }
-      
       let targetStudent = null;
       if (typeof window.getCurrentStudent === 'function') {
         targetStudent = window.getCurrentStudent();
@@ -679,7 +1116,7 @@ function showHomeworkModal(homeworkText, sessionData) {
       }
       
       if (!targetStudent) {
-        if (typeof showToast === 'function') showToast('⚠️ اختر طالباً أولاً');
+        safeToast('⚠️ اختر طالباً أولاً');
         return;
       }
       
@@ -688,10 +1125,12 @@ function showHomeworkModal(homeworkText, sessionData) {
         recommendations: `📝 التمارين المنزلية:\n\n${homeworkText}` 
       };
       
-      sendFunc(sessionWithHW, targetStudent);
+      // استخدام الدالة المُصلَحة
+      sendSessionToParent(sessionWithHW, targetStudent);
+      closeModal();
     } catch (e) {
       console.error('خطأ في الإرسال:', e);
-      if (typeof showToast === 'function') showToast('⚠️ خطأ: ' + e.message);
+      safeToast('⚠️ خطأ: ' + e.message);
     }
   };
   
@@ -702,7 +1141,7 @@ function showHomeworkModal(homeworkText, sessionData) {
 }
 
 /* ========================================
-   15. عرض تحليل التقدم
+   17. عرض تحليل التقدم
    ======================================== */
 function showProgressAnalysisModal(analysisText, studentData, stats) {
   const modal = document.createElement('div');
@@ -755,7 +1194,7 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
   
   modal.querySelector('#copyProgBtn').onclick = () => {
     navigator.clipboard.writeText(analysisText).then(() => {
-      if (typeof showToast === 'function') showToast('✅ تم نسخ التحليل');
+      safeToast('✅ تم نسخ التحليل');
     });
   };
   
@@ -785,7 +1224,7 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
 }
 
 /* ========================================
-   16. عرض خطة التدريب المخصصة
+   18. عرض خطة التدريب المخصصة
    ======================================== */
 function showCustomPlanModal(planText, studentData) {
   const modal = document.createElement('div');
@@ -821,7 +1260,7 @@ function showCustomPlanModal(planText, studentData) {
   
   modal.querySelector('#copyPlanBtn').onclick = () => {
     navigator.clipboard.writeText(planText).then(() => {
-      if (typeof showToast === 'function') showToast('✅ تم نسخ الخطة');
+      safeToast('✅ تم نسخ الخطة');
     });
   };
   
@@ -850,7 +1289,7 @@ function showCustomPlanModal(planText, studentData) {
 }
 
 /* ========================================
-   17. عرض القصة القصيرة
+   19. عرض القصة القصيرة
    ======================================== */
 function showShortStoryModal(storyText, sessionData) {
   const modal = document.createElement('div');
@@ -887,7 +1326,7 @@ function showShortStoryModal(storyText, sessionData) {
   
   modal.querySelector('#copyStoryBtn').onclick = () => {
     navigator.clipboard.writeText(storyText).then(() => {
-      if (typeof showToast === 'function') showToast('✅ تم نسخ القصة');
+      safeToast('✅ تم نسخ القصة');
     });
   };
   
@@ -920,7 +1359,7 @@ function showShortStoryModal(storyText, sessionData) {
 }
 
 /* ========================================
-   18. دوال الحفظ
+   20. دوال الحفظ
    ======================================== */
 async function saveAIToSession(sessionId, recommendations) {
   try {
@@ -930,9 +1369,9 @@ async function saveAIToSession(sessionId, recommendations) {
       aiRecommendations: recommendations,
       aiGeneratedAt: new Date().toISOString()
     });
-    if (typeof showToast === 'function') showToast('✅ تم حفظ التوصيات');
+    safeToast('✅ تم حفظ التوصيات');
   } catch (e) {
-    if (typeof showToast === 'function') showToast('❌ فشل الحفظ');
+    safeToast('❌ فشل الحفظ');
   }
 }
 
@@ -944,9 +1383,9 @@ async function saveHomeworkToSession(sessionId, homeworkText) {
       aiHomework: homeworkText,
       aiHomeworkGeneratedAt: new Date().toISOString()
     });
-    if (typeof showToast === 'function') showToast('✅ تم حفظ التمارين');
+    safeToast('✅ تم حفظ التمارين');
   } catch (e) {
-    if (typeof showToast === 'function') showToast('❌ فشل الحفظ');
+    safeToast('❌ فشل الحفظ');
   }
 }
 
@@ -958,14 +1397,14 @@ async function saveStoryToSession(sessionId, storyText) {
       aiStory: storyText,
       aiStoryGeneratedAt: new Date().toISOString()
     });
-    if (typeof showToast === 'function') showToast('✅ تم حفظ القصة');
+    safeToast('✅ تم حفظ القصة');
   } catch (e) {
-    if (typeof showToast === 'function') showToast('❌ فشل الحفظ');
+    safeToast('❌ فشل الحفظ');
   }
 }
 
 /* ========================================
-   19. أزرار التوليد
+   21. أزرار التوليد
    ======================================== */
 function createAIButton(sessionData, studentData) {
   const btn = document.createElement('button');
@@ -984,7 +1423,7 @@ function createAIButton(sessionData, studentData) {
     } catch (error) {
       btn.disabled = false;
       btn.innerHTML = '🤖 توصيات ذكية (AI)';
-      if (typeof showToast === 'function') showToast('❌ ' + error.message);
+      safeToast('❌ ' + error.message);
     }
   };
   return btn;
@@ -1007,7 +1446,7 @@ function createHomeworkButton(sessionData, studentData) {
     } catch (error) {
       btn.disabled = false;
       btn.innerHTML = '📝 تمارين منزلية (AI)';
-      if (typeof showToast === 'function') showToast('❌ ' + error.message);
+      safeToast('❌ ' + error.message);
     }
   };
   return btn;
@@ -1055,7 +1494,7 @@ function createProgressAnalysisButton(studentData) {
     } catch (error) {
       btn.disabled = false;
       btn.innerHTML = '📊 تحليل التقدم (AI)';
-      if (typeof showToast === 'function') showToast('❌ ' + error.message);
+      safeToast('❌ ' + error.message);
     }
   };
   return btn;
@@ -1091,7 +1530,7 @@ function createCustomPlanButton(studentData) {
     } catch (error) {
       btn.disabled = false;
       btn.innerHTML = '🎯 خطة مخصصة (AI)';
-      if (typeof showToast === 'function') showToast('❌ ' + error.message);
+      safeToast('❌ ' + error.message);
     }
   };
   return btn;
@@ -1114,14 +1553,14 @@ function createShortStoryButton(sessionData, studentData) {
     } catch (error) {
       btn.disabled = false;
       btn.innerHTML = '📖 قصة قصيرة (AI)';
-      if (typeof showToast === 'function') showToast('❌ ' + error.message);
+      safeToast('❌ ' + error.message);
     }
   };
   return btn;
 }
 
 /* ========================================
-   20. تصدير الدوال للنطاق العام
+   22. تصدير الدوال للنطاق العام
    ======================================== */
 window.callGeminiAI = callGeminiAI;
 window.generateSessionRecommendations = generateSessionRecommendations;
@@ -1135,6 +1574,9 @@ window.saveLetterData = saveLetterData;
 window.showGenerateLetterConfirmModal = showGenerateLetterConfirmModal;
 window.showLetterSuccessModal = showLetterSuccessModal;
 window.createGenerateLetterButton = createGenerateLetterButton;
+window.createGenerateLettersButton = createGenerateLettersButton; // ✅ إصلاح الخطأ #1
+window.sendSessionToParent = sendSessionToParent; // ✅ إصلاح الخطأ #2
+window.generateParentReportText = generateParentReportText;
 window.showAIRecommendationsModal = showAIRecommendationsModal;
 window.showHomeworkModal = showHomeworkModal;
 window.showProgressAnalysisModal = showProgressAnalysisModal;
@@ -1149,5 +1591,6 @@ window.createProgressAnalysisButton = createProgressAnalysisButton;
 window.createCustomPlanButton = createCustomPlanButton;
 window.createShortStoryButton = createShortStoryButton;
 
-console.log('✅ AI Features loaded — v8.0');
-console.log('🔍 createGenerateLetterButton:', typeof window.createGenerateLetterButton);
+console.log('✅ AI Features loaded — v9.0');
+console.log('🔍 createGenerateLettersButton:', typeof window.createGenerateLettersButton);
+console.log('🔍 sendSessionToParent:', typeof window.sendSessionToParent);
