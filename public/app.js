@@ -770,7 +770,7 @@ window.sendSessionToParent = sendSessionToParent;
    🆕 14-ب. تصدير الدوال والبيانات لـ ai-features.js
    Export Functions & Data for AI Module
    ======================================== */
-
+window.state = state;
 window.db = db;
 window.auth = auth;
 window.storage = storage;
@@ -794,7 +794,6 @@ window.alphabetData = alphabetData;
 window.letterTitleMap = letterTitleMap;
 window.getDefaultGoal = getDefaultGoal;
 window.analyzePronunciation = analyzePronunciation;
-
 
 
 
@@ -2225,6 +2224,7 @@ function printParentGuide(contentHTML) {
 
 
 
+
 /* ========================================
    25. الخطة الأسبوعية الذكية - Smart Weekly Plan
    ======================================== */
@@ -3612,6 +3612,8 @@ async function renderSpeechSessions(app) {
   }
   app.appendChild(listCard);
 }
+
+
 
 
 
