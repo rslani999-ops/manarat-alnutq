@@ -1,10 +1,10 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v7.0 — 6 features
+   v8.0 — 6 features
    ======================================== */
 
-console.log('🚀 Starting ai-features.js v7.0...');
+console.log('🚀 Starting ai-features.js v8.0...');
 
 /* ========================================
    1. الدالة الرئيسية لاستدعاء Gemini AI
@@ -34,7 +34,7 @@ async function callGeminiAI(prompt, type = 'general') {
 }
 
 /* ========================================
-   2. توليد توصيات ذكية
+   2. توليد توصيات ذكية بعد جلسة
    ======================================== */
 async function generateSessionRecommendations(sessionData, studentData) {
   const sessionTypes = window.SESSION_TYPES || [
@@ -313,63 +313,68 @@ async function generateShortStory(sessionData, studentData) {
 }
 
 /* ========================================
-   7. توليد بيانات 28 حرفاً كاملة
+   7. 🆕 توليد بيانات حرف واحد
    ======================================== */
-async function generateAllLettersData() {
-  const allLetters = window.ALL_LETTERS || [];
-  const alphabetData = window.alphabetData || [];
-  
-  const letterTitles = {};
-  alphabetData.forEach(item => { letterTitles[item.letter] = item.title; });
-  
-  const lettersList = allLetters.map(l => `- ${l} (${letterTitles[l] || ''})`).join('\n');
+async function generateSingleLetterData(letter) {
+  const letterTitle = window.letterTitleMap?.[letter] || '';
   
   const prompt = `
 أنت خبير في اللغة العربية وتعليم النطق للأطفال.
-المطلوب: توليد بيانات كاملة لـ 28 حرفاً عربياً.
+المطلوب: توليد بيانات كاملة لحرف واحد فقط: "${letter}".
 
-📋 الحروف المطلوبة:
-${lettersList}
+📌 الحرف: ${letter} (مثال: ${letterTitle})
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-المطلوب لكل حرف:
+المطلوب:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. 📍 مخرج الحرف (وصف مختصر)
-2. 📖 الحرف مع الحركات الأربعة (فتحة، ضمة، كسرة، سكون)
-3. 📝 3 كلمات: بداية، وسط، نهاية
-4. ✍️ 3 جمل بسيطة
+1. 📍 مخرج الحرف (وصف مختصر جداً: مثلاً "انطباق الشفتين")
+2. 📖 الحرف مع الحركات الأربعة:
+   - فتحة (مثل: بَ)
+   - ضمة (مثل: بُ)
+   - كسرة (مثل: بِ)
+   - سكون (مثل: بْ)
+3. 📝 3 كلمات:
+   - بداية الكلمة (مثل: بَاب)
+   - وسط الكلمة (مثل: جَبَل)
+   - نهاية الكلمة (مثل: عِنَب)
+4. ✍️ 3 جمل بسيطة تحتوي على الحرف (مناسبة للأطفال 4-12 سنة)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚠️ مهم جداً:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- أرجع الإجابة بصيغة JSON صحيحة فقط (بدون شرح أو نص إضافي)
-- لا تستخدم علامات \`\`\` أو أي تنسيق آخر
+- أرجع الإجابة **بصيغة JSON صحيحة فقط** (بدون شرح أو نص إضافي)
+- **لا تستخدم علامات \`\`\` أو أي تنسيق آخر**
+- ابدأ مباشرة بـ { وانتهي بـ }
 
 الصيغة المطلوبة:
 
 {
-  "أ": {
-    "place": "من أقصى الحلق",
-    "vowels": {"fatha": "أَ", "damma": "أُ", "kasra": "أِ", "sukoon": "أْ"},
-    "words": {"start": ["أَسَد", "أَب", "أُم"], "middle": ["سَأَل", "رَأَى", "قَرَأَ"], "end": ["مَاء", "سَمَاء", "دُعَاء"]},
-    "sentences": ["أَحْمَدُ يَلْعَبُ.", "أُمِّي طَيِّبَة.", "أَبِي فِي البَيْت."]
-  }
-  // ... وهكذا لجميع الحروف الـ 28
+  "place": "وصف مخرج الحرف",
+  "vowels": {"fatha": "${letter}َ", "damma": "${letter}ُ", "kasra": "${letter}ِ", "sukoon": "${letter}ْ"},
+  "words": {"start": ["كلمة1", "كلمة2", "كلمة3"], "middle": ["كلمة1", "كلمة2", "كلمة3"], "end": ["كلمة1", "كلمة2", "كلمة3"]},
+  "sentences": ["جملة 1", "جملة 2", "جملة 3"]
 }
 
-تأكد من:
-1. جميع الحروف الـ 28 موجودة
-2. كل حرف له 4 حركات + 3 كلمات + 3 جمل
-3. JSON صحيح 100%
+⚠️ تأكد من:
+1. JSON صحيح 100%
+2. الكلمات تبدأ فعلاً بالحرف "${letter}"
+3. الجمل بسيطة ومناسبة للأطفال
+4. الجمل تحتوي على الحرف "${letter}"
 `;
 
-  const response = await callGeminiAI(prompt, 'letters-data');
+  const response = await callGeminiAI(prompt, 'single-letter-data');
   
+  // استخراج JSON بشكل ذكي
   let jsonText = response.trim();
-  jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
   
+  // إزالة أي علامات ```
+  jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+  jsonText = jsonText.replace(/^[^{]*/, ''); // إزالة أي نص قبل {
+  jsonText = jsonText.replace(/[^}]*$/, ''); // إزالة أي نص بعد }
+  
+  // البحث عن أول { وآخر }
   const firstBrace = jsonText.indexOf('{');
   const lastBrace = jsonText.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1) {
@@ -378,9 +383,16 @@ ${lettersList}
   
   try {
     const data = JSON.parse(jsonText);
+    
+    // التحقق من البيانات
+    if (!data.place || !data.vowels || !data.words || !data.sentences) {
+      throw new Error('بيانات الحرف غير مكتملة');
+    }
+    
     return data;
   } catch (e) {
     console.error('❌ فشل تحليل JSON:', e);
+    console.error('النص المُستلم:', jsonText.substring(0, 300));
     throw new Error('فشل تحليل JSON من رد Gemini — حاول مرة أخرى');
   }
 }
@@ -413,177 +425,162 @@ async function getLetterData(letter) {
 }
 
 /* ========================================
-   9. جلب بيانات جميع الحروف من Firebase
+   9. حفظ بيانات حرف في Firebase
    ======================================== */
-async function getAllLettersData() {
+async function saveLetterData(letter, data) {
   try {
     const fbDb = window.db;
-    const fbCollection = window.collection;
-    const fbGetDocs = window.getDocs;
+    const fbDoc = window.doc;
+    const fbSetDoc = window.setDoc;
     
-    if (!fbDb || !fbCollection || !fbGetDocs) return null;
+    if (!fbDb || !fbDoc || !fbSetDoc) {
+      throw new Error('Firebase غير جاهز');
+    }
     
-    const snap = await fbGetDocs(fbCollection(fbDb, "letters_data"));
-    const result = {};
-    snap.forEach(d => { result[d.id] = d.data(); });
-    return result;
+    await fbSetDoc(fbDoc(fbDb, "letters_data", letter), data);
+    return true;
   } catch (e) {
-    console.warn('خطأ في جلب بيانات الحروف:', e);
-    return null;
+    console.error('خطأ في حفظ بيانات الحرف:', e);
+    throw e;
   }
 }
 
 /* ========================================
-   10. عرض نافذة توليد محتوى الحروف
+   10. 🆕 عرض نافذة تأكيد التوليد
    ======================================== */
-function showGenerateLettersModal() {
-  console.log('📚 فتح نافذة توليد الحروف...');
-  
+function showGenerateLetterConfirmModal(letter) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.id = 'generateLetterModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+    
+    modal.innerHTML = `
+      <div style="background:white;padding:30px;border-radius:20px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:60px;margin-bottom:10px;">📚</div>
+          <h2 style="margin:0;color:#7C3AED;">توليد محتوى حرف (${letter})</h2>
+        </div>
+        
+        <div style="background:#F3E8FF;padding:18px;border-radius:12px;margin-bottom:20px;border-right:4px solid #7C3AED;">
+          <p style="margin:0;font-size:13px;color:#5B21B6;line-height:1.7;">
+            سيتم توليد البيانات التالية بالذكاء الاصطناعي:
+          </p>
+          <ul style="margin:10px 0 0 0;padding-right:20px;font-size:13px;color:#333;line-height:1.8;">
+            <li>📍 مخرج الحرف</li>
+            <li>📖 4 حركات</li>
+            <li>📝 3 كلمات (بداية، وسط، نهاية)</li>
+            <li>✍️ 3 جمل بسيطة</li>
+          </ul>
+        </div>
+        
+        <p style="margin:0 0 15px 0;font-size:12px;color:#999;text-align:center;">
+          ⚠️ سيستغرق 5-10 ثواني
+        </p>
+        
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn" id="confirmGenerateBtn" style="background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
+            🚀 توليد الآن
+          </button>
+          <button class="btn" id="cancelGenerateBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
+            إلغاء
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const closeModal = (result) => {
+      modal.remove();
+      resolve(result);
+    };
+    
+    modal.querySelector('#confirmGenerateBtn').onclick = () => closeModal(true);
+    modal.querySelector('#cancelGenerateBtn').onclick = () => closeModal(false);
+    modal.onclick = (e) => { if (e.target === modal) closeModal(false); };
+  });
+}
+
+/* ========================================
+   11. 🆕 عرض نافذة نجاح التوليد
+   ======================================== */
+function showLetterSuccessModal(letter) {
   const modal = document.createElement('div');
-  modal.id = 'generateLettersModal';
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
   
   modal.innerHTML = `
-    <div style="background:white;padding:30px;border-radius:20px;max-width:650px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
-      <div style="text-align:center;margin-bottom:25px;">
-        <div style="font-size:60px;margin-bottom:10px;">📚</div>
-        <h2 style="margin:0;color:#7C3AED;">توليد محتوى الحروف</h2>
-        <p style="margin:10px 0 0 0;color:#666;font-size:14px;">
-          توليد بيانات 28 حرفاً عربياً بالذكاء الاصطناعي
-        </p>
-      </div>
-      
-      <div style="background:#F3E8FF;padding:18px;border-radius:12px;margin-bottom:20px;border-right:4px solid #7C3AED;">
-        <p style="margin:0;font-size:13px;color:#5B21B6;line-height:1.7;">
-          <strong>⚠️ ملاحظة:</strong><br>
-          هذه العملية ستستغرق <strong>2-5 دقائق</strong>. الرجاء عدم إغلاق الصفحة.
-        </p>
-      </div>
-      
-      <div style="background:#F9FDFC;padding:18px;border-radius:12px;margin-bottom:20px;">
-        <strong style="color:#155E75;display:block;margin-bottom:10px;">📋 ما سيتم توليده:</strong>
-        <ul style="margin:0;padding-right:20px;font-size:13px;color:#333;line-height:1.8;">
-          <li>📍 مخرج كل حرف</li>
-          <li>📖 4 حركات لكل حرف</li>
-          <li>📝 3 كلمات لكل حرف (بداية/وسط/نهاية)</li>
-          <li>✍️ 3 جمل بسيطة لكل حرف</li>
-        </ul>
-      </div>
-      
-      <div id="generateStatus" style="display:none;background:#ECFEFF;padding:18px;border-radius:12px;margin-bottom:20px;text-align:center;">
-        <div style="font-size:40px;margin-bottom:10px;">⏳</div>
-        <p style="margin:0;color:#155E75;font-weight:bold;" id="generateStatusText">جاري التوليد...</p>
-        <p style="margin:10px 0 0 0;color:#666;font-size:12px;" id="generateStatusSub"></p>
-      </div>
-      
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-        <button class="btn" id="startGenerateBtn" style="background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
-          🚀 بدء التوليد
-        </button>
-        <button class="btn" id="closeGenerateModalBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
-          إغلاق
-        </button>
-      </div>
+    <div style="background:white;padding:30px;border-radius:20px;max-width:450px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+      <div style="font-size:80px;margin-bottom:15px;">🎉</div>
+      <h2 style="margin:0 0 10px 0;color:#16A34A;">تم بنجاح!</h2>
+      <p style="margin:0 0 20px 0;color:#555;font-size:15px;">
+        تم توليد وحفظ بيانات حرف <strong>(${letter})</strong>
+      </p>
+      <p style="margin:0 0 20px 0;color:#999;font-size:13px;">
+        ستظهر البيانات الجديدة في الجلسة الآن
+      </p>
+      <button class="btn" id="reloadPageBtn" style="background:linear-gradient(135deg, #16A34A, #22C55E);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
+        🔄 تحديث الجلسة
+      </button>
     </div>
   `;
   
   document.body.appendChild(modal);
   
-  const closeModal = () => modal.remove();
-  modal.querySelector('#closeGenerateModalBtn').onclick = closeModal;
-  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
-  
-  const startBtn = modal.querySelector('#startGenerateBtn');
-  const statusBox = modal.querySelector('#generateStatus');
-  const statusText = modal.querySelector('#generateStatusText');
-  const statusSub = modal.querySelector('#generateStatusSub');
-  
-  startBtn.onclick = async () => {
-    startBtn.disabled = true;
-    startBtn.textContent = '⏳ جاري التوليد...';
-    statusBox.style.display = 'block';
-    statusText.textContent = 'جاري الاتصال بـ Gemini AI...';
-    statusSub.textContent = 'قد يستغرق 2-5 دقائق';
-    
-    try {
-      const data = await generateAllLettersData();
-      
-      const lettersCount = Object.keys(data).length;
-      statusText.textContent = `✅ تم توليد ${lettersCount} حرفاً`;
-      statusSub.textContent = 'جاري الحفظ في Firebase...';
-      
-      const fbDb = window.db;
-      const fbDoc = window.doc;
-      const fbSetDoc = window.setDoc;
-      
-      if (!fbDb || !fbDoc || !fbSetDoc) {
-        throw new Error('Firebase غير جاهز');
-      }
-      
-      let saved = 0;
-      for (const [letter, letterData] of Object.entries(data)) {
-        try {
-          await fbSetDoc(fbDoc(fbDb, "letters_data", letter), letterData);
-          saved++;
-          statusText.textContent = `✅ تم حفظ ${saved}/${lettersCount}`;
-        } catch (e) {
-          console.warn(`خطأ في حفظ ${letter}:`, e);
-        }
-      }
-      
-      statusBox.innerHTML = `
-        <div style="font-size:60px;margin-bottom:15px;">🎉</div>
-        <p style="margin:0;color:#16A34A;font-weight:bold;font-size:18px;">تم بنجاح!</p>
-        <p style="margin:10px 0 0 0;color:#333;font-size:14px;">
-          تم حفظ <strong>${saved}</strong> حرفاً في قاعدة البيانات
-        </p>
-      `;
-      
-      startBtn.style.display = 'none';
-      
-      const closeBtn = modal.querySelector('#closeGenerateModalBtn');
-      closeBtn.textContent = 'إغلاق';
-      closeBtn.style.background = 'linear-gradient(135deg, #16A34A, #22C55E)';
-      closeBtn.style.color = 'white';
-      
-      if (typeof showToast === 'function') showToast(`✅ تم توليد وحفظ ${saved} حرفاً`);
-      if (typeof showNotification === 'function') showNotification(`تم توليد ${saved} حرفاً بنجاح`, 'success');
-      
-    } catch (error) {
-      console.error('خطأ في التوليد:', error);
-      statusBox.innerHTML = `
-        <div style="font-size:60px;margin-bottom:15px;">❌</div>
-        <p style="margin:0;color:#DC2626;font-weight:bold;font-size:16px;">فشل التوليد</p>
-        <p style="margin:10px 0 0 0;color:#666;font-size:13px;">${error.message}</p>
-      `;
-      
-      startBtn.disabled = false;
-      startBtn.textContent = '🔄 إعادة المحاولة';
-      
-      if (typeof showToast === 'function') showToast('❌ فشل التوليد: ' + error.message);
-    }
+  modal.querySelector('#reloadPageBtn').onclick = () => {
+    modal.remove();
+    render();
   };
 }
 
 /* ========================================
-   11. زر توليد محتوى الحروف
+   12. 🆕 زر توليد الحرف في صفحة الجلسة
    ======================================== */
-function createGenerateLettersButton() {
-  console.log('✅ إنشاء زر توليد الحروف...');
-  
+function createGenerateLetterButton(letter, onSuccess) {
   const btn = document.createElement('button');
-  btn.id = 'generateLettersBtn';
-  btn.className = 'btn btn-sm';
-  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
-  btn.innerHTML = '📚 توليد محتوى الحروف (AI)';
+  btn.id = `generateLetterBtn_${letter}`;
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 28px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;transition:0.2s;';
+  btn.innerHTML = `📚 توليد محتوى حرف (${letter}) بالذكاء الاصطناعي`;
   
-  btn.onclick = () => showGenerateLettersModal();
+  btn.onclick = async () => {
+    try {
+      // 1. نافذة التأكيد
+      const confirmed = await showGenerateLetterConfirmModal(letter);
+      if (!confirmed) return;
+      
+      // 2. تعطيل الزر
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      btn.innerHTML = '⏳ جاري التوليد...';
+      
+      // 3. التوليد
+      const data = await generateSingleLetterData(letter);
+      
+      // 4. الحفظ في Firebase
+      await saveLetterData(letter, data);
+      
+      // 5. نجاح
+      showLetterSuccessModal(letter);
+      
+      if (typeof showToast === 'function') showToast(`✅ تم توليد بيانات حرف (${letter})`);
+      if (typeof showNotification === 'function') showNotification(`تم توليد محتوى حرف (${letter})`, 'success');
+      
+    } catch (error) {
+      console.error('❌ فشل التوليد:', error);
+      
+      if (typeof showToast === 'function') showToast('❌ فشل التوليد: ' + error.message);
+      
+      // استعادة الزر
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = `📚 إعادة محاولة توليد حرف (${letter})`;
+    }
+  };
   
   return btn;
 }
 
 /* ========================================
-   12. عرض توصيات AI
+   13. عرض توصيات AI
    ======================================== */
 function showAIRecommendationsModal(recommendations, sessionData) {
   const modal = document.createElement('div');
@@ -627,7 +624,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
 }
 
 /* ========================================
-   13. عرض التمارين المنزلية
+   14. عرض التمارين المنزلية
    ======================================== */
 function showHomeworkModal(homeworkText, sessionData) {
   const modal = document.createElement('div');
@@ -680,9 +677,6 @@ function showHomeworkModal(homeworkText, sessionData) {
       if (!targetStudent && window.state?.currentStudent) {
         targetStudent = window.state.currentStudent;
       }
-      if (!targetStudent && window.currentStudent) {
-        targetStudent = window.currentStudent;
-      }
       
       if (!targetStudent) {
         if (typeof showToast === 'function') showToast('⚠️ اختر طالباً أولاً');
@@ -708,7 +702,7 @@ function showHomeworkModal(homeworkText, sessionData) {
 }
 
 /* ========================================
-   14. عرض تحليل التقدم
+   15. عرض تحليل التقدم
    ======================================== */
 function showProgressAnalysisModal(analysisText, studentData, stats) {
   const modal = document.createElement('div');
@@ -791,7 +785,7 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
 }
 
 /* ========================================
-   15. عرض خطة التدريب المخصصة
+   16. عرض خطة التدريب المخصصة
    ======================================== */
 function showCustomPlanModal(planText, studentData) {
   const modal = document.createElement('div');
@@ -856,7 +850,7 @@ function showCustomPlanModal(planText, studentData) {
 }
 
 /* ========================================
-   16. عرض القصة القصيرة
+   17. عرض القصة القصيرة
    ======================================== */
 function showShortStoryModal(storyText, sessionData) {
   const modal = document.createElement('div');
@@ -926,7 +920,7 @@ function showShortStoryModal(storyText, sessionData) {
 }
 
 /* ========================================
-   17. دوال الحفظ
+   18. دوال الحفظ
    ======================================== */
 async function saveAIToSession(sessionId, recommendations) {
   try {
@@ -971,7 +965,7 @@ async function saveStoryToSession(sessionId, storyText) {
 }
 
 /* ========================================
-   18. أزرار التوليد
+   19. أزرار التوليد
    ======================================== */
 function createAIButton(sessionData, studentData) {
   const btn = document.createElement('button');
@@ -1127,21 +1121,20 @@ function createShortStoryButton(sessionData, studentData) {
 }
 
 /* ========================================
-   19. تصدير الدوال للنطاق العام
+   20. تصدير الدوال للنطاق العام
    ======================================== */
-console.log('📤 تصدير الدوال إلى window...');
-
 window.callGeminiAI = callGeminiAI;
 window.generateSessionRecommendations = generateSessionRecommendations;
 window.generateHomeworkExercises = generateHomeworkExercises;
 window.generateProgressAnalysis = generateProgressAnalysis;
 window.generateCustomPlan = generateCustomPlan;
 window.generateShortStory = generateShortStory;
-window.generateAllLettersData = generateAllLettersData;
+window.generateSingleLetterData = generateSingleLetterData;
 window.getLetterData = getLetterData;
-window.getAllLettersData = getAllLettersData;
-window.showGenerateLettersModal = showGenerateLettersModal;
-window.createGenerateLettersButton = createGenerateLettersButton;
+window.saveLetterData = saveLetterData;
+window.showGenerateLetterConfirmModal = showGenerateLetterConfirmModal;
+window.showLetterSuccessModal = showLetterSuccessModal;
+window.createGenerateLetterButton = createGenerateLetterButton;
 window.showAIRecommendationsModal = showAIRecommendationsModal;
 window.showHomeworkModal = showHomeworkModal;
 window.showProgressAnalysisModal = showProgressAnalysisModal;
@@ -1156,5 +1149,5 @@ window.createProgressAnalysisButton = createProgressAnalysisButton;
 window.createCustomPlanButton = createCustomPlanButton;
 window.createShortStoryButton = createShortStoryButton;
 
-console.log('✅ AI Features loaded — 6 features available');
-console.log('🔍 createGenerateLettersButton:', typeof window.createGenerateLettersButton);
+console.log('✅ AI Features loaded — v8.0');
+console.log('🔍 createGenerateLetterButton:', typeof window.createGenerateLetterButton);
