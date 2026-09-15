@@ -736,7 +736,6 @@ function render() {
 
 
 
-
 /* ========================================
    16. صفحة الملف الشخصي - Student Profile
    ======================================== */
@@ -1411,31 +1410,20 @@ async function renderTeacherDashboard(app) {
   `;
   app.appendChild(summaryDashboard);
 
+  // 🆕 بعد التعديل: 3 أزرار فقط (بدون السجل السحابي + الخطة الأسبوعية + التوجيهات)
   const actCard = document.createElement('div');
   actCard.className = 'card no-print';
   actCard.innerHTML = `
-    <h3>الجلسات والتقييم السحابي</h3>
+    <h3>الإجراءات السريعة</h3>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button class="btn btn-primary btn-sm" id="btnSessions">📋 سجل الجلسات السحابي</button>
       <button class="btn btn-success btn-sm" id="btnSessionsLog">📊 جدول سجل الجلسات</button>
       <button class="btn btn-soft btn-sm" id="btnIEPList">📋 الخطة الفردية (IEP)</button>
       <button class="btn btn-soft btn-sm" id="btnAchievementList">🏆 ملف إنجاز الطلاب</button>
       <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
-      <button class="btn btn-soft btn-sm" id="btnWeeklyPlan">📅 الخطة الأسبوعية</button>
-      <button class="btn btn-soft btn-sm" id="btnParentGuide">👨‍👩‍👧 توجيهات أولياء الأمور</button>
     </div>
   `;
   app.appendChild(actCard);
 
-  const btnSessions = actCard.querySelector('#btnSessions');
-  if (btnSessions) btnSessions.onclick = () => {
-    if (!state.currentStudent && state.myStudents.length) state.currentStudent = state.myStudents[0];
-    if (state.currentStudent) {
-      state.diagEval = state.currentStudent.diagnostic || {};
-      state.view = 'speech-sessions';
-    } else { showToast('لا يوجد طلاب مضافون'); }
-    render();
-  };
   const btnSessionsLog = actCard.querySelector('#btnSessionsLog');
   if (btnSessionsLog) btnSessionsLog.onclick = () => { state.view = 'sessions-log'; render(); };
   const btnIEPList = actCard.querySelector('#btnIEPList');
@@ -1444,15 +1432,10 @@ async function renderTeacherDashboard(app) {
   if (btnAchievementList) btnAchievementList.onclick = () => { state.view = 'student-achievement-list'; render(); };
   const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
   if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
-  const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
-  if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
-  const btnParentGuide = actCard.querySelector('#btnParentGuide');
-  if (btnParentGuide) btnParentGuide.onclick = () => { state.view = 'parent-guide'; render(); };
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
   
-  // 🆕 رأس البطاقة مع زر التصفية الذكية
   myCard.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
       <h3 style="margin:0;">📋 قائمة طلابك المضافين (${state.myStudents.length})</h3>
@@ -1565,7 +1548,6 @@ async function renderTeacherDashboard(app) {
     });
   }
   
-  // 🆕 ربط زر التصفية الذكية
   const smartFilterBtn = myCard.querySelector('#smartFilterBtn');
   if (smartFilterBtn) {
     smartFilterBtn.onclick = () => showSmartFilterModal();
@@ -1625,9 +1607,6 @@ async function renderTeacherDashboard(app) {
   app.appendChild(freeCard);
 }
 
-/* ========================================
-   🆕 دالة عرض نافذة التصفية الذكية
-   ======================================== */
 function showSmartFilterModal() {
   const modal = document.createElement('div');
   modal.id = 'smartFilterModal';
@@ -1642,7 +1621,7 @@ function showSmartFilterModal() {
       
       <div style="background:#ECFEFF;padding:16px;border-radius:12px;margin-bottom:20px;border-right:4px solid #0891B2;">
         <p style="margin:0;font-size:13px;color:#155E75;">
-          💡 اختر معايير التصفية (الحرف + الفئة العمرية + يوم الجلسة) لعرض الطلاب المتشابهين
+          💡 اختر معايير التصفية (الحرف + الفئة العمرية) لعرض الطلاب المتشابهين
         </p>
       </div>
       
@@ -1665,15 +1644,6 @@ function showSmartFilterModal() {
             <option value="9-10">9-10 سنوات</option>
             <option value="10-11">10-11 سنة</option>
             <option value="11-12">11-12 سنة</option>
-          </select>
-        </div>
-        
-        <div>
-          <label style="font-weight:bold;display:block;margin-bottom:6px;font-size:14px;">📅 يوم الجلسة:</label>
-          <select id="filterDay" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;background:white;">
-            <option value="">الكل</option>
-            <option value="sunday-tuesday">الأحد + الثلاثاء</option>
-            <option value="monday-wednesday">الاثنين + الأربعاء</option>
           </select>
         </div>
       </div>
@@ -1703,31 +1673,25 @@ function showSmartFilterModal() {
   applyBtn.onclick = () => {
     const letter = modal.querySelector('#filterLetter').value;
     const age = modal.querySelector('#filterAge').value;
-    const day = modal.querySelector('#filterDay').value;
-    renderFilteredStudents(letter, age, day);
+    renderFilteredStudents(letter, age);
   };
   
   const resetBtn = modal.querySelector('#resetFilterBtn');
   resetBtn.onclick = () => {
     modal.querySelector('#filterLetter').value = '';
     modal.querySelector('#filterAge').value = '';
-    modal.querySelector('#filterDay').value = '';
     const resultsDiv = modal.querySelector('#filterResults');
     resultsDiv.innerHTML = '<p style="text-align:center;color:#6B7A99;font-size:14px;">اختر المعايير ثم اضغط "تطبيق التصفية"</p>';
   };
 }
 
-/* ========================================
-   🆕 دالة عرض الطلاب المُصفّين
-   ======================================== */
-async function renderFilteredStudents(letterFilter, ageFilter, dayFilter) {
+async function renderFilteredStudents(letterFilter, ageFilter) {
   const resultsDiv = document.getElementById('filterResults');
   if (!resultsDiv) return;
   
   resultsDiv.innerHTML = '<p style="text-align:center;color:#6B7A99;">⏳ جاري التصفية...</p>';
   
   try {
-    // جلب بيانات الطلاب الكاملة من Firebase
     const allStudentsData = [];
     for (const st of state.myStudents) {
       try {
@@ -1738,7 +1702,6 @@ async function renderFilteredStudents(letterFilter, ageFilter, dayFilter) {
       } catch (e) { console.warn('خطأ في جلب بيانات طالب:', e); }
     }
     
-    // تصفية حسب الحرف
     let filtered = allStudentsData;
     
     if (letterFilter) {
@@ -1753,13 +1716,6 @@ async function renderFilteredStudents(letterFilter, ageFilter, dayFilter) {
       filtered = filtered.filter(st => st.ageGroup === ageFilter);
     }
     
-    // التصفية حسب يوم الجلسة
-    if (dayFilter) {
-      filtered = filtered.filter(st => {
-        return st.sessionDay === dayFilter;
-      });
-    }
-    
     if (filtered.length === 0) {
       resultsDiv.innerHTML = `
         <div style="text-align:center;padding:30px;background:#FFF8E1;border-radius:12px;border:2px dashed #F57F17;">
@@ -1770,7 +1726,6 @@ async function renderFilteredStudents(letterFilter, ageFilter, dayFilter) {
       return;
     }
     
-    // تجميع النتائج حسب الحرف ثم العمر
     const grouped = {};
     filtered.forEach(st => {
       const diag = st.diagnostic || {};
@@ -1999,26 +1954,9 @@ function renderGames(app) {
   if (startMatchBtn) startMatchBtn.onclick = generateMatchQuestion;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ========================================
    24. توجيهات أولياء الأمور - Parent Guide
+   (تبقى موجودة لكن لا زر لها في لوحة المعلم)
    ======================================== */
 function renderParentGuide(app) {
   renderTopbar(app, '👨‍👩‍👧 توجيهات أولياء الأمور', 'دليل شامل لتدريب النطق في المنزل', () => {
@@ -2161,6 +2099,23 @@ function printParentGuide(contentHTML) {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ========================================
    25. الخطة الأسبوعية الذكية - Smart Weekly Plan
