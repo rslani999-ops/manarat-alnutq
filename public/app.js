@@ -1,11 +1,29 @@
-/* ========================================
+/* ═══════════════════════════════════════════════════════════
    منارة النطق - التطبيق الرئيسي
    Manarat Al-Nutq - Main Application
-   ======================================== */
+   v2.0 — إصلاح شامل للأخطاء
+   ═══════════════════════════════════════════════════════════
+   
+   📋 الأخطاء المُصلَحة في هذا الإصدار:
+   ✅ الخطأ #4: تصدير SESSION_TYPES و ALL_LETTERS و letterTitleMap
+   ✅ الخطأ #5: حذف حقل "نوع العيب" المكرر في التشخيص
+   ✅ الخطأ #6: حفظ تلقائي لـ comprehensive عند التغيير
+   ✅ الخطأ #7: حذف showIEPModal (دالة ميتة)
+   ✅ الخطأ #9: إضافة زر renderWeeklyPlan في لوحة المعلم
+   ✅ الخطأ #10: إضافة نوع العيب في الجلسة الفردية
+   ✅ إصلاح إضافي: تصدير window.render (تحتاجه ai-features.js)
+   
+   📂 الأجزاء:
+   - الجزء 1/6: الاستيراد + Firebase + البيانات الثابتة
+   - الجزء 2/6: الصوت + التسجيل + التحليل + الحالة + التنبيهات
+   - الجزء 3/6: المصادقة + لوحة المعلم
+   - الجزء 4/6: التشخيص + IEP + الجلسات
+   - الجزء 5/6: الألعاب + ولي الأمر + الخطة الأسبوعية + ملفات الإنجاز
+   - الجزء 6/6: التهيئة النهائية + التصدير
+   ═══════════════════════════════════════════════════════════ */
 
-/* ========================================
-   1. استيراد مكتبات Firebase - Firebase Imports
-   ======================================== */
+
+/* ─── [SEC-01] Firebase Imports ─── */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import {
   getAuth,
@@ -34,10 +52,10 @@ import {
   uploadBytes,
   getDownloadURL
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+/* ─── [END SEC-01] ─── */
 
-/* ========================================
-   2. إعدادات Firebase - Firebase Config
-   ======================================== */
+
+/* ─── [SEC-02] Firebase Config & Init ─── */
 const firebaseConfig = {
   apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
   authDomain: "manarat-alnutq.firebaseapp.com",
@@ -53,10 +71,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+/* ─── [END SEC-02] ─── */
 
-/* ========================================
-   3. دوال مساعدة لـ Firebase - Firebase Helpers
-   ======================================== */
+
+/* ─── [SEC-03] رفع ملفات المعلم إلى Storage ─── */
 async function uploadTeacherFile(teacherId, standardId, file) {
   try {
     const path = `teacher-files/${teacherId}/${standardId}/${Date.now()}_${file.name}`;
@@ -75,10 +93,10 @@ async function uploadTeacherFile(teacherId, standardId, file) {
   }
 }
 window.uploadTeacherFile = uploadTeacherFile;
+/* ─── [END SEC-03] ─── */
 
-/* ========================================
-   4. البيانات الثابتة - Static Data
-   ======================================== */
+
+/* ─── [SEC-04] البيانات الثابتة — مجموعات الحروف ─── */
 const LETTER_GROUPS = [
   { name: 'حروف شفوية', letters: ['ب', 'م', 'و', 'ف'] },
   { name: 'حروف أسنانية لثوية', letters: ['ت', 'ث', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ل', 'ن'] },
@@ -86,7 +104,10 @@ const LETTER_GROUPS = [
   { name: 'حروف حلقية', letters: ['أ', 'هـ', 'ع', 'ح', 'خ', 'غ'] }
 ];
 const ALL_LETTERS = LETTER_GROUPS.flatMap(g => g.letters);
+/* ─── [END SEC-04] ─── */
 
+
+/* ─── [SEC-05] البيانات الثابتة — الأبجدية ─── */
 const alphabetData = [
   { letter: 'أ', title: 'أسد' }, { letter: 'ب', title: 'بطة' }, { letter: 'ت', title: 'تاج' }, { letter: 'ث', title: 'ثوب' },
   { letter: 'ج', title: 'جمل' }, { letter: 'ح', title: 'حصان' }, { letter: 'خ', title: 'خروف' }, { letter: 'د', title: 'دجاجة' },
@@ -98,7 +119,10 @@ const alphabetData = [
 ];
 const letterTitleMap = {};
 alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
+/* ─── [END SEC-05] ─── */
 
+
+/* ─── [SEC-06] البيانات الثابتة — قوائم المفردات ─── */
 const VOCAB_LISTS = {
   'الأشكال': [
     { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
@@ -172,31 +196,46 @@ const VOCAB_LISTS = {
   ]
 };
 const VOCAB_CATEGORIES = Object.keys(VOCAB_LISTS);
+/* ─── [END SEC-06] ─── */
 
+
+/* ─── [SEC-07] البيانات الثابتة — أنواع الجلسات ─── */
 const SESSION_TYPES = [
   { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
   { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
   { id: 3, name: 'الحرف في كلمات', icon: '📝' },
   { id: 4, name: 'الحرف في جمل', icon: '✍️' }
 ];
+/* ─── [END SEC-07] ─── */
 
+
+/* ─── [SEC-08] البيانات الثابتة — خيارات الأدوات ─── */
 const TOOLS_OPTIONS = [
   'بطاقات تعليمية', 'مرآة', 'ألعاب تفاعلية', 'تطبيق إلكتروني',
   'أقلام وأوراق', 'صور ومجسمات', 'لوحة الكتابة', 'أخرى'
 ];
+/* ─── [END SEC-08] ─── */
 
+
+/* ─── [SEC-09] البيانات الثابتة — خيارات المخارج ─── */
 const PLACE_OPTIONS = [
   'شفوي (ب، م، و، ف)',
   'أسناني لثوي (ت، ث، د، ذ، ر، ز، س، ش، ص، ض، ط، ظ، ل، ن)',
   'لهوي (ج، ك، ق، ي)',
   'حلقي (أ، هـ، ع، ح، خ، غ)'
 ];
+/* ─── [END SEC-09] ─── */
 
+
+/* ─── [SEC-10] البيانات الثابتة — خيارات الطرق ─── */
 const METHOD_OPTIONS = [
   'التكرار والمحاكاة', 'التدريب بالمرآة', 'الأنشطة الحركية',
   'الاستماع والتكرار', 'التمييز السمعي', 'الألعاب التعليمية', 'القصص والصور'
 ];
+/* ─── [END SEC-10] ─── */
 
+
+/* ─── [SEC-11] البيانات الثابتة — أنواع العيوب ─── */
 const DISORDER_TYPES = [
   'طبيعي', 'إبدال', 'تشويه', 'حذف', 'إضافة', 'قلب', 'خنف',
   'لجلجة', 'تأتأة / تلعثم', 'حبسة', 'بحة صوتية',
@@ -222,7 +261,10 @@ const DISORDER_DEFINITIONS = {
   'سرعة في الكلام': 'سرعة مفرطة في الكلام.',
   'كلام طفولي': 'استخدام أنماط كلام غير ناضجة مقارنة بالعمر.'
 };
+/* ─── [END SEC-11] ─── */
 
+
+/* ─── [SEC-12] قاعدة بيانات الحروف المحلية (Fallback) ─── */
 const LETTER_DATABASE = {
   'ر': {
     place: 'طرف اللسان مع اللثة العليا',
@@ -237,7 +279,10 @@ const LETTER_DATABASE = {
     sentences: ['بَنَى بَاسِمٌ بَيْتاً.', 'أَكَلَ بَدْرٌ العِنَبَ.', 'الكَلْبُ عِنْدَ البَابِ.']
   }
 };
+/* ─── [END SEC-12] ─── */
 
+
+/* ─── [SEC-13] دالة الهدف الافتراضي ─── */
 function getDefaultGoal(letter, type) {
   const names = {
     1: `نطق حرف (${letter}) بشكل مجرد`,
@@ -247,10 +292,39 @@ function getDefaultGoal(letter, type) {
   };
   return names[type] || `تدريب حرف (${letter})`;
 }
+/* ─── [END SEC-13] ─── */
 
-/* ========================================
-   5. النطق الصوتي - Speech Synthesis
-   ======================================== */
+
+/* ═══════════════════════════════════════════════════════════
+   نهاية الجزء 1/6
+   ═══════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════
+   ✅ إصلاح الخطأ #4: تصدير البيانات الثابتة إلى window
+   (تحتاجها ai-features.js)
+   ═══════════════════════════════════════════════════════════ */
+window.LETTER_GROUPS = LETTER_GROUPS;
+window.ALL_LETTERS = ALL_LETTERS;
+window.alphabetData = alphabetData;
+window.letterTitleMap = letterTitleMap;
+window.VOCAB_LISTS = VOCAB_LISTS;
+window.VOCAB_CATEGORIES = VOCAB_CATEGORIES;
+window.SESSION_TYPES = SESSION_TYPES;
+window.TOOLS_OPTIONS = TOOLS_OPTIONS;
+window.PLACE_OPTIONS = PLACE_OPTIONS;
+window.METHOD_OPTIONS = METHOD_OPTIONS;
+window.DISORDER_TYPES = DISORDER_TYPES;
+window.DISORDER_DEFINITIONS = DISORDER_DEFINITIONS;
+window.LETTER_DATABASE = LETTER_DATABASE;
+window.getDefaultGoal = getDefaultGoal;
+/* ─── [END تصدير البيانات الثابتة] ─── */
+/* ═══════════════════════════════════════════════════════════
+   الجزء 2/6 — الصوت + التسجيل + التحليل + الحالة + التنبيهات
+   ═══════════════════════════════════════════════════════════ */
+
+
+/* ─── [SEC-14] النطق الصوتي — Speech Synthesis ─── */
 function speakText(text) {
   if (!('speechSynthesis' in window)) {
     showToast('❌ المتصفح لا يدعم خاصية النطق الصوتي.');
@@ -268,10 +342,10 @@ function speakText(text) {
   }
 }
 window.speakText = speakText;
+/* ─── [END SEC-14] ─── */
 
-/* ========================================
-   6. التسجيل الصوتي - Voice Recording
-   ======================================== */
+
+/* ─── [SEC-15] التسجيل الصوتي — Voice Recording ─── */
 async function startRecording(targetText, callback, maxSeconds = 5) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -339,10 +413,10 @@ async function startRecording(targetText, callback, maxSeconds = 5) {
   }
 }
 window.startRecording = startRecording;
+/* ─── [END SEC-15] ─── */
 
-/* ========================================
-   7. تحليل النطق - Pronunciation Analysis
-   ======================================== */
+
+/* ─── [SEC-16] تحليل النطق — Levenshtein + Disorder Detection ─── */
 function levenshteinDistance(a, b) {
   const matrix = [];
   for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -415,10 +489,12 @@ function analyzePronunciation(targetText, transcript) {
 
   return { isMatch: false, disorderType: 'تشويه', detail: 'النطق غير دقيق', similarityPercent };
 }
+window.analyzePronunciation = analyzePronunciation;
+window.levenshteinDistance = levenshteinDistance;
+/* ─── [END SEC-16] ─── */
 
-/* ========================================
-   8. حالة التطبيق - Application State
-   ======================================== */
+
+/* ─── [SEC-17] حالة التطبيق — Application State ─── */
 let state = {
   view: 'home',
   user: null,
@@ -439,10 +515,11 @@ let state = {
 
 let iepPrintArea = null;
 let toastTimer = null;
+let diagnosticAudio = { letters: {}, words: {} };
+/* ─── [END SEC-17] ─── */
 
-/* ========================================
-   9. الإشعارات - Notifications
-   ======================================== */
+
+/* ─── [SEC-18] التنبيهات — Toast + Notification ─── */
 function showToast(msg) {
   const t = document.createElement('div');
   t.className = 'toast';
@@ -451,6 +528,7 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.remove(), 3000);
 }
+window.showToast = showToast;
 
 function showNotification(message, type = 'info') {
   let container = document.getElementById('notificationContainer');
@@ -471,10 +549,10 @@ function showNotification(message, type = 'info') {
   }, 4000);
 }
 window.showNotification = showNotification;
+/* ─── [END SEC-18] ─── */
 
-/* ========================================
-   10. إمكانية الوصول - Accessibility
-   ======================================== */
+
+/* ─── [SEC-19] إمكانية الوصول — Accessibility ─── */
 function toggleHighContrast() {
   document.body.classList.toggle('high-contrast');
   localStorage.setItem('highContrast', document.body.classList.contains('high-contrast') ? 'on' : 'off');
@@ -505,10 +583,10 @@ function initAccessibility() {
   if (localStorage.getItem('largerText') === 'on') document.body.classList.add('larger-text');
   updateAccessibilityButtons();
 }
+/* ─── [END SEC-19] ─── */
 
-/* ========================================
-   11. حساب النقاط - Points Calculation
-   ======================================== */
+
+/* ─── [SEC-20] حساب النقاط — Points Calculation ─── */
 function calculateStudentPoints(studentData) {
   const diag = studentData?.diagnostic || {};
   let points = 0;
@@ -520,10 +598,10 @@ function calculateStudentPoints(studentData) {
   return points;
 }
 window.calculateStudentPoints = calculateStudentPoints;
+/* ─── [END SEC-20] ─── */
 
-/* ========================================
-   12. الإحصائيات الأسبوعية - Weekly Stats
-   ======================================== */
+
+/* ─── [SEC-21] الإحصائيات الأسبوعية — Weekly Stats ─── */
 function getWeeklyStats(sessions) {
   const now = new Date();
   const startOfWeek = new Date(now);
@@ -552,10 +630,36 @@ function getWeeklyStats(sessions) {
   return { totalThisWeek, evaluatedThisWeek: evaluatedThisWeek.length, avgSuccess, lettersTrained, startOfWeek, endOfWeek };
 }
 window.getWeeklyStats = getWeeklyStats;
+/* ─── [END SEC-21] ─── */
 
-/* ========================================
-   13. الشريط العلوي - Topbar Renderer
-   ======================================== */
+
+/* ─── [SEC-22] ردود أنواع العيوب — Disorder Feedback ─── */
+function getDisorderFeedback(disorderType) {
+  const messages = {
+    'طبيعي': '✅ ممتاز! النطق سليم.',
+    'إبدال': '🔄 حاول نطق الحرف الأصلي بدلاً من استبداله بحرف آخر.',
+    'تشويه': '🗣️ ركز على مخرج الحرف الصحيح وحاول مرة أخرى.',
+    'حذف': '📝 حاول نطق الكلمة كاملة دون حذف أي حرف.',
+    'إضافة': '✂️ تجنب إضافة حروف زائدة في الكلمة.',
+    'قلب': '🔁 انتبه لترتيب الحروف في الكلمة.',
+    'خنف': '👃 حاول تقليل الصوت الأنفي أثناء النطق.',
+    'لجلجة': '📖 تحدث ببطء ووضوح.',
+    'تأتأة / تلعثم': '🧘 خذ نفساً عميقاً وحاول النطق بهدوء.',
+    'حبسة': '💬 استخدم جمل قصيرة وتدرب على التكرار.',
+    'بحة صوتية': '💧 اشرب ماءً وحاول إخراج الصوت بلطف.',
+    'خشونة الصوت': '🎵 حاول النطق بنبرة أوضح وأنعم.',
+    'نعومة الصوت': '📢 ارفع صوتك قليلاً أثناء النطق.',
+    'بطء في الكلام': '🐢 حاول زيادة سرعتك تدريجياً.',
+    'سرعة في الكلام': '🐇 تحدث ببطء وخذ وقتك.',
+    'كلام طفولي': '🧒 حاول استخدام أنماط كلام مناسبة لعمرك.'
+  };
+  return messages[disorderType] || '📌 استمر في التدريب وحاول مرة أخرى.';
+}
+window.getDisorderFeedback = getDisorderFeedback;
+/* ─── [END SEC-22] ─── */
+
+
+/* ─── [SEC-23] الشريط العلوي — Topbar Renderer ─── */
 function renderTopbar(appContainer, title, sub, onBack) {
   const bar = document.createElement('div');
   bar.className = 'topbar';
@@ -593,13 +697,13 @@ function renderTopbar(appContainer, title, sub, onBack) {
       render();
     };
     actions.appendChild(btnDash);
-    
+
     const btnProfile = document.createElement('button');
     btnProfile.className = 'btn-nav';
     btnProfile.textContent = '👤 ملفي';
     btnProfile.onclick = () => { state.view = 'student-profile'; render(); };
     actions.appendChild(btnProfile);
-    
+
     if (state.role === 'admin') {
       const btnAdmin = document.createElement('button');
       btnAdmin.className = 'btn-nav';
@@ -640,10 +744,10 @@ function renderTopbar(appContainer, title, sub, onBack) {
   if (textBtn) textBtn.onclick = toggleLargerText;
   updateAccessibilityButtons();
 }
+/* ─── [END SEC-23] ─── */
 
-/* ========================================
-   14. سياسة الخصوصية - Privacy Policy
-   ======================================== */
+
+/* ─── [SEC-24] سياسة الخصوصية — Privacy Policy ─── */
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'privacyPolicyLink') {
     e.preventDefault();
@@ -688,10 +792,10 @@ function showPrivacyPolicy() {
   if (closeBtn) closeBtn.onclick = () => modal.remove();
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
+/* ─── [END SEC-24] ─── */
 
-/* ========================================
-   15. التصيير الرئيسي - Main Renderer
-   ======================================== */
+
+/* ─── [SEC-25] التصيير الرئيسي — Main Renderer ─── */
 function render() {
   const app = document.getElementById('app');
   app.innerHTML = '';
@@ -719,524 +823,20 @@ function render() {
   if (state.view === 'letter-training') return renderLetterTraining(app);
 }
 
+/* ✅ إصلاح إضافي: تصدير render إلى window (تحتاجه ai-features.js) */
+window.render = render;
+/* ─── [END SEC-25] ─── */
 
 
+/* ═══════════════════════════════════════════════════════════
+   نهاية الجزء 2/6
+   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   الجزء 3/6 — المصادقة + لوحة المعلم
+   ═══════════════════════════════════════════════════════════ */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ========================================
-   16. صفحة الملف الشخصي - Student Profile
-   ======================================== */
-function renderStudentProfile(app) {
-  if (!state.user) {
-    showToast('يجب تسجيل الدخول');
-    state.view = 'home';
-    return render();
-  }
-  
-  const isTeacher = state.role === 'teacher' || state.role === 'admin';
-  renderTopbar(app, '👤 الملف الشخصي', isTeacher ? 'بيانات المعلم' : 'بيانات الطالب وولي الأمر', () => {
-    state.view = isTeacher ? 'teacher-dashboard' : 'student-menu';
-    render();
-  });
-
-  const container = document.createElement('div');
-  container.id = 'profileContent';
-  app.appendChild(container);
-
-  loadProfileData(container);
-}
-
-async function loadProfileData(container) {
-  container.innerHTML = '<div class="card"><p class="muted">⏳ جاري تحميل البيانات...</p></div>';
-  
-  try {
-    const uDoc = await getDoc(doc(db, "users", state.user.uid));
-    if (!uDoc.exists()) {
-      container.innerHTML = '<div class="card"><p class="muted">⚠️ لا توجد بيانات</p></div>';
-      return;
-    }
-    
-    const userData = uDoc.data();
-    const isTeacher = state.role === 'teacher' || state.role === 'admin';
-    const fullName = userData.fullName || '';
-    const email = userData.email || state.user.email || '';
-    const roleLabel = state.role === 'teacher' ? 'معلم' : state.role === 'admin' ? 'مدير' : 'طالب';
-    
-    let sessionsCount = 0;
-    try {
-      const qS = isTeacher
-        ? query(collection(db, "sessions"), where("teacherId", "==", state.user.uid))
-        : query(collection(db, "sessions"), where("studentId", "==", state.user.uid));
-      const snap = await getDocs(qS);
-      sessionsCount = snap.size;
-    } catch(e) { console.warn(e); }
-    
-    let studentsCount = 0;
-    if (isTeacher) {
-      studentsCount = state.myStudents.length;
-    }
-    
-    const points = isTeacher ? 0 : calculateStudentPoints(userData);
-    const diag = userData.diagnostic || {};
-    const passedLetters = isTeacher ? 0 : ALL_LETTERS.filter(l => diag[l]?.status === 'passed').length;
-    
-    container.innerHTML = '';
-    
-    const identityCard = document.createElement('div');
-    identityCard.className = 'card';
-    identityCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-    identityCard.style.border = '2px solid var(--mint-deep)';
-    identityCard.style.textAlign = 'center';
-    identityCard.innerHTML = `
-      <div style="font-size:80px; margin-bottom:10px;">${isTeacher ? '👨‍🏫' : '🧒'}</div>
-      <h2 style="margin:8px 0; color:var(--mint-deep);">${fullName || email}</h2>
-      <p style="font-size:14px; color:#555; margin:4px 0;">${email}</p>
-      <span class="badge badge-assigned" style="font-size:14px; padding:6px 16px;">${roleLabel}</span>
-      ${!isTeacher && userData.ageGroup ? `<div style="margin-top:8px;"><span class="badge" style="background:#FFF8E1; color:#F57F17; font-size:13px; padding:4px 12px;">👶 ${userData.ageGroup} سنوات</span></div>` : ''}
-    `;
-    container.appendChild(identityCard);
-    
-    const statsCard = document.createElement('div');
-    statsCard.className = 'card';
-    statsCard.innerHTML = `
-      <h3>📊 إحصائيات</h3>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:12px;">
-        <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
-          <div style="font-size:28px; font-weight:bold; color:var(--mint-deep);">${sessionsCount}</div>
-          <div style="font-size:13px; color:#6B7A99;">${isTeacher ? 'جلسة منفذة' : 'جلسة'}</div>
-        </div>
-        ${isTeacher ? `
-          <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
-            <div style="font-size:28px; font-weight:bold; color:var(--mint-deep);">${studentsCount}</div>
-            <div style="font-size:13px; color:#6B7A99;">طالب</div>
-          </div>
-        ` : `
-          <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
-            <div style="font-size:28px; font-weight:bold; color:var(--mint-deep);">${passedLetters}/${ALL_LETTERS.length}</div>
-            <div style="font-size:13px; color:#6B7A99;">حروف متقنة</div>
-          </div>
-          <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
-            <div style="font-size:28px; font-weight:bold; color:var(--gold);">${points}</div>
-            <div style="font-size:13px; color:#6B7A99;">نقطة تحفيزية</div>
-          </div>
-        `}
-      </div>
-    `;
-    container.appendChild(statsCard);
-    
-    const editCard = document.createElement('div');
-    editCard.className = 'card';
-    editCard.innerHTML = `
-      <h3>✏️ تعديل البيانات الأساسية</h3>
-      <div style="margin-top:12px;">
-        <label style="font-weight:bold; display:block; margin-bottom:4px;">الاسم الكامل:</label>
-        <input type="text" id="profileFullName" value="${fullName}" placeholder="اكتب اسمك الكامل">
-        
-        <label style="font-weight:bold; display:block; margin-bottom:4px;">البريد الإلكتروني:</label>
-        <input type="email" id="profileEmail" value="${email}" disabled style="background:#F0F0F0; cursor:not-allowed;">
-        <p class="muted" style="font-size:12px; margin-top:-8px; margin-bottom:12px;">ℹ️ البريد الإلكتروني لا يمكن تعديله</p>
-        
-        <button class="btn btn-primary" id="saveProfileBtn" style="border-radius:50px; padding:10px 30px;">💾 حفظ التعديلات</button>
-      </div>
-    `;
-    container.appendChild(editCard);
-    
-    if (!isTeacher) {
-      const parentCard = document.createElement('div');
-      parentCard.className = 'card';
-      parentCard.innerHTML = `
-        <h3>👨‍👩‍👧 بيانات ولي الأمر</h3>
-        <p class="muted">تستخدم لإرسال تقارير الجلسات لولي أمرك</p>
-        <div style="margin-top:12px;">
-          <label style="font-weight:bold; display:block; margin-bottom:4px;">اسم ولي الأمر:</label>
-          <input type="text" id="profileParentName" value="${userData.parentName || ''}" placeholder="اسم ولي الأمر">
-          
-          <label style="font-weight:bold; display:block; margin-bottom:4px;">بريد ولي الأمر:</label>
-          <input type="email" id="profileParentEmail" value="${userData.parentEmail || ''}" placeholder="example@email.com">
-          
-          <label style="font-weight:bold; display:block; margin-bottom:4px;">جوال ولي الأمر (واتساب):</label>
-          <input type="tel" id="profileParentPhone" value="${userData.parentPhone || ''}" placeholder="05xxxxxxxx">
-          
-          <button class="btn btn-primary" id="saveParentProfileBtn" style="border-radius:50px; padding:10px 30px;">💾 حفظ بيانات ولي الأمر</button>
-        </div>
-      `;
-      container.appendChild(parentCard);
-    }
-    
-    const passwordCard = document.createElement('div');
-    passwordCard.className = 'card';
-    passwordCard.innerHTML = `
-      <h3>🔐 الأمان</h3>
-      <p class="muted">لتغيير كلمة المرور، سنرسل رابطاً إلى بريدك الإلكتروني.</p>
-      <button class="btn btn-soft" id="resetPasswordProfileBtn" style="border-radius:50px; padding:10px 30px; margin-top:8px;">📧 إرسال رابط تغيير كلمة المرور</button>
-    `;
-    container.appendChild(passwordCard);
-    
-    const logoutCard = document.createElement('div');
-    logoutCard.className = 'card';
-    logoutCard.style.borderRight = '4px solid var(--coral)';
-    logoutCard.innerHTML = `
-      <h3>🚪 تسجيل الخروج</h3>
-      <p class="muted">سيتم إنهاء جلستك الحالية</p>
-      <button class="btn btn-danger" id="logoutProfileBtn" style="border-radius:50px; padding:10px 30px; margin-top:8px;">تسجيل الخروج</button>
-    `;
-    container.appendChild(logoutCard);
-    
-    const saveProfileBtn = container.querySelector('#saveProfileBtn');
-    if (saveProfileBtn) {
-      saveProfileBtn.onclick = async () => {
-        const newName = container.querySelector('#profileFullName').value.trim();
-        if (!newName) { showToast('❌ الاسم لا يمكن أن يكون فارغاً'); return; }
-        saveProfileBtn.disabled = true;
-        saveProfileBtn.textContent = '⏳ جاري الحفظ...';
-        try {
-          await updateDoc(doc(db, "users", state.user.uid), {
-            fullName: newName,
-            updatedAt: new Date().toISOString()
-          });
-          showToast('✅ تم حفظ البيانات بنجاح');
-          showNotification('تم تحديث ملفك الشخصي', 'success');
-          renderStudentProfile(app);
-        } catch(e) {
-          showToast('❌ فشل الحفظ: ' + e.message);
-          saveProfileBtn.disabled = false;
-          saveProfileBtn.textContent = '💾 حفظ التعديلات';
-        }
-      };
-    }
-    
-    const saveParentProfileBtn = container.querySelector('#saveParentProfileBtn');
-    if (saveParentProfileBtn) {
-      saveParentProfileBtn.onclick = async () => {
-        const parentName = container.querySelector('#profileParentName').value.trim();
-        const parentEmail = container.querySelector('#profileParentEmail').value.trim();
-        const parentPhone = container.querySelector('#profileParentPhone').value.trim();
-        if (parentEmail && !parentEmail.includes('@')) { showToast('❌ البريد الإلكتروني غير صحيح'); return; }
-        saveParentProfileBtn.disabled = true;
-        saveParentProfileBtn.textContent = '⏳ جاري الحفظ...';
-        try {
-          await updateDoc(doc(db, "users", state.user.uid), {
-            parentName, parentEmail, parentPhone
-          });
-          showToast('✅ تم حفظ بيانات ولي الأمر');
-          saveParentProfileBtn.disabled = false;
-          saveParentProfileBtn.textContent = '💾 حفظ بيانات ولي الأمر';
-        } catch(e) {
-          showToast('❌ فشل الحفظ: ' + e.message);
-          saveParentProfileBtn.disabled = false;
-          saveParentProfileBtn.textContent = '💾 حفظ بيانات ولي الأمر';
-        }
-      };
-    }
-    
-    const resetPasswordProfileBtn = container.querySelector('#resetPasswordProfileBtn');
-    if (resetPasswordProfileBtn) {
-      resetPasswordProfileBtn.onclick = async () => {
-        if (!confirm('هل تريد إرسال رابط تغيير كلمة المرور؟')) return;
-        try {
-          await sendPasswordResetEmail(auth, email);
-          showToast('✅ تم إرسال الرابط');
-        } catch(e) { showToast('❌ فشل الإرسال: ' + e.message); }
-      };
-    }
-    
-    const logoutProfileBtn = container.querySelector('#logoutProfileBtn');
-    if (logoutProfileBtn) {
-      logoutProfileBtn.onclick = async () => {
-        if (!confirm('هل أنت متأكد من تسجيل الخروج؟')) return;
-        try {
-          if (iepPrintArea) { iepPrintArea.remove(); iepPrintArea = null; }
-          await signOut(auth);
-          state.user = null; state.role = null;
-          state.view = 'home';
-          showToast('تم تسجيل الخروج');
-          render();
-        } catch(e) { showToast('خطأ في الخروج'); }
-      };
-    }
-    
-  } catch (e) {
-    console.error('خطأ في تحميل الملف الشخصي:', e);
-    container.innerHTML = `<div class="card"><p class="muted">⚠️ خطأ: ${e.message}</p></div>`;
-  }
-}
-
-/* ========================================
-   17. صفحة تدريب الحروف - Letter Training
-   ======================================== */
-function renderLetterTraining(app) {
-  renderTopbar(app, '🔤 تدريب الحروف', 'تدريب تفاعلي على نطق الحروف', () => {
-    state.view = 'home';
-    render();
-  });
-  
-  const container = document.createElement('div');
-  app.appendChild(container);
-  
-  const selectorCard = document.createElement('div');
-  selectorCard.className = 'card';
-  selectorCard.innerHTML = `
-    <h3>🎯 اختر الحرف للتدريب</h3>
-    <p class="muted">اضغط على أي حرف لبدء جلسة التدريب</p>
-    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(60px,1fr)); gap:8px; margin-top:12px;">
-      ${ALL_LETTERS.map(letter => `
-        <button class="training-letter-btn" data-letter="${letter}" style="padding:12px; border-radius:12px; border:2px solid var(--line); background:white; font-size:20px; font-weight:bold; color:var(--mint-deep); cursor:pointer; transition:0.2s;">${letter}</button>
-      `).join('')}
-    </div>
-  `;
-  container.appendChild(selectorCard);
-  
-  const trainingArea = document.createElement('div');
-  trainingArea.id = 'trainingArea';
-  container.appendChild(trainingArea);
-  
-  trainingArea.innerHTML = `
-    <div class="card" style="text-align:center; padding:40px;">
-      <div style="font-size:60px;">👆</div>
-      <h3 style="color:var(--mint-deep); margin-top:10px;">اختر حرفاً من الأعلى لبدء التدريب</h3>
-      <p class="muted">ستظهر هنا واجهة التدريب مع التسجيل والتقييم</p>
-    </div>
-  `;
-  
-  container.querySelectorAll('.training-letter-btn').forEach(btn => {
-    btn.onmouseover = () => { btn.style.background = '#EAF6F4'; btn.style.transform = 'scale(1.1)'; };
-    btn.onmouseout = () => { btn.style.background = 'white'; btn.style.transform = 'scale(1)'; };
-    btn.onclick = () => {
-      showTrainingSession(trainingArea, btn.dataset.letter);
-    };
-  });
-}
-
-function showTrainingSession(area, letter) {
-  const titleStr = letterTitleMap[letter] || '';
-  const letterData = LETTER_DATABASE[letter] || {
-    place: 'مخرج الحرف العام',
-    vowels: { fatha: `${letter}َ`, damma: `${letter}ُ`, kasra: `${letter}ِ`, sukoon: `${letter}ْ` },
-    words: { start: [`${letter}َـ`], middle: [`ـ${letter}ـ`], end: [`ـ${letter}`] },
-    sentences: [`جملة تدريبية لحرف ${letter}.`]
-  };
-  
-  area.innerHTML = `
-    <div class="card" style="border-right:6px solid var(--mint-deep);">
-      <h3 style="color:var(--mint-deep);">🔤 حرف (${letter}) - ${titleStr}</h3>
-      <p class="muted">📍 مخرج الحرف: ${letterData.place}</p>
-      
-      <div style="text-align:center; padding:20px; margin:15px 0; background:#F0FDFA; border-radius:20px;">
-        <div style="font-size:100px; font-weight:bold; color:var(--mint-deep); cursor:pointer;" onclick="speakText('${letter}')">${letter}</div>
-        <p style="font-size:16px; font-weight:bold; margin-top:10px;">🔊 اضغط على الحرف للاستماع</p>
-      </div>
-      
-      <div style="text-align:center; margin-bottom:20px;">
-        <button class="btn-record" id="trainRecordBtn" data-letter="${letter}" style="font-size:16px; padding:12px 30px;">🎤 سجل نطقك</button>
-        <div id="trainFeedback" style="margin-top:12px; min-height:30px; font-size:15px; font-weight:bold;"></div>
-      </div>
-      
-      <h4 style="color:var(--mint-deep);">📖 الحرف مع الحركات</h4>
-      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:15px 0;">
-        ${Object.entries(letterData.vowels).map(([key, val]) => {
-          const label = { fatha: 'فتحة', damma: 'ضمة', kasra: 'كسرة', sukoon: 'سكون' }[key];
-          return `
-            <div style="background:white; border:2px solid var(--mint); border-radius:15px; padding:15px 20px; cursor:pointer;" onclick="speakText('${val}')">
-              <div style="font-size:32px; font-weight:bold; color:var(--mint-deep);">${val}</div>
-              <div style="font-size:13px; color:#6B7A99; margin-top:4px;">${label}</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-      
-      <h4 style="color:var(--mint-deep); margin-top:20px;">📝 كلمات بالحرف</h4>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0;">
-        ${[...letterData.words.start, ...letterData.words.middle, ...letterData.words.end].map(word => `
-          <span style="background:#EAF6F4; padding:8px 16px; border-radius:20px; font-size:16px; font-weight:bold; cursor:pointer;" onclick="speakText('${word}')">${word} 🔊</span>
-        `).join('')}
-      </div>
-      
-      <h4 style="color:var(--mint-deep); margin-top:20px;">✍️ جمل تدريبية</h4>
-      ${letterData.sentences.map(sentence => `
-        <div style="background:white; padding:12px; border-radius:12px; margin-bottom:8px; font-size:16px; line-height:1.8; cursor:pointer; border:1px solid var(--line);" onclick="speakText('${sentence}')">
-          ${sentence}
-          <span style="float:left;">🔊</span>
-        </div>
-      `).join('')}
-      
-      <div style="margin-top:20px; padding-top:20px; border-top:2px dashed var(--line);">
-        <button class="btn btn-soft btn-sm" id="backToTrainingBtn" style="border-radius:50px;">← رجوع لقائمة الحروف</button>
-      </div>
-    </div>
-  `;
-  
-  const recordBtn = area.querySelector('#trainRecordBtn');
-  if (recordBtn) {
-    recordBtn.onclick = function() {
-      const l = this.dataset.letter;
-      const feedbackEl = area.querySelector('#trainFeedback');
-      feedbackEl.innerHTML = '🎤 جاري الاستماع...';
-      startRecording(l, (transcript, analysis) => {
-        if (!transcript) {
-          feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
-          feedbackEl.style.color = 'var(--fail)';
-          return;
-        }
-        if (analysis.isMatch) {
-          feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح.`;
-          feedbackEl.style.color = 'var(--success)';
-          showNotification('أحسنت! نطق صحيح 🎉', 'success');
-        } else {
-          feedbackEl.innerHTML = `❌ حاول مرة أخرى: ${getDisorderFeedback(analysis.disorderType)}`;
-          feedbackEl.style.color = 'var(--fail)';
-        }
-      });
-    };
-  }
-  
-  const backBtn = area.querySelector('#backToTrainingBtn');
-  if (backBtn) {
-    backBtn.onclick = () => {
-      area.innerHTML = `
-        <div class="card" style="text-align:center; padding:40px;">
-          <div style="font-size:60px;">👆</div>
-          <h3 style="color:var(--mint-deep); margin-top:10px;">اختر حرفاً من الأعلى لبدء التدريب</h3>
-          <p class="muted">ستظهر هنا واجهة التدريب مع التسجيل والتقييم</p>
-        </div>
-      `;
-    };
-  }
-  
-  area.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-/* ========================================
-   18. الصفحة الرئيسية - Home Page
-   ======================================== */
-function renderHome(app) {
-  renderTopbar(app, 'منارة النطق', 'المنصة التدريبية المباشرة');
-  const banner = document.createElement('div');
-  banner.className = 'card';
-  banner.style.background = 'linear-gradient(135deg, #357E74, #4FB6A8)';
-  banner.style.color = 'white';
-  banner.innerHTML = `
-    <h2 style="margin-top:0;">منصة تشخيص وتدريب النطق الشاملة</h2>
-    <p>تشخيص 28 حرفاً مع الصوت والصورة وإدارة الجلسات الأسبوعية العلاجية المباشرة والخطة الفردية (IEP).</p>
-    <p style="font-size:14px; opacity:0.9;">استكشف القوائم التعليمية والألعاب التفاعلية أدناه.</p>
-    ${!state.user ? '<button class="btn btn-soft" id="btnAuthHome" style="color:#357E74; margin-top:8px;">تسجيل الدخول / إنشاء حساب</button>' : ''}
-  `;
-  app.appendChild(banner);
-  if (!state.user) {
-    const authBtn = banner.querySelector('#btnAuthHome');
-    if (authBtn) authBtn.onclick = () => { state.view = 'auth'; render(); };
-  }
-  const grid = document.createElement('div');
-  grid.className = 'grid-2';
-  VOCAB_CATEGORIES.forEach(category => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.cursor = 'pointer';
-    card.style.transition = '0.2s';
-    card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; };
-    card.onmouseout = () => { card.style.transform = 'translateY(0)'; };
-    const iconMap = {
-      'الأشكال': '🔷', 'الألوان': '🎨', 'الفاكهة': '🍎', 'الخضروات': '🥕',
-      'الحيوانات': '🦁', 'النباتات': '🌿', 'أعضاء الجسم': '🧍',
-      'الأثاث': '🪑', 'الحشرات': '🐝', 'الطيور': '🕊️'
-    };
-    const icon = iconMap[category] || '📚';
-    card.innerHTML = `
-      <h3>${icon} ${category}</h3>
-      <p class="muted">${VOCAB_LISTS[category].length} كلمة تدريبية</p>
-      <button class="btn btn-soft btn-sm">استكشف القائمة</button>
-    `;
-    card.onclick = () => {
-      state.view = 'vocab-list';
-      state.currentVocabCategory = category;
-      render();
-    };
-    grid.appendChild(card);
-  });
-  const lettersCard = document.createElement('div');
-  lettersCard.className = 'card';
-  lettersCard.style.cursor = 'pointer';
-  lettersCard.style.transition = '0.2s';
-  lettersCard.onmouseover = () => { lettersCard.style.transform = 'translateY(-4px)'; };
-  lettersCard.onmouseout = () => { lettersCard.style.transform = 'translateY(0)'; };
-  lettersCard.innerHTML = `
-    <h3>🔤 الحروف الأبجدية</h3>
-    <p class="muted">28 حرفاً مع الصور التوضيحية</p>
-    <button class="btn btn-soft btn-sm">عرض الحروف</button>
-  `;
-  lettersCard.onclick = () => { state.view = 'letter-display'; render(); };
-  grid.appendChild(lettersCard);
-  const gamesCard = document.createElement('div');
-  gamesCard.className = 'card';
-  gamesCard.style.cursor = 'pointer';
-  gamesCard.style.transition = '0.2s';
-  gamesCard.onmouseover = () => { gamesCard.style.transform = 'translateY(-4px)'; };
-  gamesCard.onmouseout = () => { gamesCard.style.transform = 'translateY(0)'; };
-  gamesCard.innerHTML = `
-    <h3>🎮 الألعاب التعليمية</h3>
-    <p class="muted">اختر الحرف الصحيح وطابق الكلمة مع الصورة</p>
-    <button class="btn btn-soft btn-sm">العب الآن</button>
-  `;
-  gamesCard.onclick = () => { state.view = 'games'; render(); };
-  grid.appendChild(gamesCard);
-  const parentGuideCard = document.createElement('div');
-  parentGuideCard.className = 'card';
-  parentGuideCard.style.cursor = 'pointer';
-  parentGuideCard.style.transition = '0.2s';
-  parentGuideCard.onmouseover = () => { parentGuideCard.style.transform = 'translateY(-4px)'; };
-  parentGuideCard.onmouseout = () => { parentGuideCard.style.transform = 'translateY(0)'; };
-  parentGuideCard.innerHTML = `
-    <h3>👨‍👩‍👧 توجيهات أولياء الأمور</h3>
-    <p class="muted">نصائح وتمارين منزلية لتحسين النطق</p>
-    <button class="btn btn-soft btn-sm">عرض التوجيهات</button>
-  `;
-  parentGuideCard.onclick = () => { state.view = 'parent-guide'; render(); };
-  grid.appendChild(parentGuideCard);
-  app.appendChild(grid);
-}
-
-/* ========================================
-   19. صفحة قائمة المفردات - Vocabulary List
-   ======================================== */
-function renderVocabList(app) {
-  const category = state.currentVocabCategory || 'الفاكهة';
-  const items = VOCAB_LISTS[category] || [];
-  renderTopbar(app, `📚 ${category}`, `${items.length} كلمة تدريبية`, () => {
-    state.view = 'home';
-    render();
-  });
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `
-    <h3 style="margin-bottom:4px;">📖 ${category}</h3>
-    <p class="muted">اضغط على أي كلمة للاستماع إلى نطقها الصحيح</p>
-    <div class="vocab-grid">
-      ${items.map(item => `
-        <div class="vocab-item" onclick="speakText('${item.word}')">
-          <span class="icon">${item.icon}</span>
-          <span class="word">${item.word}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  app.appendChild(card);
-}
-
-/* ========================================
-   20. دوال المصادقة - Authentication
-   ======================================== */
+/* ─── [SEC-26] دوال المصادقة — Authentication ─── */
 function renderAuth(app) {
   renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -1340,27 +940,49 @@ function renderResetPassword(app) {
   if (backBtn) backBtn.onclick = () => { state.view = 'auth'; render(); };
   app.appendChild(card);
 }
+/* ─── [END SEC-26] ─── */
 
-/* ========================================
-   21. جلب بيانات المستخدم - Fetch User Data
-   =
 
-       const snap = await getDocs(q);
-       state.myStudents = [];
-       state.freeStudents = [];
-       snap.forEach(d => {
-         const data = d.data();
-         const obj = { id: d.id, ...data };
-         if (data.teacherId === state.user.uid) state.myStudents.push(obj);
-         else if (!data.teacherId) state.freeStudents.push(obj);
-       });
-       render();
-     } catch (e) { showToast('خطأ في تحميل بيانات الطلاب'); }
-   }
+/* ─── [SEC-27] جلب بيانات المستخدم — Fetch User Data ─── */
+async function fetchUserData(uid) {
+  try {
+    const uDoc = await getDoc(doc(db, "users", uid));
+    if (uDoc.exists()) {
+      const uData = uDoc.data();
+      state.role = uData.role;
+      if (uData.comprehensive) state.comprehensive = uData.comprehensive;
+      if (state.role === 'teacher' || state.role === 'admin') {
+        state.view = 'teacher-dashboard';
+        await fetchTeacherStudents();
+      } else {
+        state.currentStudent = { id: uid, ...uData };
+        state.view = 'student-menu';
+        render();
+      }
+    }
+  } catch (e) { showToast('خطأ في جلب بيانات المستخدم'); }
+}
 
-/* ========================================
-   22. لوحة المعلم - Teacher Dashboard
-   ======================================== */
+async function fetchTeacherStudents() {
+  if (!state.user) return;
+  try {
+    const q = query(collection(db, "users"), where("role", "==", "student"));
+    const snap = await getDocs(q);
+    state.myStudents = [];
+    state.freeStudents = [];
+    snap.forEach(d => {
+      const data = d.data();
+      const obj = { id: d.id, ...data };
+      if (data.teacherId === state.user.uid) state.myStudents.push(obj);
+      else if (!data.teacherId) state.freeStudents.push(obj);
+    });
+    render();
+  } catch (e) { showToast('خطأ في تحميل بيانات الطلاب'); }
+}
+/* ─── [END SEC-27] ─── */
+
+
+/* ─── [SEC-28] لوحة المعلم — Teacher Dashboard ─── */
 async function renderTeacherDashboard(app) {
   renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
@@ -1388,7 +1010,7 @@ async function renderTeacherDashboard(app) {
   `;
   app.appendChild(summaryDashboard);
 
-  // 🆕 الإجراءات السريعة — بدون بطاقة "إدارة محتوى الحروف"
+  /* ✅ إصلاح الخطأ #9: إضافة زر renderWeeklyPlan */
   const actCard = document.createElement('div');
   actCard.className = 'card no-print';
   actCard.innerHTML = `
@@ -1398,6 +1020,7 @@ async function renderTeacherDashboard(app) {
       <button class="btn btn-soft btn-sm" id="btnIEPList">📋 الخطة الفردية (IEP)</button>
       <button class="btn btn-soft btn-sm" id="btnAchievementList">🏆 ملف إنجاز الطلاب</button>
       <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
+      <button class="btn btn-sm" id="btnWeeklyPlan" style="background:linear-gradient(135deg, #0891B2, #06B6D4); color:white;">📅 الخطة الأسبوعية الذكية</button>
     </div>
   `;
   app.appendChild(actCard);
@@ -1410,10 +1033,35 @@ async function renderTeacherDashboard(app) {
   if (btnAchievementList) btnAchievementList.onclick = () => { state.view = 'student-achievement-list'; render(); };
   const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
   if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
+  const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
+  if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
+
+  /* بطاقة إدارة محتوى الحروف */
+  const lettersDataCard = document.createElement('div');
+  lettersDataCard.className = 'card';
+  lettersDataCard.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;';
+  lettersDataCard.innerHTML = `
+    <h3 style="margin:0 0 8px 0;color:#6D28D9;">📚 إدارة محتوى الحروف</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:12px;">
+      قم بتوليد بيانات 28 حرفاً عربياً (حركات + كلمات + جمل) بالذكاء الاصطناعي لتحسين جلسات التدريب.
+    </p>
+    <div id="lettersDataButtonContainer" style="text-align:center;"></div>
+  `;
+  app.appendChild(lettersDataCard);
+
+  const lettersBtnContainer = lettersDataCard.querySelector('#lettersDataButtonContainer');
+  if (lettersBtnContainer) {
+    if (typeof window.createGenerateLettersButton === 'function') {
+      const generateBtn = window.createGenerateLettersButton();
+      lettersBtnContainer.appendChild(generateBtn);
+    } else {
+      lettersBtnContainer.innerHTML = '<p class="muted">⚠️ ميزة التوليد غير متوفرة</p>';
+    }
+  }
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
-  
+
   myCard.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
       <h3 style="margin:0;">📋 قائمة طلابك المضافين (${state.myStudents.length})</h3>
@@ -1424,9 +1072,9 @@ async function renderTeacherDashboard(app) {
     <div id="studentsListContainer"></div>
   `;
   app.appendChild(myCard);
-  
+
   const studentsContainer = myCard.querySelector('#studentsListContainer');
-  
+
   if (!state.myStudents.length) {
     studentsContainer.innerHTML = '<p class="muted">لا يوجد طلاب مضافون.</p>';
   } else {
@@ -1525,7 +1173,7 @@ async function renderTeacherDashboard(app) {
       }, 0);
     });
   }
-  
+
   const smartFilterBtn = myCard.querySelector('#smartFilterBtn');
   if (smartFilterBtn) {
     smartFilterBtn.onclick = () => showSmartFilterModal();
@@ -1584,25 +1232,58 @@ async function renderTeacherDashboard(app) {
   }
   app.appendChild(freeCard);
 }
+/* ─── [END SEC-28] ─── */
 
+
+/* ─── [SEC-29] دالة الاقتراحات التكيفية ─── */
+function getAdaptiveSuggestion(studentData, sessions) {
+  const suggestions = [];
+  const diag = studentData.diagnostic || {};
+
+  const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+
+  if (needLetters.length === 0) {
+    suggestions.push('✅ لا توجد حروف تحتاج تدريباً حالياً.');
+  } else if (needLetters.length > 5) {
+    suggestions.push(`⚠️ الطالب يحتاج تدريباً على ${needLetters.length} حرفاً — يُنصح بزيادة الجلسات الأسبوعية.`);
+  } else {
+    suggestions.push(`📌 الطالب يحتاج تدريباً على ${needLetters.length} حرفاً — التزم بالخطة الأسبوعية.`);
+  }
+
+  const evaluated = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
+  if (evaluated.length > 0) {
+    const avg = Math.round(evaluated.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluated.length);
+    if (avg >= 80) suggestions.push('🌟 أداء ممتاز — يمكن تسريع وتيرة التدريب.');
+    else if (avg >= 50) suggestions.push('👍 أداء جيد — استمر على نفس الوتيرة.');
+    else suggestions.push('💪 الأداء يحتاج دعماً — ركز على الحروف الأصعب.');
+  } else {
+    suggestions.push('📊 لم تُقيَّم جلسات بعد — سجّل التقييمات لمتابعة التقدم.');
+  }
+
+  return suggestions;
+}
+/* ─── [END SEC-29] ─── */
+
+
+/* ─── [SEC-30] نافذة التصفية الذكية — Smart Filter Modal ─── */
 function showSmartFilterModal() {
   const modal = document.createElement('div');
   modal.id = 'smartFilterModal';
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
-  
+
   modal.innerHTML = `
     <div style="background:white;padding:25px;border-radius:20px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h3 style="margin:0;color:#0891B2;">🔍 التصفية الذكية للطلاب</h3>
         <button id="closeFilterModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
-      
+
       <div style="background:#ECFEFF;padding:16px;border-radius:12px;margin-bottom:20px;border-right:4px solid #0891B2;">
         <p style="margin:0;font-size:13px;color:#155E75;">
           💡 اختر معايير التصفية (الحرف + الفئة العمرية) لعرض الطلاب المتشابهين
         </p>
       </div>
-      
+
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px;">
         <div>
           <label style="font-weight:bold;display:block;margin-bottom:6px;font-size:14px;">🔤 الحرف المستهدف:</label>
@@ -1611,7 +1292,7 @@ function showSmartFilterModal() {
             ${ALL_LETTERS.map(l => `<option value="${l}">حرف ${l}</option>`).join('')}
           </select>
         </div>
-        
+
         <div>
           <label style="font-weight:bold;display:block;margin-bottom:6px;font-size:14px;">👶 الفئة العمرية:</label>
           <select id="filterAge" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;background:white;">
@@ -1625,7 +1306,7 @@ function showSmartFilterModal() {
           </select>
         </div>
       </div>
-      
+
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
         <button class="btn" id="applyFilterBtn" style="background:#0891B2;color:white;border-radius:50px;padding:10px 30px;font-weight:bold;border:none;cursor:pointer;font-family:'Tajawal';font-size:14px;">
           ✅ تطبيق التصفية
@@ -1634,26 +1315,26 @@ function showSmartFilterModal() {
           🔄 إعادة تعيين
         </button>
       </div>
-      
+
       <div id="filterResults" style="border-top:2px dashed var(--line);padding-top:20px;">
         <p style="text-align:center;color:#6B7A99;font-size:14px;">اختر المعايير ثم اضغط "تطبيق التصفية"</p>
       </div>
     </div>
   `;
-  
+
   document.body.appendChild(modal);
-  
+
   const closeModal = () => modal.remove();
   modal.querySelector('#closeFilterModal').onclick = closeModal;
   modal.onclick = (e) => { if (e.target === modal) closeModal(); };
-  
+
   const applyBtn = modal.querySelector('#applyFilterBtn');
   applyBtn.onclick = () => {
     const letter = modal.querySelector('#filterLetter').value;
     const age = modal.querySelector('#filterAge').value;
     renderFilteredStudents(letter, age);
   };
-  
+
   const resetBtn = modal.querySelector('#resetFilterBtn');
   resetBtn.onclick = () => {
     modal.querySelector('#filterLetter').value = '';
@@ -1662,13 +1343,16 @@ function showSmartFilterModal() {
     resultsDiv.innerHTML = '<p style="text-align:center;color:#6B7A99;font-size:14px;">اختر المعايير ثم اضغط "تطبيق التصفية"</p>';
   };
 }
+/* ─── [END SEC-30] ─── */
 
+
+/* ─── [SEC-31] عرض الطلاب المُصفَّين — Filtered Students ─── */
 async function renderFilteredStudents(letterFilter, ageFilter) {
   const resultsDiv = document.getElementById('filterResults');
   if (!resultsDiv) return;
-  
+
   resultsDiv.innerHTML = '<p style="text-align:center;color:#6B7A99;">⏳ جاري التصفية...</p>';
-  
+
   try {
     const allStudentsData = [];
     for (const st of state.myStudents) {
@@ -1679,9 +1363,9 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
         }
       } catch (e) { console.warn('خطأ في جلب بيانات طالب:', e); }
     }
-    
+
     let filtered = allStudentsData;
-    
+
     if (letterFilter) {
       filtered = filtered.filter(st => {
         const diag = st.diagnostic || {};
@@ -1689,11 +1373,11 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
         return letterStatus === 'need' || letterStatus === 'unclear';
       });
     }
-    
+
     if (ageFilter) {
       filtered = filtered.filter(st => st.ageGroup === ageFilter);
     }
-    
+
     if (filtered.length === 0) {
       resultsDiv.innerHTML = `
         <div style="text-align:center;padding:30px;background:#FFF8E1;border-radius:12px;border:2px dashed #F57F17;">
@@ -1703,7 +1387,7 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
       `;
       return;
     }
-    
+
     const grouped = {};
     filtered.forEach(st => {
       const diag = st.diagnostic || {};
@@ -1714,21 +1398,21 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
         letters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
       }
       if (letters.length === 0) return;
-      
+
       const primaryLetter = letters[0];
       const ageGroup = st.ageGroup || 'غير محدد';
-      
+
       if (!grouped[primaryLetter]) grouped[primaryLetter] = {};
       if (!grouped[primaryLetter][ageGroup]) grouped[primaryLetter][ageGroup] = [];
       grouped[primaryLetter][ageGroup].push(st);
     });
-    
+
     let html = `
       <div style="background:#F0F9FF;padding:12px;border-radius:10px;margin-bottom:15px;text-align:center;">
         <strong style="color:#0891B2;">📊 النتائج: ${filtered.length} طالب</strong>
       </div>
     `;
-    
+
     Object.keys(grouped).sort().forEach(letter => {
       const letterTitle = letterTitleMap[letter] || '';
       html += `
@@ -1737,7 +1421,7 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
             🔤 حرف (${letter}) — ${letterTitle}
           </div>
       `;
-      
+
       Object.keys(grouped[letter]).sort().forEach(ageGroup => {
         const students = grouped[letter][ageGroup];
         html += `
@@ -1747,7 +1431,7 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;">
         `;
-        
+
         students.forEach(st => {
           const status = st.diagnostic?.[letter]?.status;
           const statusLabels = {
@@ -1757,7 +1441,7 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
             'trained': '🔄 اجتاز بعد تدريب'
           };
           const statusText = statusLabels[status] || 'غير محدد';
-          
+
           html += `
             <div style="background:white;padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;">
               <span style="font-weight:bold;">${st.fullName || st.email}</span>
@@ -1765,22 +1449,25 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
             </div>
           `;
         });
-        
+
         html += `
             </div>
           </div>
         `;
       });
-      
+
       html += `</div>`;
     });
-    
+
     resultsDiv.innerHTML = html;
   } catch (e) {
     resultsDiv.innerHTML = `<p style="text-align:center;color:var(--coral);">⚠️ خطأ: ${e.message}</p>`;
   }
 }
+/* ─── [END SEC-31] ─── */
 
+
+/* ─── [SEC-32] إضافة/إزالة الطلاب — Claim & Remove ─── */
 window.claimStudent = async function(studentId) {
   try {
     const ref = doc(db, "users", studentId);
@@ -1804,767 +1491,545 @@ window.removeStudent = async function(studentId) {
     await fetchTeacherStudents();
   } catch (e) { showToast('فشل في إزالة الطالب'); }
 };
+/* ─── [END SEC-32] ─── */
 
-/* ========================================
-   23. الألعاب التعليمية - Educational Games
-   ======================================== */
-function renderGames(app) {
-  renderTopbar(app, '🎮 الألعاب التعليمية', 'تعلم والعب مع النطق', () => {
+
+/* ═══════════════════════════════════════════════════════════
+   نهاية الجزء 3/6
+   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   الجزء 4/6 — التشخيص المتقدم + IEP + الجلسات
+   ═══════════════════════════════════════════════════════════ */
+
+
+/* ─── [SEC-33] صفحة الملف الشخصي — Student Profile ─── */
+function renderStudentProfile(app) {
+  if (!state.user) {
+    showToast('يجب تسجيل الدخول');
     state.view = 'home';
+    return render();
+  }
+
+  const isTeacher = state.role === 'teacher' || state.role === 'admin';
+  renderTopbar(app, '👤 الملف الشخصي', isTeacher ? 'بيانات المعلم' : 'بيانات الطالب وولي الأمر', () => {
+    state.view = isTeacher ? 'teacher-dashboard' : 'student-menu';
     render();
   });
 
   const container = document.createElement('div');
-  container.innerHTML = `
-    <div class="game-container">
-      <div class="game-header">
-        <span class="game-title">🎯 اختر الحرف الصحيح</span>
-        <span class="game-score" id="letterGameScore">النقاط: 0</span>
-      </div>
-      <div class="game-question" id="letterQuestion">اضغط ابدأ للعب</div>
-      <div class="game-options" id="letterOptions"></div>
-      <div class="game-feedback" id="letterFeedback"></div>
-      <button class="btn btn-primary" id="startLetterGameBtn" style="margin-top:10px;">ابدأ اللعبة</button>
-    </div>
-
-    <div class="game-container">
-      <div class="game-header">
-        <span class="game-title">🖼️ طابق الكلمة مع الصورة</span>
-        <span class="game-score" id="matchGameScore">النقاط: 0</span>
-      </div>
-      <div class="game-question" id="matchQuestion">اضغط ابدأ للعب</div>
-      <div class="game-options" id="matchOptions"></div>
-      <div class="game-feedback" id="matchFeedback"></div>
-      <button class="btn btn-primary" id="startMatchGameBtn" style="margin-top:10px;">ابدأ اللعبة</button>
-    </div>
-  `;
+  container.id = 'profileContent';
   app.appendChild(container);
 
-  let letterScore = 0;
-  let currentLetter = '';
-  const startLetterBtn = container.querySelector('#startLetterGameBtn');
-  const letterQuestion = container.querySelector('#letterQuestion');
-  const letterOptions = container.querySelector('#letterOptions');
-  const letterFeedback = container.querySelector('#letterFeedback');
-  const letterGameScore = container.querySelector('#letterGameScore');
-
-  function generateLetterQuestion() {
-    const randomLetter = ALL_LETTERS[Math.floor(Math.random() * ALL_LETTERS.length)];
-    currentLetter = randomLetter;
-    letterQuestion.textContent = `ما هو الحرف الذي تبدأ به كلمة "${letterTitleMap[randomLetter] || randomLetter}"؟`;
-    letterFeedback.textContent = '';
-    letterOptions.innerHTML = '';
-    const options = [randomLetter];
-    while (options.length < 4) {
-      const l = ALL_LETTERS[Math.floor(Math.random() * ALL_LETTERS.length)];
-      if (!options.includes(l)) options.push(l);
-    }
-    options.sort(() => Math.random() - 0.5);
-    options.forEach(letter => {
-      const btn = document.createElement('button');
-      btn.className = 'game-option';
-      btn.textContent = letter;
-      btn.onclick = () => {
-        if (letter === currentLetter) {
-          btn.classList.add('correct');
-          letterFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
-          letterScore += 10;
-          letterGameScore.textContent = `النقاط: ${letterScore}`;
-          showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
-          setTimeout(generateLetterQuestion, 1500);
-        } else {
-          btn.classList.add('wrong');
-          letterFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
-          speakText(letter);
-        }
-      };
-      letterOptions.appendChild(btn);
-    });
-  }
-  if (startLetterBtn) startLetterBtn.onclick = generateLetterQuestion;
-
-  let matchScore = 0;
-  let currentMatch = null;
-  const startMatchBtn = container.querySelector('#startMatchGameBtn');
-  const matchQuestion = container.querySelector('#matchQuestion');
-  const matchOptions = container.querySelector('#matchOptions');
-  const matchFeedback = container.querySelector('#matchFeedback');
-  const matchGameScore = container.querySelector('#matchGameScore');
-  const allVocab = [];
-  VOCAB_CATEGORIES.forEach(cat => {
-    VOCAB_LISTS[cat].forEach(item => allVocab.push({ word: item.word, icon: item.icon }));
-  });
-
-  function generateMatchQuestion() {
-    const randomItem = allVocab[Math.floor(Math.random() * allVocab.length)];
-    currentMatch = randomItem;
-    matchQuestion.textContent = `اختر الصورة الصحيحة لكلمة "${randomItem.word}"`;
-    matchFeedback.textContent = '';
-    matchOptions.innerHTML = '';
-    const options = [randomItem];
-    while (options.length < 4) {
-      const item = allVocab[Math.floor(Math.random() * allVocab.length)];
-      if (!options.includes(item)) options.push(item);
-    }
-    options.sort(() => Math.random() - 0.5);
-    options.forEach(item => {
-      const btn = document.createElement('button');
-      btn.className = 'game-option';
-      btn.textContent = item.icon;
-      btn.style.fontSize = '48px';
-      btn.onclick = () => {
-        if (item.word === currentMatch.word) {
-          btn.classList.add('correct');
-          matchFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
-          matchScore += 10;
-          matchGameScore.textContent = `النقاط: ${matchScore}`;
-          showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
-          setTimeout(generateMatchQuestion, 1500);
-        } else {
-          btn.classList.add('wrong');
-          matchFeedback.innerHTML = '<span class="feedback-fwrong">❌ خطأ! حاول مرة أخرى</span>';
-          speakText(item.word);
-        }
-      };
-      matchOptions.appendChild(btn);
-    });
-  }
-  if (startMatchBtn) startMatchBtn.onclick = generateMatchQuestion;
+  loadProfileData(container);
 }
 
-/* ========================================
-   24. توجيهات أولياء الأمور - Parent Guide
-   ======================================== */
-function renderParentGuide(app) {
-  renderTopbar(app, '👨‍👩‍👧 توجيهات أولياء الأمور', 'دليل شامل لتدريب النطق في المنزل', () => {
+async function loadProfileData(container) {
+  container.innerHTML = '<div class="card"><p class="muted">⏳ جاري تحميل البيانات...</p></div>';
+
+  try {
+    const uDoc = await getDoc(doc(db, "users", state.user.uid));
+    if (!uDoc.exists()) {
+      container.innerHTML = '<div class="card"><p class="muted">⚠️ لا توجد بيانات</p></div>';
+      return;
+    }
+
+    const userData = uDoc.data();
+    const isTeacher = state.role === 'teacher' || state.role === 'admin';
+    const fullName = userData.fullName || '';
+    const email = userData.email || state.user.email || '';
+    const roleLabel = state.role === 'teacher' ? 'معلم' : state.role === 'admin' ? 'مدير' : 'طالب';
+
+    let sessionsCount = 0;
+    try {
+      const qS = isTeacher
+        ? query(collection(db, "sessions"), where("teacherId", "==", state.user.uid))
+        : query(collection(db, "sessions"), where("studentId", "==", state.user.uid));
+      const snap = await getDocs(qS);
+      sessionsCount = snap.size;
+    } catch (e) { console.warn(e); }
+
+    let studentsCount = 0;
+    if (isTeacher) {
+      studentsCount = state.myStudents.length;
+    }
+
+    const points = isTeacher ? 0 : calculateStudentPoints(userData);
+    const diag = userData.diagnostic || {};
+    const passedLetters = isTeacher ? 0 : ALL_LETTERS.filter(l => diag[l]?.status === 'passed').length;
+
+    container.innerHTML = '';
+
+    const identityCard = document.createElement('div');
+    identityCard.className = 'card';
+    identityCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+    identityCard.style.border = '2px solid var(--mint-deep)';
+    identityCard.style.textAlign = 'center';
+    identityCard.innerHTML = `
+      <div style="font-size:80px; margin-bottom:10px;">${isTeacher ? '👨‍🏫' : '🧒'}</div>
+      <h2 style="margin:8px 0; color:var(--mint-deep);">${fullName || email}</h2>
+      <p style="font-size:14px; color:#555; margin:4px 0;">${email}</p>
+      <span class="badge badge-assigned" style="font-size:14px; padding:6px 16px;">${roleLabel}</span>
+      ${!isTeacher && userData.ageGroup ? `<div style="margin-top:8px;"><span class="badge" style="background:#FFF8E1; color:#F57F17; font-size:13px; padding:4px 12px;">👶 ${userData.ageGroup} سنوات</span></div>` : ''}
+    `;
+    container.appendChild(identityCard);
+
+    const statsCard = document.createElement('div');
+    statsCard.className = 'card';
+    statsCard.innerHTML = `
+      <h3>📊 إحصائيات</h3>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:12px;">
+        <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
+          <div style="font-size:28px; font-weight:bold; color:var(--mint-deep);">${sessionsCount}</div>
+          <div style="font-size:13px; color:#6B7A99;">${isTeacher ? 'جلسة منفذة' : 'جلسة'}</div>
+        </div>
+        ${isTeacher ? `
+          <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
+            <div style="font-size:28px; font-weight:bold; color:var(--mint-deep);">${studentsCount}</div>
+            <div style="font-size:13px; color:#6B7A99;">طالب</div>
+          </div>
+        ` : `
+          <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
+            <div style="font-size:28px; font-weight:bold; color:var(--mint-deep);">${passedLetters}/${ALL_LETTERS.length}</div>
+            <div style="font-size:13px; color:#6B7A99;">حروف متقنة</div>
+          </div>
+          <div style="background:#F8FAFC; padding:15px; border-radius:12px; text-align:center;">
+            <div style="font-size:28px; font-weight:bold; color:var(--gold);">${points}</div>
+            <div style="font-size:13px; color:#6B7A99;">نقطة تحفيزية</div>
+          </div>
+        `}
+      </div>
+    `;
+    container.appendChild(statsCard);
+
+    const editCard = document.createElement('div');
+    editCard.className = 'card';
+    editCard.innerHTML = `
+      <h3>✏️ تعديل البيانات الأساسية</h3>
+      <div style="margin-top:12px;">
+        <label style="font-weight:bold; display:block; margin-bottom:4px;">الاسم الكامل:</label>
+        <input type="text" id="profileFullName" value="${fullName}" placeholder="اكتب اسمك الكامل">
+
+        <label style="font-weight:bold; display:block; margin-bottom:4px;">البريد الإلكتروني:</label>
+        <input type="email" id="profileEmail" value="${email}" disabled style="background:#F0F0F0; cursor:not-allowed;">
+        <p class="muted" style="font-size:12px; margin-top:-8px; margin-bottom:12px;">ℹ️ البريد الإلكتروني لا يمكن تعديله</p>
+
+        <button class="btn btn-primary" id="saveProfileBtn" style="border-radius:50px; padding:10px 30px;">💾 حفظ التعديلات</button>
+      </div>
+    `;
+    container.appendChild(editCard);
+
+    if (!isTeacher) {
+      const parentCard = document.createElement('div');
+      parentCard.className = 'card';
+      parentCard.innerHTML = `
+        <h3>👨‍👩‍👧 بيانات ولي الأمر</h3>
+        <p class="muted">تستخدم لإرسال تقارير الجلسات لولي أمرك</p>
+        <div style="margin-top:12px;">
+          <label style="font-weight:bold; display:block; margin-bottom:4px;">اسم ولي الأمر:</label>
+          <input type="text" id="profileParentName" value="${userData.parentName || ''}" placeholder="اسم ولي الأمر">
+
+          <label style="font-weight:bold; display:block; margin-bottom:4px;">بريد ولي الأمر:</label>
+          <input type="email" id="profileParentEmail" value="${userData.parentEmail || ''}" placeholder="example@email.com">
+
+          <label style="font-weight:bold; display:block; margin-bottom:4px;">جوال ولي الأمر (واتساب):</label>
+          <input type="tel" id="profileParentPhone" value="${userData.parentPhone || ''}" placeholder="05xxxxxxxx">
+
+          <button class="btn btn-primary" id="saveParentProfileBtn" style="border-radius:50px; padding:10px 30px;">💾 حفظ بيانات ولي الأمر</button>
+        </div>
+      `;
+      container.appendChild(parentCard);
+    }
+
+    const passwordCard = document.createElement('div');
+    passwordCard.className = 'card';
+    passwordCard.innerHTML = `
+      <h3>🔐 الأمان</h3>
+      <p class="muted">لتغيير كلمة المرور، سنرسل رابطاً إلى بريدك الإلكتروني.</p>
+      <button class="btn btn-soft" id="resetPasswordProfileBtn" style="border-radius:50px; padding:10px 30px; margin-top:8px;">📧 إرسال رابط تغيير كلمة المرور</button>
+    `;
+    container.appendChild(passwordCard);
+
+    const logoutCard = document.createElement('div');
+    logoutCard.className = 'card';
+    logoutCard.style.borderRight = '4px solid var(--coral)';
+    logoutCard.innerHTML = `
+      <h3>🚪 تسجيل الخروج</h3>
+      <p class="muted">سيتم إنهاء جلستك الحالية</p>
+      <button class="btn btn-danger" id="logoutProfileBtn" style="border-radius:50px; padding:10px 30px; margin-top:8px;">تسجيل الخروج</button>
+    `;
+    container.appendChild(logoutCard);
+
+    const saveProfileBtn = container.querySelector('#saveProfileBtn');
+    if (saveProfileBtn) {
+      saveProfileBtn.onclick = async () => {
+        const newName = container.querySelector('#profileFullName').value.trim();
+        if (!newName) { showToast('❌ الاسم لا يمكن أن يكون فارغاً'); return; }
+        saveProfileBtn.disabled = true;
+        saveProfileBtn.textContent = '⏳ جاري الحفظ...';
+        try {
+          await updateDoc(doc(db, "users", state.user.uid), {
+            fullName: newName,
+            updatedAt: new Date().toISOString()
+          });
+          showToast('✅ تم حفظ البيانات بنجاح');
+          showNotification('تم تحديث ملفك الشخصي', 'success');
+          renderStudentProfile(app);
+        } catch (e) {
+          showToast('❌ فشل الحفظ: ' + e.message);
+          saveProfileBtn.disabled = false;
+          saveProfileBtn.textContent = '💾 حفظ التعديلات';
+        }
+      };
+    }
+
+    const saveParentProfileBtn = container.querySelector('#saveParentProfileBtn');
+    if (saveParentProfileBtn) {
+      saveParentProfileBtn.onclick = async () => {
+        const parentName = container.querySelector('#profileParentName').value.trim();
+        const parentEmail = container.querySelector('#profileParentEmail').value.trim();
+        const parentPhone = container.querySelector('#profileParentPhone').value.trim();
+        if (parentEmail && !parentEmail.includes('@')) { showToast('❌ البريد الإلكتروني غير صحيح'); return; }
+        saveParentProfileBtn.disabled = true;
+        saveParentProfileBtn.textContent = '⏳ جاري الحفظ...';
+        try {
+          await updateDoc(doc(db, "users", state.user.uid), {
+            parentName, parentEmail, parentPhone
+          });
+          showToast('✅ تم حفظ بيانات ولي الأمر');
+          saveParentProfileBtn.disabled = false;
+          saveParentProfileBtn.textContent = '💾 حفظ بيانات ولي الأمر';
+        } catch (e) {
+          showToast('❌ فشل الحفظ: ' + e.message);
+          saveParentProfileBtn.disabled = false;
+          saveParentProfileBtn.textContent = '💾 حفظ بيانات ولي الأمر';
+        }
+      };
+    }
+
+    const resetPasswordProfileBtn = container.querySelector('#resetPasswordProfileBtn');
+    if (resetPasswordProfileBtn) {
+      resetPasswordProfileBtn.onclick = async () => {
+        if (!confirm('هل تريد إرسال رابط تغيير كلمة المرور؟')) return;
+        try {
+          await sendPasswordResetEmail(auth, email);
+          showToast('✅ تم إرسال الرابط');
+        } catch (e) { showToast('❌ فشل الإرسال: ' + e.message); }
+      };
+    }
+
+    const logoutProfileBtn = container.querySelector('#logoutProfileBtn');
+    if (logoutProfileBtn) {
+      logoutProfileBtn.onclick = async () => {
+        if (!confirm('هل أنت متأكد من تسجيل الخروج؟')) return;
+        try {
+          if (iepPrintArea) { iepPrintArea.remove(); iepPrintArea = null; }
+          await signOut(auth);
+          state.user = null; state.role = null;
+          state.view = 'home';
+          showToast('تم تسجيل الخروج');
+          render();
+        } catch (e) { showToast('خطأ في الخروج'); }
+      };
+    }
+
+  } catch (e) {
+    console.error('خطأ في تحميل الملف الشخصي:', e);
+    container.innerHTML = `<div class="card"><p class="muted">⚠️ خطأ: ${e.message}</p></div>`;
+  }
+}
+/* ─── [END SEC-33] ─── */
+
+
+/* ─── [SEC-34] صفحة تدريب الحروف — Letter Training ─── */
+function renderLetterTraining(app) {
+  renderTopbar(app, '🔤 تدريب الحروف', 'تدريب تفاعلي على نطق الحروف', () => {
     state.view = 'home';
     render();
   });
 
   const container = document.createElement('div');
-
-  const introCard = document.createElement('div');
-  introCard.className = 'card';
-  introCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-  introCard.style.border = '2px solid var(--mint-deep)';
-  introCard.innerHTML = `
-    <h3 style="margin:0;color:var(--mint-deep);text-align:center;">دليل ولي الأمر لتدريب النطق</h3>
-    <p style="font-size:14px;line-height:1.8;margin-top:10px;">
-      عزيزي ولي الأمر، دورك أساسي في تحسين نطق طفلك. التدريب المنزلي المنتظم (حتى 10-15 دقيقة يومياً) يضاعف نتائج جلسات المعلم. هذا الدليل يقدم لك نصائح وتمارين بسيطة يمكن تطبيقها بسهولة.
-    </p>
-  `;
-  container.appendChild(introCard);
-
-  const tipsSection = document.createElement('div');
-  tipsSection.className = 'parent-guide-section';
-  tipsSection.innerHTML = `<div class="parent-guide-title">💡 نصائح عامة</div>`;
-  const tips = [
-    { icon: '🗣️', text: 'تحدث مع طفلك بوضوح وبطء، وانطق الحروف بشكل صحيح أمامه.' },
-    { icon: '🪞', text: 'استخدم المرآة أثناء التدريب ليرى طفلك حركة فمه ولسانه.' },
-    { icon: '🔁', text: 'كرر الكلمات الصعبة بهدوء دون إجبار الطفل.' },
-    { icon: '🎮', text: 'حوّل التدريب إلى لعبة ممتعة، مثل "من يستطيع نطق الحرف أولاً؟".' },
-    { icon: '⭐', text: 'كافئ طفلك عند المحاولة الصحيحة، وكافئ المحاولة وليس الكمال.' },
-    { icon: '📅', text: 'حدد وقتاً ثابتاً يومياً للتدريب، واجعله قصيراً وممتعاً.' },
-    { icon: '👂', text: 'استمع لطفلك دون مقاطعته، ثم أعد نطق الكلمة الصحيحة بلطف.' },
-    { icon: '📚', text: 'اقرأ لطفلك قصصاً قصيرة يومياً، وناقشه في الصور والأحداث.' }
-  ];
-  tips.forEach(tip => {
-    const tipDiv = document.createElement('div');
-    tipDiv.className = 'parent-guide-tip';
-    tipDiv.innerHTML = `<span class="icon">${tip.icon}</span><span>${tip.text}</span>`;
-   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ========================================
-   25. الخطة الأسبوعية الذكية - Smart Weekly Plan
-   ======================================== */
-async function renderWeeklyPlan(app) {
-  renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
-    state.view = 'teacher-dashboard';
-    render();
-  });
-
-  const container = document.createElement('div');
-  container.innerHTML = `
-    <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep); margin-bottom:15px;">
-      <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 الخطة الأسبوعية المقترحة</h3>
-      <p class="muted" style="text-align:center;">تتحدث تلقائياً حسب الجلسات المكتملة وشدة الحالة</p>
-      <div style="text-align:center;margin-top:10px;">
-        <button class="btn btn-primary btn-sm" id="printWeeklyPlanBtn" style="border-radius:50px;">🖨️ طباعة / حفظ PDF</button>
-      </div>
-    </div>
-  `;
   app.appendChild(container);
 
-  const printBtn = container.querySelector('#printWeeklyPlanBtn');
-  if (printBtn) printBtn.onclick = () => printWeeklyPlan();
+  const selectorCard = document.createElement('div');
+  selectorCard.className = 'card';
+  selectorCard.innerHTML = `
+    <h3>🎯 اختر الحرف للتدريب</h3>
+    <p class="muted">اضغط على أي حرف لبدء جلسة التدريب</p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(60px,1fr)); gap:8px; margin-top:12px;">
+      ${ALL_LETTERS.map(letter => `
+        <button class="training-letter-btn" data-letter="${letter}" style="padding:12px; border-radius:12px; border:2px solid var(--line); background:white; font-size:20px; font-weight:bold; color:var(--mint-deep); cursor:pointer; transition:0.2s;">${letter}</button>
+      `).join('')}
+    </div>
+  `;
+  container.appendChild(selectorCard);
 
-  if (!state.myStudents.length) {
-    const emptyCard = document.createElement('div');
-    emptyCard.className = 'card';
-    emptyCard.innerHTML = '<p class="muted">لا يوجد طلاب لعرض الخطة.</p>';
-    app.appendChild(emptyCard);
-    return;
-  }
+  const trainingArea = document.createElement('div');
+  trainingArea.id = 'trainingArea';
+  container.appendChild(trainingArea);
 
-  const allSessionsSnap = await getDocs(collection(db, "sessions"));
-  const allSessions = [];
-  allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+  trainingArea.innerHTML = `
+    <div class="card" style="text-align:center; padding:40px;">
+      <div style="font-size:60px;">👆</div>
+      <h3 style="color:var(--mint-deep); margin-top:10px;">اختر حرفاً من الأعلى لبدء التدريب</h3>
+      <p class="muted">ستظهر هنا واجهة التدريب مع التسجيل والتقييم</p>
+    </div>
+  `;
 
-  const nonConsecutiveDays = ['السبت', 'الإثنين', 'الأربعاء'];
-  const singleDay = ['الأحد'];
+  container.querySelectorAll('.training-letter-btn').forEach(btn => {
+    btn.onmouseover = () => { btn.style.background = '#EAF6F4'; btn.style.transform = 'scale(1.1)'; };
+    btn.onmouseout = () => { btn.style.background = 'white'; btn.style.transform = 'scale(1)'; };
+    btn.onclick = () => {
+      showTrainingSession(trainingArea, btn.dataset.letter);
+    };
+  });
+}
 
-  function getWeeklySessions(studentData) {
-    const diag = studentData.diagnostic || {};
-    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-    const severeTypes = ['حذف', 'قلب', 'خنف', 'تأتأة / تلعثم', 'حبسة'];
-    let severity = 0;
-    needLetters.forEach(letter => {
-      const info = diag[letter] || {};
-      if (severeTypes.includes(info.disorderType)) severity += 2;
-      else severity += 1;
-    });
-    if (severity <= 2) return 1;
-    else if (severity <= 4) return 2;
-    else return 3;
-  }
-
-  function getCompletedSessions(letter, studentId) {
-    return allSessions.filter(s => s.studentId === studentId && s.letter === letter && (s.evaluation === 'passed' || s.evaluation === 'trained')).length;
-  }
-
-  for (const student of state.myStudents) {
-    const studentDoc = await getDoc(doc(db, "users", student.id));
-    const studentData = studentDoc.exists() ? studentDoc.data() : {};
-    const diag = studentData.diagnostic || {};
-    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-
-    if (needLetters.length === 0) {
-      const okCard = document.createElement('div');
-      okCard.className = 'card';
-      okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً.</p>`;
-      app.appendChild(okCard);
-      continue;
+async function showTrainingSession(area, letter) {
+  const titleStr = letterTitleMap[letter] || '';
+  
+  // استخدام بيانات Firebase إن وُجدت
+  let letterData = null;
+  try {
+    if (typeof window.getLetterData === 'function') {
+      letterData = await window.getLetterData(letter);
     }
+  } catch (e) {
+    console.warn('تعذر جلب بيانات الحرف من Firebase:', e);
+  }
+  
+  if (!letterData) {
+    letterData = LETTER_DATABASE[letter] || {
+      place: 'مخرج الحرف العام',
+      vowels: { fatha: `${letter}َ`, damma: `${letter}ُ`, kasra: `${letter}ِ`, sukoon: `${letter}ْ` },
+      words: { start: [`${letter}َـ`], middle: [`ـ${letter}ـ`], end: [`ـ${letter}`] },
+      sentences: [`جملة تدريبية لحرف ${letter}.`]
+    };
+  }
 
-    const sessionsPerWeek = getWeeklySessions(studentData);
-    const daysForStudent = sessionsPerWeek === 1 ? singleDay : nonConsecutiveDays.slice(0, sessionsPerWeek);
+  area.innerHTML = `
+    <div class="card" style="border-right:6px solid var(--mint-deep);">
+      <h3 style="color:var(--mint-deep);">🔤 حرف (${letter}) - ${titleStr}</h3>
+      <p class="muted">📍 مخرج الحرف: ${letterData.place}</p>
 
-    const planCard = document.createElement('div');
-    planCard.className = 'card';
-    planCard.style.borderRight = '4px solid var(--mint-deep)';
-    planCard.innerHTML = `
-      <h4 style="margin:0;color:var(--mint-deep);">👤 ${student.fullName || student.email}</h4>
-      <p style="font-size:13px;color:#555;margin:4px 0;">
-        الجلسات الأسبوعية الموصى بها: <strong>${sessionsPerWeek}</strong> - الأيام: ${daysForStudent.join(' و ')}
-      </p>
-      <div style="margin-top:8px;">
-        ${needLetters.slice(0, 4).map(letter => {
-          const completed = getCompletedSessions(letter, student.id);
-          const totalNeeded = 4;
+      <div style="text-align:center; padding:20px; margin:15px 0; background:#F0FDFA; border-radius:20px;">
+        <div style="font-size:100px; font-weight:bold; color:var(--mint-deep); cursor:pointer;" onclick="speakText('${letter}')">${letter}</div>
+        <p style="font-size:16px; font-weight:bold; margin-top:10px;">🔊 اضغط على الحرف للاستماع</p>
+      </div>
+
+      <div style="text-align:center; margin-bottom:20px;">
+        <button class="btn-record" id="trainRecordBtn" data-letter="${letter}" style="font-size:16px; padding:12px 30px;">🎤 سجل نطقك</button>
+        <div id="trainFeedback" style="margin-top:12px; min-height:30px; font-size:15px; font-weight:bold;"></div>
+      </div>
+
+      <h4 style="color:var(--mint-deep);">📖 الحرف مع الحركات</h4>
+      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:15px 0;">
+        ${Object.entries(letterData.vowels).map(([key, val]) => {
+          const label = { fatha: 'فتحة', damma: 'ضمة', kasra: 'كسرة', sukoon: 'سكون' }[key];
           return `
-            <div style="display:flex; gap:10px; align-items:center; padding:4px 0; border-bottom:1px solid #eee;">
-              <span style="min-width:70px;">حرف ${letter}</span>
-              <span style="color:${completed >= totalNeeded ? 'green' : '#F57F17'};">${completed}/${totalNeeded} جلسات</span>
-              <button class="btn btn-soft btn-sm" onclick="speakText('${letter}')">🔊</button>
+            <div style="background:white; border:2px solid var(--mint); border-radius:15px; padding:15px 20px; cursor:pointer;" onclick="speakText('${val}')">
+              <div style="font-size:32px; font-weight:bold; color:var(--mint-deep);">${val}</div>
+              <div style="font-size:13px; color:#6B7A99; margin-top:4px;">${label}</div>
             </div>
           `;
         }).join('')}
       </div>
-      <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الجلسات الفردية فقط، دون دمج الطلاب.</p>
-    `;
-    app.appendChild(planCard);
-  }
-}
 
-function printWeeklyPlan() {
-  let printArea = document.getElementById('iep-print-area');
-  if (!printArea) {
-    printArea = document.createElement('div');
-    printArea.id = 'iep-print-area';
-    document.body.appendChild(printArea);
-  }
-  const planContent = document.getElementById('app').innerText;
-  printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب</p>
-        <hr style="border:1px solid #ddd;margin:10px 0;">
+      <h4 style="color:var(--mint-deep); margin-top:20px;">📝 كلمات بالحرف</h4>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0;">
+        ${[...letterData.words.start, ...letterData.words.middle, ...letterData.words.end].map(word => `
+          <span style="background:#EAF6F4; padding:8px 16px; border-radius:20px; font-size:16px; font-weight:bold; cursor:pointer;" onclick="speakText('${word}')">${word} 🔊</span>
+        `).join('')}
       </div>
-      <pre style="white-space:pre-wrap;font-size:14px;line-height:1.8;">${planContent}</pre>
-      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذه الخطة تلقائياً بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+
+      <h4 style="color:var(--mint-deep); margin-top:20px;">✍️ جمل تدريبية</h4>
+      ${letterData.sentences.map(sentence => `
+        <div style="background:white; padding:12px; border-radius:12px; margin-bottom:8px; font-size:16px; line-height:1.8; cursor:pointer; border:1px solid var(--line);" onclick="speakText('${sentence}')">
+          ${sentence}
+          <span style="float:left;">🔊</span>
+        </div>
+      `).join('')}
+
+      <div style="margin-top:20px; padding-top:20px; border-top:2px dashed var(--line);">
+        <button class="btn btn-soft btn-sm" id="backToTrainingBtn" style="border-radius:50px;">← رجوع لقائمة الحروف</button>
+      </div>
     </div>
   `;
-  window.print();
-  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
-}
 
-/* ========================================
-   26. قائمة ملفات إنجاز الطلاب - Achievement List
-   ======================================== */
-async function renderStudentAchievementList(app) {
-  renderTopbar(app, '🏆 ملفات إنجاز الطلاب', 'اختر طالباً لعرض ملف إنجازه', () => {
-    state.view = 'teacher-dashboard';
+  const recordBtn = area.querySelector('#trainRecordBtn');
+  if (recordBtn) {
+    recordBtn.onclick = function() {
+      const l = this.dataset.letter;
+      const feedbackEl = area.querySelector('#trainFeedback');
+      feedbackEl.innerHTML = '🎤 جاري الاستماع...';
+      startRecording(l, (transcript, analysis) => {
+        if (!transcript) {
+          feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
+          feedbackEl.style.color = 'var(--fail)';
+          return;
+        }
+        if (analysis.isMatch) {
+          feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح.`;
+          feedbackEl.style.color = 'var(--success)';
+          showNotification('أحسنت! نطق صحيح 🎉', 'success');
+        } else {
+          feedbackEl.innerHTML = `❌ حاول مرة أخرى: ${getDisorderFeedback(analysis.disorderType)}`;
+          feedbackEl.style.color = 'var(--fail)';
+        }
+      });
+    };
+  }
+
+  const backBtn = area.querySelector('#backToTrainingBtn');
+  if (backBtn) {
+    backBtn.onclick = () => {
+      area.innerHTML = `
+        <div class="card" style="text-align:center; padding:40px;">
+          <div style="font-size:60px;">👆</div>
+          <h3 style="color:var(--mint-deep); margin-top:10px;">اختر حرفاً من الأعلى لبدء التدريب</h3>
+          <p class="muted">ستظهر هنا واجهة التدريب مع التسجيل والتقييم</p>
+        </div>
+      `;
+    };
+  }
+
+  area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+/* ─── [END SEC-34] ─── */
+
+
+/* ─── [SEC-35] الصفحة الرئيسية — Home Page ─── */
+function renderHome(app) {
+  renderTopbar(app, 'منارة النطق', 'المنصة التدريبية المباشرة');
+  const banner = document.createElement('div');
+  banner.className = 'card';
+  banner.style.background = 'linear-gradient(135deg, #357E74, #4FB6A8)';
+  banner.style.color = 'white';
+  banner.innerHTML = `
+    <h2 style="margin-top:0;">منصة تشخيص وتدريب النطق الشاملة</h2>
+    <p>تشخيص 28 حرفاً مع الصوت والصورة وإدارة الجلسات الأسبوعية العلاجية المباشرة والخطة الفردية (IEP).</p>
+    <p style="font-size:14px; opacity:0.9;">استكشف القوائم التعليمية والألعاب التفاعلية أدناه.</p>
+    ${!state.user ? '<button class="btn btn-soft" id="btnAuthHome" style="color:#357E74; margin-top:8px;">تسجيل الدخول / إنشاء حساب</button>' : ''}
+  `;
+  app.appendChild(banner);
+  if (!state.user) {
+    const authBtn = banner.querySelector('#btnAuthHome');
+    if (authBtn) authBtn.onclick = () => { state.view = 'auth'; render(); };
+  }
+  const grid = document.createElement('div');
+  grid.className = 'grid-2';
+  VOCAB_CATEGORIES.forEach(category => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cursor = 'pointer';
+    card.style.transition = '0.2s';
+    card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; };
+    card.onmouseout = () => { card.style.transform = 'translateY(0)'; };
+    const iconMap = {
+      'الأشكال': '🔷', 'الألوان': '🎨', 'الفاكهة': '🍎', 'الخضروات': '🥕',
+      'الحيوانات': '🦁', 'النباتات': '🌿', 'أعضاء الجسم': '🧍',
+      'الأثاث': '🪑', 'الحشرات': '🐝', 'الطيور': '🕊️'
+    };
+    const icon = iconMap[category] || '📚';
+    card.innerHTML = `
+      <h3>${icon} ${category}</h3>
+      <p class="muted">${VOCAB_LISTS[category].length} كلمة تدريبية</p>
+      <button class="btn btn-soft btn-sm">استكشف القائمة</button>
+    `;
+    card.onclick = () => {
+      state.view = 'vocab-list';
+      state.currentVocabCategory = category;
+      render();
+    };
+    grid.appendChild(card);
+  });
+  const lettersCard = document.createElement('div');
+  lettersCard.className = 'card';
+  lettersCard.style.cursor = 'pointer';
+  lettersCard.style.transition = '0.2s';
+  lettersCard.onmouseover = () => { lettersCard.style.transform = 'translateY(-4px)'; };
+  lettersCard.onmouseout = () => { lettersCard.style.transform = 'translateY(0)'; };
+  lettersCard.innerHTML = `
+    <h3>🔤 الحروف الأبجدية</h3>
+    <p class="muted">28 حرفاً مع الصور التوضيحية</p>
+    <button class="btn btn-soft btn-sm">عرض الحروف</button>
+  `;
+  lettersCard.onclick = () => { state.view = 'letter-display'; render(); };
+  grid.appendChild(lettersCard);
+
+  const trainingCard = document.createElement('div');
+  trainingCard.className = 'card';
+  trainingCard.style.cursor = 'pointer';
+  trainingCard.style.transition = '0.2s';
+  trainingCard.style.border = '2px solid var(--mint-deep)';
+  trainingCard.onmouseover = () => { trainingCard.style.transform = 'translateY(-4px)'; };
+  trainingCard.onmouseout = () => { trainingCard.style.transform = 'translateY(0)'; };
+  trainingCard.innerHTML = `
+    <h3>🎯 تدريب الحروف التفاعلي</h3>
+    <p class="muted">تسجيل صوتي وتحليل فوري لنطق كل حرف</p>
+    <button class="btn btn-soft btn-sm">ابدأ التدريب</button>
+  `;
+  trainingCard.onclick = () => { state.view = 'letter-training'; render(); };
+  grid.appendChild(trainingCard);
+
+  const gamesCard = document.createElement('div');
+  gamesCard.className = 'card';
+  gamesCard.style.cursor = 'pointer';
+  gamesCard.style.transition = '0.2s';
+  gamesCard.onmouseover = () => { gamesCard.style.transform = 'translateY(-4px)'; };
+  gamesCard.onmouseout = () => { gamesCard.style.transform = 'translateY(0)'; };
+  gamesCard.innerHTML = `
+    <h3>🎮 الألعاب التعليمية</h3>
+    <p class="muted">اختر الحرف الصحيح وطابق الكلمة مع الصورة</p>
+    <button class="btn btn-soft btn-sm">العب الآن</button>
+  `;
+  gamesCard.onclick = () => { state.view = 'games'; render(); };
+  grid.appendChild(gamesCard);
+  const parentGuideCard = document.createElement('div');
+  parentGuideCard.className = 'card';
+  parentGuideCard.style.cursor = 'pointer';
+  parentGuideCard.style.transition = '0.2s';
+  parentGuideCard.onmouseover = () => { parentGuideCard.style.transform = 'translateY(-4px)'; };
+  parentGuideCard.onmouseout = () => { parentGuideCard.style.transform = 'translateY(0)'; };
+  parentGuideCard.innerHTML = `
+    <h3>👨‍👩‍👧 توجيهات أولياء الأمور</h3>
+    <p class="muted">نصائح وتمارين منزلية لتحسين النطق</p>
+    <button class="btn btn-soft btn-sm">عرض التوجيهات</button>
+  `;
+  parentGuideCard.onclick = () => { state.view = 'parent-guide'; render(); };
+  grid.appendChild(parentGuideCard);
+  app.appendChild(grid);
+}
+/* ─── [END SEC-35] ─── */
+
+
+/* ─── [SEC-36] صفحة قائمة المفردات — Vocabulary List ─── */
+function renderVocabList(app) {
+  const category = state.currentVocabCategory || 'الفاكهة';
+  const items = VOCAB_LISTS[category] || [];
+  renderTopbar(app, `📚 ${category}`, `${items.length} كلمة تدريبية`, () => {
+    state.view = 'home';
     render();
   });
   const card = document.createElement('div');
   card.className = 'card';
-  card.innerHTML = '<h3>👥 الطلاب</h3>';
-  app.appendChild(card);
-  if (!state.myStudents.length) {
-    card.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
-    return;
-  }
-  const list = document.createElement('div');
-  list.className = 'iep-student-list';
-  card.appendChild(list);
-  state.myStudents.forEach(st => {
-    const item = document.createElement('div');
-    item.className = 'iep-student-item';
-    item.innerHTML = `
-      <div style="font-size:40px;">🧒</div>
-      <div class="student-name">${st.fullName || st.email}</div>
-      <div class="student-email">${st.email}</div>
-    `;
-    item.onclick = () => {
-      state.currentStudent = st;
-      state.view = 'achievement';
-      render();
-    };
-    list.appendChild(item);
-  });
-}
-
-/* ========================================
-   27. ملف إنجاز المعلم - Teacher Achievement
-   ======================================== */
-const TEACHER_STANDARDS = [
-  { id: 1, title: 'أداء الواجبات الوظيفية', evidences: 'سجل الدوام، سجل المناوبة والإشراف، سجل الانتظار، خطة توزيع المنهج.' },
-  { id: 2, title: 'التفاعل مع المجتمع المحلي', evidences: 'سجل مجتمعات التعلم، سجل تبادل الزيارات، تقرير درس تطبيقي، شهادات حضور.' },
-  { id: 3, title: 'التفاعل مع أولياء الأمور', evidences: 'صور من الجمعية العمومية، تقرير اجتماع مع ولي الأمر، نسخة من الخطة الأسبوعية.' },
-  { id: 4, title: 'التنويع في استراتيجيات التدريس', evidences: 'تقرير عن تطبيق استراتيجية، ملف إنجاز المعلم.' },
-  { id: 5, title: 'تحسين نتائج المتعلمين', evidences: 'نتائج الاختبارات القبلية والبعدية، كشف متابعة الطلاب.' },
-  { id: 6, title: 'إعداد وتنفيذ خطة التعلم', evidences: 'خطة توزيع المنهج، نماذج من إعداد الدروس، نماذج من الواجبات والاختبارات.' },
-  { id: 7, title: 'توظيف تقنيات ووسائل التعلم', evidences: 'صور من الوسائل التعليمية، تقرير عن برنامج تقني.' },
-  { id: 8, title: 'تهيئة البيئة التعليمية', evidences: 'تقرير تصنيف الطلاب حسب أنماط التعلم، نماذج من التحفيز المادي والمعنوي.' },
-  { id: 9, title: 'الإدارة الصفية', evidences: 'كشف المتابعة، تطبيق إدارة الصف.' },
-  { id: 10, title: 'تحليل نتائج المتعلمين', evidences: 'تقرير تحليل نتائج الطلاب، سجل معالجة الفاقد التعليمي.' },
-  { id: 11, title: 'تنوع أساليب التقويم', evidences: 'نماذج من الاختبارات، ملفات إنجاز الطلاب، نماذج من المهام الأدائية والمشاريع.' }
-];
-
-async function renderTeacherAchievement(app) {
-  renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
-    state.view = 'teacher-dashboard';
-    render();
-  });
-  if (!state.user) {
-    showToast('يجب تسجيل الدخول');
-    state.view = 'auth';
-    return render();
-  }
-  const teacherId = state.user.uid;
-  let teacherData = {};
-  try {
-    const teacherDoc = await getDoc(doc(db, "users", teacherId));
-    if (teacherDoc.exists()) teacherData = teacherDoc.data();
-  } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
-  const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
-
-  let existingFiles = {};
-  try {
-    const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
-    const filesSnap = await getDocs(filesQuery);
-    filesSnap.forEach(d => {
-      const data = d.data();
-      const standardId = data.standardId;
-      if (!existingFiles[standardId]) existingFiles[standardId] = [];
-      existingFiles[standardId].push({ id: d.id, ...data });
-    });
-  } catch (e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
-
-  const headerCard = document.createElement('div');
-  headerCard.className = 'card';
-  headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-  headerCard.style.border = '2px solid var(--mint-deep)';
-  headerCard.innerHTML = `
-    <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
-    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
-      <button class="btn btn-primary btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">🖨️ طباعة / حفظ PDF</button>
-      <button class="btn btn-soft btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:8px 20px;">📄 توليد الشواهد تلقائياً</button>
-    </div>
-  `;
-  app.appendChild(headerCard);
-
-  const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
-  const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
-  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
-
-  TEACHER_STANDARDS.forEach(standard => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.marginBottom = '12px';
-    card.innerHTML = `
-      <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
-      <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
-        <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
-        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
-        <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
-      </div>
-      <div id="filesList_${standard.id}" style="margin-top:8px;">
-        ${(existingFiles[standard.id] || []).map(file => `
-          <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
-            <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
-            <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
-          </div>
-        `).join('')}
-      </div>
-    `;
-    app.appendChild(card);
-
-    const fileInput = card.querySelector(`#fileInput_${standard.id}`);
-    const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
-    const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
-    if (uploadBtn && fileInput) {
-      uploadBtn.onclick = () => fileInput.click();
-      fileInput.onchange = async () => {
-        if (!fileInput.files || fileInput.files.length === 0) return;
-        fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
-        const uploadPromises = Array.from(fileInput.files).map(file => uploadTeacherFile(teacherId, standard.id, file));
-        const results = await Promise.all(uploadPromises);
-        const success = results.filter(r => r !== null);
-        if (success.length > 0) {
-          for (const fileInfo of success) {
-            try {
-              await addDoc(collection(db, "teacher_files"), {
-                teacherId,
-                standardId: standard.id,
-                name: fileInfo.name,
-                url: fileInfo.url,
-                type: fileInfo.type,
-                uploadedAt: fileInfo.uploadedAt
-              });
-            } catch (e) { console.error('خطأ في حفظ الملف:', e); }
-          }
-          showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
-          renderTeacherAchievement(app);
-        } else {
-          showToast('❌ فشل رفع الملفات');
-        }
-        fileInput.value = '';
-      };
-    }
-  });
-}
-
-async function generateEvidenceReport(teacherName) {
-  showToast('⏳ جاري توليد الشواهد تلقائياً...');
-  try {
-    const teacherId = state.user.uid;
-    const allSessionsSnap = await getDocs(collection(db, "sessions"));
-    const allSessions = [];
-    allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
-    const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
-    const totalSessions = teacherSessions.length;
-    const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
-    const averageSuccess = evaluatedSessions.length > 0
-      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
-      : 0;
-    const totalStudents = state.myStudents.length;
-    const studentSummaries = [];
-    for (const student of state.myStudents) {
-      const studentDoc = await getDoc(doc(db, "users", student.id));
-      const studentData = studentDoc.exists() ? studentDoc.data() : {};
-      const diag = studentData.diagnostic || {};
-      const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-      const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-      const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
-      const studentSessions = allSessions.filter(s => s.studentId === student.id && s.evaluation && s.evaluation !== 'none');
-      const studentAvg = studentSessions.length > 0
-        ? Math.round(studentSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / studentSessions.length)
-        : 0;
-      studentSummaries.push({
-        name: student.fullName || student.email,
-        passed: passedLetters.length,
-        need: needLetters.length,
-        trained: trainedLetters.length,
-        sessions: studentSessions.length,
-        avg: studentAvg
-      });
-    }
-    let printArea = document.getElementById('iep-print-area');
-    if (!printArea) {
-      printArea = document.createElement('div');
-      printArea.id = 'iep-print-area';
-      document.body.appendChild(printArea);
-    }
-    printArea.innerHTML = `
-      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-        <div style="text-align:center;margin-bottom:20px;">
-          <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-          <p style="margin:5px 0 0;font-size:14px;color:#555;">شواهد إنجاز المعلم - تقرير تلقائي</p>
-          <hr style="border:1px solid #ddd;margin:10px 0;">
-        </div>
-        <div style="margin-bottom:15px;text-align:center;">
-          <strong>اسم المعلم:</strong> ${teacherName}<br>
-          <strong>تاريخ التوليد:</strong> ${new Date().toLocaleDateString('ar-SA')}
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;background:#f5f5f5;padding:15px;border-radius:8px;">
-          <div><strong>عدد الطلاب:</strong> ${totalStudents}</div>
-          <div><strong>عدد الجلسات المنفذة:</strong> ${totalSessions}</div>
-          <div><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
-          <div><strong>عدد الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
-        </div>
-        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">ملخص أداء الطلاب</h3>
-        ${studentSummaries.length > 0 ? `
-          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-            <thead><tr style="background:#f0f0f0;">
-              <th style="border:1px solid #ddd;padding:8px;">الطالب</th>
-              <th style="border:1px solid #ddd;padding:8px;">حروف متقنة</th>
-              <th style="border:1px solid #ddd;padding:8px;">تحتاج تدريب</th>
-              <th style="border:1px solid #ddd;padding:8px;">جلسات</th>
-              <th style="border:1px solid #ddd;padding:8px;">متوسط النجاح</th>
-            </tr></thead>
-            <tbody>
-              ${studentSummaries.map(s => `
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px;">${s.name}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.passed}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.need}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.sessions}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.avg}%</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        ` : '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض بياناتهم.</p>'}
-        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">الشواهد المتاحة من المنصة</h3>
-        <div style="margin-bottom:10px;font-size:14px;">
-          <p>✅ سجل الجلسات السحابي (${totalSessions} جلسة)</p>
-          <p>✅ التقارير الفردية للطلاب</p>
-          <p>✅ التشخيص الشامل للحروف</p>
-          <p>✅ التسجيل الصوتي والتغذية الراجعة</p>
-          <p>✅ ملفات إنجاز الطلاب</p>
-          <p>✅ الخطط الفردية (IEP)</p>
-          <p>✅ قوائم المفردات التفاعلية</p>
-          <p>✅ أدوات التقييم المتنوعة (أتقن/تدريب/غير واضح)</p>
-        </div>
-        <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذا التقرير تلقائياً من منصة منارة النطق</div>
-      </div>
-    `;
-    window.print();
-    setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
-  } catch (e) {
-    console.error('خطأ في توليد الشواهد:', e);
-    showToast('❌ فشل توليد الشواهد');
-  }
-}
-
-function printTeacherAchievement(teacherName, existingFiles) {
-  let printArea = document.getElementById('iep-print-area');
-  if (!printArea) {
-    printArea = document.createElement('div');
-    printArea.id = 'iep-print-area';
-    document.body.appendChild(printArea);
-  }
-  printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز المعلم</p>
-        <hr style="border:1px solid #ddd;margin:10px 0;">
-      </div>
-      <div style="margin-bottom:15px;text-align:center;"><strong>اسم المعلم:</strong> ${teacherName}</div>
-      ${TEACHER_STANDARDS.map(standard => `
-        <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
-          <strong>${standard.id}. ${standard.title}</strong>
-          <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
-          ${(existingFiles[standard.id] || []).map(file => `<div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>`).join('')}
+  card.innerHTML = `
+    <h3 style="margin-bottom:4px;">📖 ${category}</h3>
+    <p class="muted">اضغط على أي كلمة للاستماع إلى نطقها الصحيح</p>
+    <div class="vocab-grid">
+      ${items.map(item => `
+        <div class="vocab-item" onclick="speakText('${item.word}')">
+          <span class="icon">${item.icon}</span>
+          <span class="word">${item.word}</span>
         </div>
       `).join('')}
-      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
     </div>
   `;
-  window.print();
-  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+  app.appendChild(card);
 }
+/* ─── [END SEC-36] ─── */
 
-/* ========================================
-   28. ملف الإنجاز الرقمي للطالب - Student Achievement
-   ======================================== */
-async function renderAchievement(app) {
-  if (!state.currentStudent) {
-    showToast('اختر طالباً أولاً');
-    state.view = 'teacher-dashboard';
-    return render();
-  }
-  renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
-    state.view = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
-    render();
-  });
-  try {
-    const studentRef = doc(db, "users", state.currentStudent.id);
-    const studentDoc = await getDoc(studentRef);
-    const studentData = studentDoc.exists() ? studentDoc.data() : {};
-    const diag = studentData.diagnostic || {};
-    const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-    const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
-    const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
-    const sessionsSnap = await getDocs(sessionsQuery);
-    const sessions = [];
-    sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
-    sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
-    const totalSessions = sessions.length;
-    const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
-    const averageSuccess = evaluatedSessions.length > 0
-      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
-      : 0;
-    const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
-    const points = calculateStudentPoints(studentData);
-    let achievementLevel = '';
-    let achievementIcon = '';
-    if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
-    else if (masteryPercentage >= 50) { achievementLevel = 'جيد جداً'; achievementIcon = '⭐'; }
-    else if (masteryPercentage >= 30) { achievementLevel = 'جيد'; achievementIcon = '👍'; }
-    else { achievementLevel = 'يحتاج متابعة'; achievementIcon = '💪'; }
 
-    const weeklyStats = getWeeklyStats(sessions);
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-    card.style.border = '2px solid var(--mint-deep)';
-    card.innerHTML = `
-      <div style="text-align:center; margin-bottom:20px;">
-        <div style="font-size:60px;">${achievementIcon}</div>
-        <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
-        <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${passedLetters.length}</div>
-          <div style="font-size:13px;color:#6B7A99;">حروف متقنة</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:#F57F17;">${needLetters.length}</div>
-          <div style="font-size:13px;color:#6B7A99;">تحتاج تدريب</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${totalSessions}</div>
-          <div style="font-size:13px;color:#6B7A99;">جلسة منفذة</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${averageSuccess}%</div>
-          <div style="font-size:13px;color:#6B7A99;">متوسط النجاح</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${masteryPercentage}%</div>
-          <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
-          <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
-        </div>
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>نسبة الإتقان:</strong>
-        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${masteryPercentage}%;">${masteryPercentage}%</div></div>
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>📅 ملخص هذا الأسبوع:</strong><br>
-        الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
-        متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
-        الحروف المتدرب عليها: ${Object.keys(weeklyStats.lettersTrained).length ? Object.keys(weeklyStats.lettersTrained).join(' - ') : 'لا يوجد'}
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>الحروف المتقنة:</strong> ${passedLetters.length ? passedLetters.join(' - ') : 'لا يوجد'}
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>الحروف التي تحتاج تدريب:</strong> ${needLetters.length ? needLetters.join(' - ') : 'لا يوجد'}
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>الحروف التي أتقنها بعد تدريب:</strong> ${trainedLetters.length ? trainedLetters.join(' - ') : 'لا يوجد'}
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${passedLetters.length} حرف متقن (تحسن ${passedLetters.length} حرف)
-      </div>
-      <div style="text-align:center; margin-top:20px;">
-        <button class="btn btn-primary" id="printAchievementBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>
-      </div>
-    `;
-    app.appendChild(card);
-    const printBtn = card.querySelector('#printAchievementBtn');
-    if (printBtn) {
-      printBtn.onclick = () => {
-        printAchievement(state.currentStudent, {
-          passedLetters, needLetters, trainedLetters, totalSessions, averageSuccess,
-          masteryPercentage, achievementLevel, achievementIcon, points, weeklyStats
-        });
-      };
-    }
-  } catch (e) {
-    const errorCard = document.createElement('div');
-    errorCard.className = 'card';
-    errorCard.innerHTML = `<p class="muted">⚠️ خطأ في تحميل ملف الإنجاز: ${e.message}</p>`;
-    app.appendChild(errorCard);
-  }
-}
-
-function printAchievement(student, data) {
-  let printArea = document.getElementById('iep-print-area');
-  if (!printArea) {
-    printArea = document.createElement('div');
-    printArea.id = 'iep-print-area';
-    document.body.appendChild(printArea);
-  }
-  printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز الطالب</p>
-        <hr style="border:1px solid #ddd;margin:10px 0;">
-      </div>
-      <div style="margin-bottom:15px;text-align:center;"><strong>اسم الطالب:</strong> ${student.fullName || student.email}<br><strong>المستوى:</strong> ${data.achievementLevel} ${data.achievementIcon}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
-        <div><strong>الحروف المتقنة:</strong> ${data.passedLetters.length}</div>
-        <div><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length}</div>
-        <div><strong>عدد الجلسات:</strong> ${data.totalSessions}</div>
-        <div><strong>متوسط النجاح:</strong> ${data.averageSuccess}%</div>
-        <div><strong>نسبة الإتقان:</strong> ${data.masteryPercentage}%</div>
-        <div><strong>النقاط:</strong> ${data.points}</div>
-      </div>
-      <div style="margin-bottom:10px;"><strong>ملخص هذا الأسبوع:</strong><br>الجلسات: ${data.weeklyStats.totalThisWeek} | متوسط النجاح: ${data.weeklyStats.avgSuccess}%</div>
-      <div style="margin-bottom:10px;"><strong>الحروف المتقنة:</strong> ${data.passedLetters.length ? data.passedLetters.join('، ') : 'لا يوجد'}</div>
-      <div style="margin-bottom:10px;"><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length ? data.needLetters.join('، ') : 'لا يوجد'}</div>
-      <div style="margin-bottom:10px;"><strong>الحروف التي أتقنها بعد تدريب:</strong> ${data.trainedLetters.length ? data.trainedLetters.join('، ') : 'لا يوجد'}</div>
-      <div style="margin-bottom:10px;"><strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${data.passedLetters.length} حرف متقن</div>
-      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
-    </div>
-  `;
-  window.print();
-  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
-}
-
-/* ========================================
-   29. التشخيص الشامل - Comprehensive Diagnosis
-   ======================================== */
+/* ─── [SEC-37] التشخيص الشامل — Comprehensive Diagnosis ─── */
 function renderComprehensiveDiagnosis(container) {
   container.innerHTML = '';
   const card = document.createElement('div');
@@ -2682,6 +2147,19 @@ function renderComprehensiveDiagnosis(container) {
     </div>
   `;
   container.appendChild(card);
+
+  /* ✅ إصلاح الخطأ #6: حفظ تلقائي لـ comprehensive عند التغيير */
+  const autoSaveComprehensive = async () => {
+    if (!state.currentStudent?.id) return;
+    try {
+      await updateDoc(doc(db, "users", state.currentStudent.id), {
+        comprehensive: state.comprehensive
+      });
+    } catch (e) {
+      console.warn('تعذر الحفظ التلقائي للتشخيص الشامل:', e);
+    }
+  };
+
   const keys = ['hearing', 'hearingAid', 'vision', 'movement', 'attention', 'comprehension', 'physical', 'psychological', 'scans', 'surgeries'];
   keys.forEach(key => {
     const group = card.querySelector(`[data-key="${key}"]`)?.closest('.diag-option-group');
@@ -2699,43 +2177,26 @@ function renderComprehensiveDiagnosis(container) {
           const c = card.querySelector('#surgeryDetailsContainer');
           if (c) c.style.display = (val === 'done') ? 'block' : 'none';
         }
+        autoSaveComprehensive();
         renderComprehensiveDiagnosis(container);
       };
     });
   });
   const scanInput = card.querySelector('#scanDetailsInput');
-  if (scanInput) scanInput.oninput = (e) => { state.comprehensive.scanDetails = e.target.value; };
-  const surgeryInput = card.querySelector('#surgeryDetailsInput');
-  if (surgeryInput) surgeryInput.oninput = (e) => { state.comprehensive.surgeryDetails = e.target.value; };
-}
-
-/* ========================================
-   30. التشخيص المتقدم - Advanced Diagnostic
-   ======================================== */
-let diagnosticAudio = { letters: {}, words: {} };
-
-function getDisorderFeedback(disorderType) {
-  const messages = {
-    'طبيعي': '✅ ممتاز! النطق سليم.',
-    'إبدال': '🔄 حاول نطق الحرف الأصلي بدلاً من استبداله بحرف آخر.',
-    'تشويه': '🗣️ ركز على مخرج الحرف الصحيح وحاول مرة أخرى.',
-    'حذف': '📝 حاول نطق الكلمة كاملة دون حذف أي حرف.',
-    'إضافة': '✂️ تجنب إضافة حروف زائدة في الكلمة.',
-    'قلب': '🔁 انتبه لترتيب الحروف في الكلمة.',
-    'خنف': '👃 حاول تقليل الصوت الأنفي أثناء النطق.',
-    'لجلجة': '📖 تحدث ببطء ووضوح.',
-    'تأتأة / تلعثم': '🧘 خذ نفساً عميقاً وحاول النطق بهدوء.',
-    'حبسة': '💬 استخدم جمل قصيرة وتدرب على التكرار.',
-    'بحة صوتية': '💧 اشرب ماءً وحاول إخراج الصوت بلطف.',
-    'خشونة الصوت': '🎵 حاول النطق بنبرة أوضح وأنعم.',
-    'نعومة الصوت': '📢 ارفع صوتك قليلاً أثناء النطق.',
-    'بطء في الكلام': '🐢 حاول زيادة سرعتك تدريجياً.',
-    'سرعة في الكلام': '🐇 تحدث ببطء وخذ وقتك.',
-    'كلام طفولي': '🧒 حاول استخدام أنماط كلام مناسبة لعمرك.'
+  if (scanInput) scanInput.oninput = (e) => {
+    state.comprehensive.scanDetails = e.target.value;
   };
-  return messages[disorderType] || '📌 استمر في التدريب وحاول مرة أخرى.';
+  if (scanInput) scanInput.onblur = autoSaveComprehensive;
+  const surgeryInput = card.querySelector('#surgeryDetailsInput');
+  if (surgeryInput) surgeryInput.oninput = (e) => {
+    state.comprehensive.surgeryDetails = e.target.value;
+  };
+  if (surgeryInput) surgeryInput.onblur = autoSaveComprehensive;
 }
+/* ─── [END SEC-37] ─── */
 
+
+/* ─── [SEC-38] التشخيص المتقدم — Advanced Diagnostic ─── */
 function renderDiagnosticSession(app) {
   renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف المتقدم', () => {
     state.view = 'teacher-dashboard';
@@ -2844,6 +2305,7 @@ function renderDiagnosticSession(app) {
       const isOrganic = letterData.isOrganic !== undefined ? letterData.isOrganic : null;
       const notes = letterData.notes || '';
 
+      /* ✅ إصلاح الخطأ #5: إزالة حقل "نوع العيب" المكرر */
       card.innerHTML = `
         <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
         <span class="letter-title">${titleStr}</span>
@@ -2881,19 +2343,19 @@ function renderDiagnosticSession(app) {
               <label><input type="checkbox" data-letter="${letter}" data-vowel="sukoon" ${vowels.sukoon ? 'checked' : ''}> سكون</label>
             </div>
           </div>
-          <div class="detail-row">
+          <div class="detail-row" style="grid-column:1/-1;">
             <div class="label">نوع العيب:</div>
             <select data-letter="${letter}" data-field="disorderType" id="disorderSelect_${letter}">
               ${DISORDER_TYPES.map(t => `<option value="${t}" ${t === disorderType ? 'selected' : ''}>${t}</option>`).join('')}
             </select>
             <div id="disorderDefinition_${letter}" style="font-size:11px;color:#6B7A99;margin-top:2px;line-height:1.4;">${DISORDER_DEFINITIONS[disorderType] || ''}</div>
           </div>
-          <div class="detail-row">
-            <div class="label">نوع العيب:</div>
+          <div class="detail-row" style="grid-column:1/-1;">
+            <div class="label">التصنيف:</div>
             <div class="radio-group">
-              <label><input type="radio" data-letter="${letter}" data-field="isOrganic" value="true" ${isOrganic === true ? 'checked' : ''}> عضوي</label>
-              <label><input type="radio" data-letter="${letter}" data-field="isOrganic" value="false" ${isOrganic === false ? 'checked' : ''}> غير عضوي</label>
-              <label><input type="radio" data-letter="${letter}" data-field="isOrganic" value="" ${isOrganic === null ? 'checked' : ''}> غير محدد</label>
+              <label><input type="radio" name="organic_${letter}" data-letter="${letter}" data-field="isOrganic" value="true" ${isOrganic === true ? 'checked' : ''}> عضوي</label>
+              <label><input type="radio" name="organic_${letter}" data-letter="${letter}" data-field="isOrganic" value="false" ${isOrganic === false ? 'checked' : ''}> غير عضوي</label>
+              <label><input type="radio" name="organic_${letter}" data-letter="${letter}" data-field="isOrganic" value="" ${isOrganic === null ? 'checked' : ''}> غير محدد</label>
             </div>
           </div>
           <div class="detail-row" style="grid-column:1/-1;">
@@ -3028,10 +2490,10 @@ function renderDiagnosticSession(app) {
     container.appendChild(grid);
   });
 }
+/* ─── [END SEC-38] ─── */
 
-/* ========================================
-   31. توليد الخطة الفردية - IEP Generator
-   ======================================== */
+
+/* ─── [SEC-39] توليد الخطة الفردية — IEP Generator ─── */
 function generateIEP(passed, trained, need, unclear, student) {
   const studentName = student?.fullName || student?.email || 'الطالب';
   let diagnosisText = `الطالب: ${studentName}\n\n`;
@@ -3051,7 +2513,7 @@ function generateIEP(passed, trained, need, unclear, student) {
     const data = diag[letter];
     if (data.disorderType && data.disorderType !== 'طبيعي') {
       disorderDetails += `- حرف (${letter}): ${data.disorderType}`;
-      if (data.isOrganic !== null) disorderDetails += ` - ${data.isOrganic ? 'عضوي' : 'غير عضوي'}`;
+      if (data.isOrganic !== null && data.isOrganic !== undefined) disorderDetails += ` - ${data.isOrganic ? 'عضوي' : 'غير عضوي'}`;
       if (data.notes) disorderDetails += ` - ملاحظات: ${data.notes}`;
       disorderDetails += '\n';
     }
@@ -3086,10 +2548,11 @@ function generateIEP(passed, trained, need, unclear, student) {
     unclear
   };
 }
+window.generateIEP = generateIEP;
+/* ─── [END SEC-39] ─── */
 
-/* ========================================
-   32. صفحة الطالب - Student Menu
-   ======================================== */
+
+/* ─── [SEC-40] صفحة الطالب — Student Menu ─── */
 async function renderStudentMenu(app) {
   renderTopbar(app, 'صفحة الطالب والجلسات', 'متابعة مستوى النطق والتقييمات');
   let container = document.getElementById('studentContent');
@@ -3166,10 +2629,10 @@ async function renderStudentMenu(app) {
   }
   container.appendChild(sessionsCard);
 }
+/* ─── [END SEC-40] ─── */
 
-/* ========================================
-   33. إدارة جلسات التدريب - Speech Sessions
-   ======================================== */
+
+/* ─── [SEC-41] إدارة جلسات التدريب — Speech Sessions ─── */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
@@ -3375,30 +2838,18 @@ async function renderSpeechSessions(app) {
   }
   app.appendChild(listCard);
 }
+/* ─── [END SEC-41] ─── */
 
 
+/* ═══════════════════════════════════════════════════════════
+   نهاية الجزء 4/6
+   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   الجزء 5/6 — الجلسة الفردية + الألعاب + ولي الأمر + الخطة الأسبوعية + ملفات الإنجاز
+   ═══════════════════════════════════════════════════════════ */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ========================================
-   34. عرض جلسة واحدة - Single Session
-   ======================================== */
+/* ─── [SEC-42] عرض جلسة واحدة — Single Session ─── */
 async function renderSingleSession(app) {
   const sess = state.currentSession;
   if (!sess) { state.view = 'student-menu'; return render(); }
@@ -3414,7 +2865,6 @@ async function renderSingleSession(app) {
     render();
   });
 
-  // 🆕 قراءة بيانات الحرف من Firebase (أو fallback إلى LETTER_DATABASE)
   let letterData = null;
   try {
     if (typeof window.getLetterData === 'function') {
@@ -3423,8 +2873,7 @@ async function renderSingleSession(app) {
   } catch (e) {
     console.warn('تعذر جلب بيانات الحرف من Firebase:', e);
   }
-  
-  // fallback إلى LETTER_DATABASE المحلي
+
   if (!letterData) {
     letterData = LETTER_DATABASE[letter] || {
       place: 'مخرج الحرف العام',
@@ -3439,6 +2888,7 @@ async function renderSingleSession(app) {
   const evalColors = { 'passed': '#2E7D32', 'trained': '#0288D1', 'need': '#F57F17', 'unclear': '#C62828', 'none': '#6B7A99' };
 
   const recommendations = sess.recommendations || sess.notes || '';
+  const currentDisorderType = sess.disorderType || 'طبيعي';
 
   const infoCard = document.createElement('div');
   infoCard.className = 'card';
@@ -3463,6 +2913,16 @@ async function renderSingleSession(app) {
         `<div style="background:#f9f9f9;padding:8px 12px;border-radius:12px;margin-top:4px;">${recommendations || 'لا توجد توصيات'}</div>`
       }
     </div>
+
+    ${state.role === 'teacher' || state.role === 'admin' ? `
+    <div style="margin-top:12px;">
+      <label><strong>🔍 نوع العيب الملاحظ في الجلسة:</strong></label>
+      <select id="sessionDisorderSelect" style="width:100%;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;margin-top:4px;background:white;">
+        ${DISORDER_TYPES.map(t => `<option value="${t}" ${t === currentDisorderType ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
+      <div id="sessionDisorderDef" style="font-size:12px;color:#6B7A99;margin-top:4px;line-height:1.5;">${DISORDER_DEFINITIONS[currentDisorderType] || ''}</div>
+    </div>
+    ` : ''}
 
     <hr style="border:0;border-top:2px dashed var(--line);margin:16px 0;">
     <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
@@ -3503,11 +2963,14 @@ async function renderSingleSession(app) {
         evaluation: sess.evaluation || 'none',
         successRate: sess.successRate || 0
       };
-      sendSessionToParent(sessionData, studentData);
+      if (typeof window.sendSessionToParent === 'function') {
+        window.sendSessionToParent(sessionData, studentData);
+      } else {
+        showToast('⚠️ دالة الإرسال غير متوفرة');
+      }
     };
   }
 
-  // قسم الذكاء الاصطناعي
   if (state.role === 'teacher' || state.role === 'admin') {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
@@ -3521,23 +2984,20 @@ async function renderSingleSession(app) {
         <div id="aiButtonsContainer" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;"></div>
       `;
       const buttonsContainer = aiSection.querySelector('#aiButtonsContainer');
-      
-      // زر التوصيات الذكية
+
       const aiBtn = window.createAIButton(sess, state.currentStudent || {});
       buttonsContainer.appendChild(aiBtn);
-      
-      // زر التمارين المنزلية
+
       if (typeof window.createHomeworkButton === 'function') {
         const hwBtn = window.createHomeworkButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(hwBtn);
       }
-      
-      // 🆕 زر القصة القصيرة
+
       if (typeof window.createShortStoryButton === 'function') {
         const storyBtn = window.createShortStoryButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(storyBtn);
       }
-      
+
       app.appendChild(aiSection);
     }
   }
@@ -3545,6 +3005,7 @@ async function renderSingleSession(app) {
   if (state.role === 'teacher' || state.role === 'admin') {
     let selectedEval = currentEval;
     let selectedRate = sess.successRate || 0;
+    let selectedDisorder = currentDisorderType;
 
     const evalBtns = infoCard.querySelectorAll('.btn-eval');
     evalBtns.forEach(btn => {
@@ -3564,6 +3025,15 @@ async function renderSingleSession(app) {
       };
     }
 
+    const disorderSelect = infoCard.querySelector('#sessionDisorderSelect');
+    const disorderDef = infoCard.querySelector('#sessionDisorderDef');
+    if (disorderSelect) {
+      disorderSelect.onchange = () => {
+        selectedDisorder = disorderSelect.value;
+        if (disorderDef) disorderDef.textContent = DISORDER_DEFINITIONS[selectedDisorder] || '';
+      };
+    }
+
     const saveRateBtn = infoCard.querySelector('#saveRateBtn');
     if (saveRateBtn) saveRateBtn.onclick = async () => {
       try {
@@ -3579,10 +3049,11 @@ async function renderSingleSession(app) {
         await updateDoc(doc(db, "sessions", sess.id), {
           evaluation: selectedEval,
           successRate: selectedRate,
-          recommendations: recText
+          recommendations: recText,
+          disorderType: selectedDisorder
         });
         showToast('تم حفظ التقييم والتوصيات');
-        state.currentSession = { ...sess, evaluation: selectedEval, successRate: selectedRate, recommendations: recText };
+        state.currentSession = { ...sess, evaluation: selectedEval, successRate: selectedRate, recommendations: recText, disorderType: selectedDisorder };
         renderSingleSession(app);
         checkAndSuggestMastery(sess.studentId, sess.letter);
       } catch (e) { showToast('خطأ في الحفظ: ' + e.message); }
@@ -3594,10 +3065,11 @@ async function renderSingleSession(app) {
         await updateDoc(doc(db, "sessions", sess.id), {
           evaluation: 'none',
           successRate: 0,
-          recommendations: ''
+          recommendations: '',
+          disorderType: 'طبيعي'
         });
         showToast('تم إعادة ضبط التقييم');
-        state.currentSession = { ...sess, evaluation: 'none', successRate: 0, recommendations: '' };
+        state.currentSession = { ...sess, evaluation: 'none', successRate: 0, recommendations: '', disorderType: 'طبيعي' };
         renderSingleSession(app);
       } catch (e) { showToast('خطأ في إعادة الضبط: ' + e.message); }
     };
@@ -3666,7 +3138,6 @@ async function renderSingleSession(app) {
   `;
 
   if (st === 1) {
-    // 🆕 الجلسة 1: الحرف مجرداً
     content = `
       <div style="text-align:center;padding:20px;">
         <div style="font-size:80px;font-weight:bold;color:var(--mint-deep);cursor:pointer;padding:20px;background:white;border-radius:30px;display:inline-block;" onclick="speakText('${letter}')">${letter}</div>
@@ -3679,7 +3150,6 @@ async function renderSingleSession(app) {
       </div>
     `;
   } else if (st === 2) {
-    // 🆕 الجلسة 2: الحرف مع الحركات
     const vowelKeys = ['fatha', 'damma', 'kasra', 'sukoon'];
     const vowelLabels = { fatha: 'فتحة', damma: 'ضمة', kasra: 'كسرة', sukoon: 'سكون' };
     const vowelChars = letterData.vowels || {};
@@ -3698,7 +3168,6 @@ async function renderSingleSession(app) {
       </div>
     `;
   } else if (st === 3) {
-    // 🆕 الجلسة 3: الحرف في كلمات
     const positionsData = letterData.words || {};
     const positions = [
       { label: 'بداية الكلمة', words: positionsData.start || [] },
@@ -3722,7 +3191,6 @@ async function renderSingleSession(app) {
       </div>
     `;
   } else if (st === 4) {
-    // 🆕 الجلسة 4: الحرف في جمل
     const sentences = letterData.sentences || [];
     content = `
       <div>
@@ -3765,10 +3233,10 @@ async function renderSingleSession(app) {
     };
   }
 }
+/* ─── [END SEC-42] ─── */
 
-/* ========================================
-   35. اقتراح الإتقان - Mastery Suggestion
-   ======================================== */
+
+/* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion ─── */
 async function checkAndSuggestMastery(studentId, letter) {
   try {
     const qS = query(collection(db, "sessions"), where("studentId", "==", studentId), where("letter", "==", letter));
@@ -3797,10 +3265,10 @@ async function checkAndSuggestMastery(studentId, letter) {
     console.error('خطأ في التحقق من الإتقان:', e);
   }
 }
+/* ─── [END SEC-43] ─── */
 
-/* ========================================
-   36. سجل الجلسات - Sessions Log
-   ======================================== */
+
+/* ─── [SEC-44] سجل الجلسات — Sessions Log ─── */
 async function renderSessionsLog(app) {
   renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات مرتبة حسب التاريخ', () => {
     state.view = 'teacher-dashboard';
@@ -3861,7 +3329,7 @@ async function renderSessionsLog(app) {
     const allSessions = [];
     const snap = await getDocs(collection(db, "sessions"));
     snap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
-    
+
     allSessions.sort((a, b) => {
       const dateA = new Date(a.date || 0);
       const dateB = new Date(b.date || 0);
@@ -3948,16 +3416,16 @@ function printSessionsLog() {
     printArea.id = 'iep-print-area';
     document.body.appendChild(printArea);
   }
-  
+
   const tableElement = document.querySelector('.sessions-table');
   const statsHTML = document.getElementById('sessionsStatsBox')?.innerHTML || '';
   const teacherName = state.user?.displayName || state.user?.email || 'المعلم';
-  
+
   if (!tableElement) {
     showToast('⚠️ لا توجد بيانات للطباعة');
     return;
   }
-  
+
   printArea.innerHTML = `
     <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
       <div style="text-align:center;margin-bottom:20px;">
@@ -3998,10 +3466,10 @@ function printSessionsLog() {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
+/* ─── [END SEC-44] ─── */
 
-/* ========================================
-   37. قائمة IEP - IEP Session List
-   ======================================== */
+
+/* ─── [SEC-45] قائمة IEP — IEP Session List ─── */
 async function renderIEPSession(app) {
   renderTopbar(app, '📋 الخطط الفردية (IEP)', 'اختر طالباً لعرض خطته', () => {
     state.view = 'teacher-dashboard';
@@ -4038,21 +3506,24 @@ async function renderIEPSession(app) {
     list.appendChild(item);
   });
 }
+/* ─── [END SEC-45] ─── */
 
+
+/* ─── [SEC-46] عرض IEP لطالب واحد — IEP Single Student ─── */
 async function renderIEPSingleStudent(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
     state.view = 'iep-session';
     return render();
   }
-  
+
   const student = state.currentStudent;
-  
+
   renderTopbar(app, `📋 خطة ${student.fullName || student.email}`, 'الخطة الفردية (IEP)', () => {
     state.view = 'iep-session';
     render();
   });
-  
+
   const backCard = document.createElement('div');
   backCard.className = 'card';
   backCard.style.textAlign = 'center';
@@ -4062,16 +3533,16 @@ async function renderIEPSingleStudent(app) {
     </button>
   `;
   app.appendChild(backCard);
-  
+
   const backBtn = backCard.querySelector('#backToIEPListBtn');
   if (backBtn) backBtn.onclick = () => {
     state.view = 'iep-session';
     render();
   };
-  
+
   try {
     const iepDoc = await getDoc(doc(db, "iep", student.id));
-    
+
     if (!iepDoc.exists()) {
       const emptyCard = document.createElement('div');
       emptyCard.className = 'card';
@@ -4085,7 +3556,7 @@ async function renderIEPSingleStudent(app) {
         </button>
       `;
       app.appendChild(emptyCard);
-      
+
       const diagBtn = emptyCard.querySelector('#goToDiagBtn');
       if (diagBtn) diagBtn.onclick = () => {
         state.diagEval = student.diagnostic || {};
@@ -4095,9 +3566,9 @@ async function renderIEPSingleStudent(app) {
       };
       return;
     }
-    
+
     const iepData = iepDoc.data();
-    
+
     const studentCard = document.createElement('div');
     studentCard.className = 'card';
     studentCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
@@ -4110,7 +3581,7 @@ async function renderIEPSingleStudent(app) {
       ${student.ageGroup ? `<span class="badge" style="background:#FFF8E1; color:#F57F17; font-size:13px; padding:4px 12px; margin-top:6px; display:inline-block;">👶 ${student.ageGroup} سنوات</span>` : ''}
     `;
     app.appendChild(studentCard);
-    
+
     const printCard = document.createElement('div');
     printCard.className = 'card';
     printCard.style.textAlign = 'center';
@@ -4120,10 +3591,10 @@ async function renderIEPSingleStudent(app) {
       </button>
     `;
     app.appendChild(printCard);
-    
+
     const printBtn = printCard.querySelector('#printIEPPageBtn');
     if (printBtn) printBtn.onclick = () => printIEP(student, iepData);
-    
+
     const diagnosisCard = document.createElement('div');
     diagnosisCard.className = 'card';
     diagnosisCard.innerHTML = `
@@ -4131,7 +3602,7 @@ async function renderIEPSingleStudent(app) {
       <div style="white-space:pre-wrap; line-height:1.9; font-size:15px;">${iepData.diagnosis || 'لا يوجد تشخيص'}</div>
     `;
     app.appendChild(diagnosisCard);
-    
+
     const longGoalCard = document.createElement('div');
     longGoalCard.className = 'card';
     longGoalCard.style.borderRight = '5px solid #7C3AED';
@@ -4140,7 +3611,7 @@ async function renderIEPSingleStudent(app) {
       <div style="white-space:pre-wrap; line-height:1.9; font-size:15px;">${iepData.longGoal || 'غير محدد'}</div>
     `;
     app.appendChild(longGoalCard);
-    
+
     const shortGoalsCard = document.createElement('div');
     shortGoalsCard.className = 'card';
     shortGoalsCard.style.borderRight = '5px solid #0891B2';
@@ -4149,7 +3620,7 @@ async function renderIEPSingleStudent(app) {
       <div style="white-space:pre-wrap; line-height:1.9; font-size:15px;">${iepData.shortGoals || 'غير محددة'}</div>
     `;
     app.appendChild(shortGoalsCard);
-    
+
     const notesCard = document.createElement('div');
     notesCard.className = 'card';
     notesCard.style.borderRight = '5px solid #16A34A';
@@ -4158,7 +3629,7 @@ async function renderIEPSingleStudent(app) {
       <div style="white-space:pre-wrap; line-height:1.9; font-size:15px;">${iepData.notes || 'لا توجد توصيات'}</div>
     `;
     app.appendChild(notesCard);
-    
+
     const updateCard = document.createElement('div');
     updateCard.className = 'card';
     updateCard.style.textAlign = 'center';
@@ -4168,7 +3639,7 @@ async function renderIEPSingleStudent(app) {
       📅 آخر تحديث للخطة: <strong>${iepData.updatedAt ? new Date(iepData.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}</strong>
     `;
     app.appendChild(updateCard);
-    
+
   } catch (e) {
     const errCard = document.createElement('div');
     errCard.className = 'card';
@@ -4176,29 +3647,10 @@ async function renderIEPSingleStudent(app) {
     app.appendChild(errCard);
   }
 }
+/* ─── [END SEC-46] ─── */
 
-function showIEPModal(student, iepData) {
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
-  modal.innerHTML = `
-    <div style="background:white;padding:20px;border-radius:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
-      <h3 style="margin-bottom:16px;">📋 خطة ${student.fullName || student.email}</h3>
-      <div style="white-space:pre-wrap;margin-bottom:12px;">${iepData.diagnosis || ''}</div>
-      <div style="white-space:pre-wrap;margin-bottom:12px;"><strong>🎯 الهدف العام:</strong><br>${iepData.longGoal || ''}</div>
-      <div style="white-space:pre-wrap;margin-bottom:12px;"><strong>📌 الأهداف القصيرة:</strong><br>${iepData.shortGoals || ''}</div>
-      <div style="white-space:pre-wrap;margin-bottom:12px;"><strong>💡 التوصيات:</strong><br>${iepData.notes || ''}</div>
-      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <button class="btn btn-primary" id="printIEPBtn" style="background:var(--gold);color:white;">🖨️ طباعة</button>
-        <button class="btn btn-primary" id="closeModalBtn">إغلاق</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.querySelector('#closeModalBtn').onclick = () => modal.remove();
-  modal.querySelector('#printIEPBtn').onclick = () => { printIEP(student, iepData); modal.remove(); };
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-}
 
+/* ─── [SEC-47] طباعة IEP — Print IEP ─── */
 function printIEP(student, iepData) {
   let printArea = document.getElementById('iep-print-area');
   if (!printArea) {
@@ -4224,10 +3676,10 @@ function printIEP(student, iepData) {
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
+/* ─── [END SEC-47] ─── */
 
-/* ========================================
-   38. عرض الحروف - Letter Display
-   ======================================== */
+
+/* ─── [SEC-48] عرض الحروف — Letter Display ─── */
 function renderLetterDisplay(app) {
   renderTopbar(app, '🔤 الحروف الأبجدية', '28 حرفاً مع الصور', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -4245,10 +3697,873 @@ function renderLetterDisplay(app) {
   `;
   app.appendChild(card);
 }
+/* ─── [END SEC-48] ─── */
 
-/* ========================================
-   39. التهيئة النهائية - Final Init
-   ======================================== */
+
+/* ─── [SEC-49] الألعاب التعليمية — Games ─── */
+function renderGames(app) {
+  renderTopbar(app, '🎮 الألعاب التعليمية', 'تعلم والعب مع النطق', () => {
+    state.view = 'home';
+    render();
+  });
+
+  const container = document.createElement('div');
+  container.innerHTML = `
+    <div class="game-container">
+      <div class="game-header">
+        <span class="game-title">🎯 اختر الحرف الصحيح</span>
+        <span class="game-score" id="letterGameScore">النقاط: 0</span>
+      </div>
+      <div class="game-question" id="letterQuestion">اضغط ابدأ للعب</div>
+      <div class="game-options" id="letterOptions"></div>
+      <div class="game-feedback" id="letterFeedback"></div>
+      <button class="btn btn-primary" id="startLetterGameBtn" style="margin-top:10px;">ابدأ اللعبة</button>
+    </div>
+
+    <div class="game-container">
+      <div class="game-header">
+        <span class="game-title">🖼️ طابق الكلمة مع الصورة</span>
+        <span class="game-score" id="matchGameScore">النقاط: 0</span>
+      </div>
+      <div class="game-question" id="matchQuestion">اضغط ابدأ للعب</div>
+      <div class="game-options" id="matchOptions"></div>
+      <div class="game-feedback" id="matchFeedback"></div>
+      <button class="btn btn-primary" id="startMatchGameBtn" style="margin-top:10px;">ابدأ اللعبة</button>
+    </div>
+  `;
+  app.appendChild(container);
+
+  let letterScore = 0;
+  let currentLetter = '';
+  const startLetterBtn = container.querySelector('#startLetterGameBtn');
+  const letterQuestion = container.querySelector('#letterQuestion');
+  const letterOptions = container.querySelector('#letterOptions');
+  const letterFeedback = container.querySelector('#letterFeedback');
+  const letterGameScore = container.querySelector('#letterGameScore');
+
+  function generateLetterQuestion() {
+    const randomLetter = ALL_LETTERS[Math.floor(Math.random() * ALL_LETTERS.length)];
+    currentLetter = randomLetter;
+    letterQuestion.textContent = `ما هو الحرف الذي تبدأ به كلمة "${letterTitleMap[randomLetter] || randomLetter}"؟`;
+    letterFeedback.textContent = '';
+    letterOptions.innerHTML = '';
+    const options = [randomLetter];
+    while (options.length < 4) {
+      const l = ALL_LETTERS[Math.floor(Math.random() * ALL_LETTERS.length)];
+      if (!options.includes(l)) options.push(l);
+    }
+    options.sort(() => Math.random() - 0.5);
+    options.forEach(letter => {
+      const btn = document.createElement('button');
+      btn.className = 'game-option';
+      btn.textContent = letter;
+      btn.onclick = () => {
+        if (letter === currentLetter) {
+          btn.classList.add('correct');
+          letterFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
+          letterScore += 10;
+          letterGameScore.textContent = `النقاط: ${letterScore}`;
+          showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
+          setTimeout(generateLetterQuestion, 1500);
+        } else {
+          btn.classList.add('wrong');
+          letterFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
+          speakText(letter);
+        }
+      };
+      letterOptions.appendChild(btn);
+    });
+  }
+  if (startLetterBtn) startLetterBtn.onclick = generateLetterQuestion;
+
+  let matchScore = 0;
+  let currentMatch = null;
+  const startMatchBtn = container.querySelector('#startMatchGameBtn');
+  const matchQuestion = container.querySelector('#matchQuestion');
+  const matchOptions = container.querySelector('#matchOptions');
+  const matchFeedback = container.querySelector('#matchFeedback');
+  const matchGameScore = container.querySelector('#matchGameScore');
+  const allVocab = [];
+  VOCAB_CATEGORIES.forEach(cat => {
+    VOCAB_LISTS[cat].forEach(item => allVocab.push({ word: item.word, icon: item.icon }));
+  });
+
+  function generateMatchQuestion() {
+    const randomItem = allVocab[Math.floor(Math.random() * allVocab.length)];
+    currentMatch = randomItem;
+    matchQuestion.textContent = `اختر الصورة الصحيحة لكلمة "${randomItem.word}"`;
+    matchFeedback.textContent = '';
+    matchOptions.innerHTML = '';
+    const options = [randomItem];
+    while (options.length < 4) {
+      const item = allVocab[Math.floor(Math.random() * allVocab.length)];
+      if (!options.includes(item)) options.push(item);
+    }
+    options.sort(() => Math.random() - 0.5);
+    options.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = 'game-option';
+      btn.textContent = item.icon;
+      btn.style.fontSize = '48px';
+      btn.onclick = () => {
+        if (item.word === currentMatch.word) {
+          btn.classList.add('correct');
+          matchFeedback.innerHTML = '<span class="feedback-correct">✅ أحسنت! إجابة صحيحة</span>';
+          matchScore += 10;
+          matchGameScore.textContent = `النقاط: ${matchScore}`;
+          showNotification('أحسنت! إجابة صحيحة +10 نقاط', 'success');
+          setTimeout(generateMatchQuestion, 1500);
+        } else {
+          btn.classList.add('wrong');
+          matchFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
+          speakText(item.word);
+        }
+      };
+      matchOptions.appendChild(btn);
+    });
+  }
+  if (startMatchBtn) startMatchBtn.onclick = generateMatchQuestion;
+}
+/* ─── [END SEC-49] ─── */
+
+
+/* ─── [SEC-50] توجيهات أولياء الأمور — Parent Guide ─── */
+function renderParentGuide(app) {
+  renderTopbar(app, '👨‍👩‍👧 توجيهات أولياء الأمور', 'دليل شامل لتدريب النطق في المنزل', () => {
+    state.view = 'home';
+    render();
+  });
+
+  const container = document.createElement('div');
+
+  const introCard = document.createElement('div');
+  introCard.className = 'card';
+  introCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+  introCard.style.border = '2px solid var(--mint-deep)';
+  introCard.innerHTML = `
+    <h3 style="margin:0;color:var(--mint-deep);text-align:center;">دليل ولي الأمر لتدريب النطق</h3>
+    <p style="font-size:14px;line-height:1.8;margin-top:10px;">
+      عزيزي ولي الأمر، دورك أساسي في تحسين نطق طفلك. التدريب المنزلي المنتظم (حتى 10-15 دقيقة يومياً) يضاعف نتائج جلسات المعلم. هذا الدليل يقدم لك نصائح وتمارين بسيطة يمكن تطبيقها بسهولة.
+    </p>
+  `;
+  container.appendChild(introCard);
+
+  const tipsSection = document.createElement('div');
+  tipsSection.className = 'parent-guide-section';
+  tipsSection.innerHTML = `<div class="parent-guide-title">💡 نصائح عامة</div>`;
+  const tips = [
+    { icon: '🗣️', text: 'تحدث مع طفلك بوضوح وبطء، وانطق الحروف بشكل صحيح أمامه.' },
+    { icon: '🪞', text: 'استخدم المرآة أثناء التدريب ليرى طفلك حركة فمه ولسانه.' },
+    { icon: '🔁', text: 'كرر الكلمات الصعبة بهدوء دون إجبار الطفل.' },
+    { icon: '🎮', text: 'حوّل التدريب إلى لعبة ممتعة، مثل "من يستطيع نطق الحرف أولاً؟".' },
+    { icon: '⭐', text: 'كافئ طفلك عند المحاولة الصحيحة، وكافئ المحاولة وليس الكمال.' },
+    { icon: '📅', text: 'حدد وقتاً ثابتاً يومياً للتدريب، واجعله قصيراً وممتعاً.' },
+    { icon: '👂', text: 'استمع لطفلك دون مقاطعته، ثم أعد نطق الكلمة الصحيحة بلطف.' },
+    { icon: '📚', text: 'اقرأ لطفلك قصصاً قصيرة يومياً، وناقشه في الصور والأحداث.' }
+  ];
+  tips.forEach(tip => {
+    const tipDiv = document.createElement('div');
+    tipDiv.className = 'parent-guide-tip';
+    tipDiv.innerHTML = `<span class="icon">${tip.icon}</span><span>${tip.text}</span>`;
+    tipsSection.appendChild(tipDiv);
+  });
+  container.appendChild(tipsSection);
+
+  const exercisesSection = document.createElement('div');
+  exercisesSection.className = 'parent-guide-section';
+  exercisesSection.innerHTML = `<div class="parent-guide-title">🏋️ تمارين منزلية بسيطة</div>`;
+
+  const exercises = [
+    { title: 'تمارين اللسان', items: ['أخرج اللسان ثم أدخله ببطء (10 مرات).', 'حرك اللسان يميناً ويساراً (10 مرات).', 'المس طرف الأنف باللسان (5 مرات).', 'المس الذقن باللسان (5 مرات).'] },
+    { title: 'تمارين الشفاه', items: ['ضم الشفاه وانفخ خديك (5 ثوانٍ).', 'ابتسم ابتسامة عريضة (5 ثوانٍ).', 'قل "ووو" مع ضم الشفاه بقوة.', 'قل "إييي" مع توسيع الفم.'] },
+    { title: 'تمارين التنفس', items: ['نفخ بالونات أو ريشة خفيفة.', 'شم زهرة (شهيق عميق) ثم إطفاء شمعة (زفير بطيء).', 'نفخ فقاعات صابون.', 'تكرار أصوات الحروف مع الزفير مثل: سسسس، شششش، فففف.'] },
+    { title: 'تمارين التمييز السمعي', items: ['لعبة "اسمع وكرر": قل كلمة واطلب من طفلك تكرارها.', 'لعبة "من يجد الصورة؟": اعرض صوراً واطلب تحديد الصورة التي تبدأ بحرف معين.', 'لعبة "صوت الحيوان": قلد صوت حيوان واطلب من الطفل تخمينه.', 'استمع لأغاني أطفال تحتوي على تكرار الحروف.'] }
+  ];
+
+  exercises.forEach(ex => {
+    const box = document.createElement('div');
+    box.className = 'exercise-box';
+    box.innerHTML = `
+      <h4>${ex.title}</h4>
+      <ul>
+        ${ex.items.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    `;
+    exercisesSection.appendChild(box);
+  });
+  container.appendChild(exercisesSection);
+
+  const weeklyTableSection = document.createElement('div');
+  weeklyTableSection.className = 'parent-guide-section';
+  weeklyTableSection.innerHTML = `<div class="parent-guide-title">📅 جدول متابعة أسبوعي مقترح</div>`;
+  const weeklyTable = document.createElement('div');
+  weeklyTable.className = 'card';
+  weeklyTable.innerHTML = `
+    <table class="sessions-table" style="font-size:13px;">
+      <thead>
+        <tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>السبت</td><td>تمارين اللسان + تكرار الحرف المستهدف</td><td>10 دقائق</td></tr>
+        <tr><td>الأحد</td><td>قراءة قصة + مناقشة الصور</td><td>10 دقائق</td></tr>
+        <tr><td>الإثنين</td><td>تمارين الشفاه + لعبة التمييز السمعي</td><td>10 دقائق</td></tr>
+        <tr><td>الثلاثاء</td><td>نفخ وتنفس + تكرار كلمات بالحرف المستهدف</td><td>10 دقائق</td></tr>
+        <tr><td>الأربعاء</td><td>لعبة "اختر الصورة" أو "اختر الحرف"</td><td>10 دقائق</td></tr>
+        <tr><td>الخميس</td><td>مراجعة شاملة + مكافأة</td><td>10 دقائق</td></tr>
+      </tbody>
+    </table>
+  `;
+  weeklyTableSection.appendChild(weeklyTable);
+  container.appendChild(weeklyTableSection);
+
+  const frustrationSection = document.createElement('div');
+  frustrationSection.className = 'parent-guide-section';
+  frustrationSection.innerHTML = `<div class="parent-guide-title">💪 عند شعور الطفل بالإحباط</div>`;
+  const frustrationCard = document.createElement('div');
+  frustrationCard.className = 'card';
+  frustrationCard.innerHTML = `
+    <ul style="list-style:disc;padding-right:20px;font-size:14px;line-height:1.8;">
+      <li>لا تظهر الغضب أو الاستعجال.</li>
+      <li>قلل صعوبة التمرين وارجع خطوة للخلف.</li>
+      <li>استخدم التشجيع اللفظي: "أحسنت المحاولة، أنا فخور بك".</li>
+      <li>خذ استراحة قصيرة وعد للتدريب لاحقاً.</li>
+      <li>احتفل بالإنجازات الصغيرة مهما كانت.</li>
+    </ul>
+  `;
+  frustrationSection.appendChild(frustrationCard);
+  container.appendChild(frustrationSection);
+
+  const printDiv = document.createElement('div');
+  printDiv.className = 'print-btn-guide';
+  printDiv.innerHTML = `<button class="btn btn-primary" id="printGuideBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>`;
+  container.appendChild(printDiv);
+
+  app.appendChild(container);
+
+  const printBtn = container.querySelector('#printGuideBtn');
+  if (printBtn) {
+    printBtn.onclick = () => {
+      printParentGuide(container.innerHTML);
+    };
+  }
+}
+
+function printParentGuide(contentHTML) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">توجيهات أولياء الأمور</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      ${contentHTML}
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الدليل بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+/* ─── [END SEC-50] ─── */
+
+
+/* ─── [SEC-51] الخطة الأسبوعية الذكية — Weekly Plan ─── */
+async function renderWeeklyPlan(app) {
+  renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
+    state.view = 'teacher-dashboard';
+    render();
+  });
+
+  const container = document.createElement('div');
+  container.innerHTML = `
+    <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep); margin-bottom:15px;">
+      <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 الخطة الأسبوعية المقترحة</h3>
+      <p class="muted" style="text-align:center;">تتحدث تلقائياً حسب الجلسات المكتملة وشدة الحالة</p>
+      <div style="text-align:center;margin-top:10px;">
+        <button class="btn btn-primary btn-sm" id="printWeeklyPlanBtn" style="border-radius:50px;">🖨️ طباعة / حفظ PDF</button>
+      </div>
+    </div>
+  `;
+  app.appendChild(container);
+
+  const printBtn = container.querySelector('#printWeeklyPlanBtn');
+  if (printBtn) printBtn.onclick = () => printWeeklyPlan();
+
+  if (!state.myStudents.length) {
+    const emptyCard = document.createElement('div');
+    emptyCard.className = 'card';
+    emptyCard.innerHTML = '<p class="muted">لا يوجد طلاب لعرض الخطة.</p>';
+    app.appendChild(emptyCard);
+    return;
+  }
+
+  const allSessionsSnap = await getDocs(collection(db, "sessions"));
+  const allSessions = [];
+  allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+
+  const nonConsecutiveDays = ['السبت', 'الإثنين', 'الأربعاء'];
+  const singleDay = ['الأحد'];
+
+  function getWeeklySessions(studentData) {
+    const diag = studentData.diagnostic || {};
+    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+    const severeTypes = ['حذف', 'قلب', 'خنف', 'تأتأة / تلعثم', 'حبسة'];
+    let severity = 0;
+    needLetters.forEach(letter => {
+      const info = diag[letter] || {};
+      if (severeTypes.includes(info.disorderType)) severity += 2;
+      else severity += 1;
+    });
+    if (severity <= 2) return 1;
+    else if (severity <= 4) return 2;
+    else return 3;
+  }
+
+  function getCompletedSessions(letter, studentId) {
+    return allSessions.filter(s => s.studentId === studentId && s.letter === letter && (s.evaluation === 'passed' || s.evaluation === 'trained')).length;
+  }
+
+  for (const student of state.myStudents) {
+    const studentDoc = await getDoc(doc(db, "users", student.id));
+    const studentData = studentDoc.exists() ? studentDoc.data() : {};
+    const diag = studentData.diagnostic || {};
+    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+
+    if (needLetters.length === 0) {
+      const okCard = document.createElement('div');
+      okCard.className = 'card';
+      okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً.</p>`;
+      app.appendChild(okCard);
+      continue;
+    }
+
+    const sessionsPerWeek = getWeeklySessions(studentData);
+    const daysForStudent = sessionsPerWeek === 1 ? singleDay : nonConsecutiveDays.slice(0, sessionsPerWeek);
+
+    const planCard = document.createElement('div');
+    planCard.className = 'card';
+    planCard.style.borderRight = '4px solid var(--mint-deep)';
+    planCard.innerHTML = `
+      <h4 style="margin:0;color:var(--mint-deep);">👤 ${student.fullName || student.email}</h4>
+      <p style="font-size:13px;color:#555;margin:4px 0;">
+        الجلسات الأسبوعية الموصى بها: <strong>${sessionsPerWeek}</strong> - الأيام: ${daysForStudent.join(' و ')}
+      </p>
+      <div style="margin-top:8px;">
+        ${needLetters.slice(0, 4).map(letter => {
+          const completed = getCompletedSessions(letter, student.id);
+          const totalNeeded = 4;
+          return `
+            <div style="display:flex; gap:10px; align-items:center; padding:4px 0; border-bottom:1px solid #eee;">
+              <span style="min-width:70px;">حرف ${letter}</span>
+              <span style="color:${completed >= totalNeeded ? 'green' : '#F57F17'};">${completed}/${totalNeeded} جلسات</span>
+              <button class="btn btn-soft btn-sm" onclick="speakText('${letter}')">🔊</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الجلسات الفردية فقط، دون دمج الطلاب.</p>
+    `;
+    app.appendChild(planCard);
+  }
+}
+
+function printWeeklyPlan() {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  const planContent = document.getElementById('app').innerText;
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <pre style="white-space:pre-wrap;font-size:14px;line-height:1.8;">${planContent}</pre>
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذه الخطة تلقائياً بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+/* ─── [END SEC-51] ─── */
+
+
+/* ─── [SEC-52] قائمة ملفات إنجاز الطلاب — Achievement List ─── */
+async function renderStudentAchievementList(app) {
+  renderTopbar(app, '🏆 ملفات إنجاز الطلاب', 'اختر طالباً لعرض ملف إنجازه', () => {
+    state.view = 'teacher-dashboard';
+    render();
+  });
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>👥 الطلاب</h3>';
+  app.appendChild(card);
+  if (!state.myStudents.length) {
+    card.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
+    return;
+  }
+  const list = document.createElement('div');
+  list.className = 'iep-student-list';
+  card.appendChild(list);
+  state.myStudents.forEach(st => {
+    const item = document.createElement('div');
+    item.className = 'iep-student-item';
+    item.innerHTML = `
+      <div style="font-size:40px;">🧒</div>
+      <div class="student-name">${st.fullName || st.email}</div>
+      <div class="student-email">${st.email}</div>
+    `;
+    item.onclick = () => {
+      state.currentStudent = st;
+      state.view = 'achievement';
+      render();
+    };
+    list.appendChild(item);
+  });
+}
+/* ─── [END SEC-52] ─── */
+
+
+/* ═══════════════════════════════════════════════════════════
+   نهاية الجزء 5/6
+   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   الجزء 6/6 — ملفات الإنجاز + التهيئة النهائية + التصدير
+   ═══════════════════════════════════════════════════════════ */
+
+
+/* ─── [SEC-53] معايير ملف إنجاز المعلم — Teacher Standards ─── */
+const TEACHER_STANDARDS = [
+  { id: 1, title: 'أداء الواجبات الوظيفية', evidences: 'سجل الدوام، سجل المناوبة والإشراف، سجل الانتظار، خطة توزيع المنهج.' },
+  { id: 2, title: 'التفاعل مع المجتمع المحلي', evidences: 'سجل مجتمعات التعلم، سجل تبادل الزيارات، تقرير درس تطبيقي، شهادات حضور.' },
+  { id: 3, title: 'التفاعل مع أولياء الأمور', evidences: 'صور من الجمعية العمومية، تقرير اجتماع مع ولي الأمر، نسخة من الخطة الأسبوعية.' },
+  { id: 4, title: 'التنويع في استراتيجيات التدريس', evidences: 'تقرير عن تطبيق استراتيجية، ملف إنجاز المعلم.' },
+  { id: 5, title: 'تحسين نتائج المتعلمين', evidences: 'نتائج الاختبارات القبلية والبعدية، كشف متابعة الطلاب.' },
+  { id: 6, title: 'إعداد وتنفيذ خطة التعلم', evidences: 'خطة توزيع المنهج، نماذج من إعداد الدروس، نماذج من الواجبات والاختبارات.' },
+  { id: 7, title: 'توظيف تقنيات ووسائل التعلم', evidences: 'صور من الوسائل التعليمية، تقرير عن برنامج تقني.' },
+  { id: 8, title: 'تهيئة البيئة التعليمية', evidences: 'تقرير تصنيف الطلاب حسب أنماط التعلم، نماذج من التحفيز المادي والمعنوي.' },
+  { id: 9, title: 'الإدارة الصفية', evidences: 'كشف المتابعة، تطبيق إدارة الصف.' },
+  { id: 10, title: 'تحليل نتائج المتعلمين', evidences: 'تقرير تحليل نتائج الطلاب، سجل معالجة الفاقد التعليمي.' },
+  { id: 11, title: 'تنوع أساليب التقويم', evidences: 'نماذج من الاختبارات، ملفات إنجاز الطلاب، نماذج من المهام الأدائية والمشاريع.' }
+];
+/* ─── [END SEC-53] ─── */
+
+
+/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement ─── */
+async function renderTeacherAchievement(app) {
+  renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
+    state.view = 'teacher-dashboard';
+    render();
+  });
+  if (!state.user) {
+    showToast('يجب تسجيل الدخول');
+    state.view = 'auth';
+    return render();
+  }
+  const teacherId = state.user.uid;
+  let teacherData = {};
+  try {
+    const teacherDoc = await getDoc(doc(db, "users", teacherId));
+    if (teacherDoc.exists()) teacherData = teacherDoc.data();
+  } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
+  const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
+
+  let existingFiles = {};
+  try {
+    const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
+    const filesSnap = await getDocs(filesQuery);
+    filesSnap.forEach(d => {
+      const data = d.data();
+      const standardId = data.standardId;
+      if (!existingFiles[standardId]) existingFiles[standardId] = [];
+      existingFiles[standardId].push({ id: d.id, ...data });
+    });
+  } catch (e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
+
+  const headerCard = document.createElement('div');
+  headerCard.className = 'card';
+  headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+  headerCard.style.border = '2px solid var(--mint-deep)';
+  headerCard.innerHTML = `
+    <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
+    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+      <button class="btn btn-primary btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">🖨️ طباعة / حفظ PDF</button>
+      <button class="btn btn-soft btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:8px 20px;">📄 توليد الشواهد تلقائياً</button>
+    </div>
+  `;
+  app.appendChild(headerCard);
+
+  const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
+  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
+  const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
+  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
+
+  TEACHER_STANDARDS.forEach(standard => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginBottom = '12px';
+    card.innerHTML = `
+      <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
+      <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+        <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
+        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
+        <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
+      </div>
+      <div id="filesList_${standard.id}" style="margin-top:8px;">
+        ${(existingFiles[standard.id] || []).map(file => `
+          <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
+            <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
+            <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    app.appendChild(card);
+
+    const fileInput = card.querySelector(`#fileInput_${standard.id}`);
+    const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
+    const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
+    if (uploadBtn && fileInput) {
+      uploadBtn.onclick = () => fileInput.click();
+      fileInput.onchange = async () => {
+        if (!fileInput.files || fileInput.files.length === 0) return;
+        fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
+        const uploadPromises = Array.from(fileInput.files).map(file => uploadTeacherFile(teacherId, standard.id, file));
+        const results = await Promise.all(uploadPromises);
+        const success = results.filter(r => r !== null);
+        if (success.length > 0) {
+          for (const fileInfo of success) {
+            try {
+              await addDoc(collection(db, "teacher_files"), {
+                teacherId,
+                standardId: standard.id,
+                name: fileInfo.name,
+                url: fileInfo.url,
+                type: fileInfo.type,
+                uploadedAt: fileInfo.uploadedAt
+              });
+            } catch (e) { console.error('خطأ في حفظ الملف:', e); }
+          }
+          showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
+          renderTeacherAchievement(app);
+        } else {
+          showToast('❌ فشل رفع الملفات');
+        }
+        fileInput.value = '';
+      };
+    }
+  });
+}
+/* ─── [END SEC-54] ─── */
+
+
+/* ─── [SEC-55] توليد الشواهد تلقائياً — Evidence Report ─── */
+async function generateEvidenceReport(teacherName) {
+  showToast('⏳ جاري توليد الشواهد تلقائياً...');
+  try {
+    const teacherId = state.user.uid;
+    const allSessionsSnap = await getDocs(collection(db, "sessions"));
+    const allSessions = [];
+    allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+    const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
+    const totalSessions = teacherSessions.length;
+    const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
+    const averageSuccess = evaluatedSessions.length > 0
+      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+      : 0;
+    const totalStudents = state.myStudents.length;
+    const studentSummaries = [];
+    for (const student of state.myStudents) {
+      const studentDoc = await getDoc(doc(db, "users", student.id));
+      const studentData = studentDoc.exists() ? studentDoc.data() : {};
+      const diag = studentData.diagnostic || {};
+      const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
+      const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+      const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
+      const studentSessions = allSessions.filter(s => s.studentId === student.id && s.evaluation && s.evaluation !== 'none');
+      const studentAvg = studentSessions.length > 0
+        ? Math.round(studentSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / studentSessions.length)
+        : 0;
+      studentSummaries.push({
+        name: student.fullName || student.email,
+        passed: passedLetters.length,
+        need: needLetters.length,
+        trained: trainedLetters.length,
+        sessions: studentSessions.length,
+        avg: studentAvg
+      });
+    }
+    let printArea = document.getElementById('iep-print-area');
+    if (!printArea) {
+      printArea = document.createElement('div');
+      printArea.id = 'iep-print-area';
+      document.body.appendChild(printArea);
+    }
+    printArea.innerHTML = `
+      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+          <p style="margin:5px 0 0;font-size:14px;color:#555;">شواهد إنجاز المعلم - تقرير تلقائي</p>
+          <hr style="border:1px solid #ddd;margin:10px 0;">
+        </div>
+        <div style="margin-bottom:15px;text-align:center;">
+          <strong>اسم المعلم:</strong> ${teacherName}<br>
+          <strong>تاريخ التوليد:</strong> ${new Date().toLocaleDateString('ar-SA')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;background:#f5f5f5;padding:15px;border-radius:8px;">
+          <div><strong>عدد الطلاب:</strong> ${totalStudents}</div>
+          <div><strong>عدد الجلسات المنفذة:</strong> ${totalSessions}</div>
+          <div><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
+          <div><strong>عدد الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
+        </div>
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">ملخص أداء الطلاب</h3>
+        ${studentSummaries.length > 0 ? `
+          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+            <thead><tr style="background:#f0f0f0;">
+              <th style="border:1px solid #ddd;padding:8px;">الطالب</th>
+              <th style="border:1px solid #ddd;padding:8px;">حروف متقنة</th>
+              <th style="border:1px solid #ddd;padding:8px;">تحتاج تدريب</th>
+              <th style="border:1px solid #ddd;padding:8px;">جلسات</th>
+              <th style="border:1px solid #ddd;padding:8px;">متوسط النجاح</th>
+            </tr></thead>
+            <tbody>
+              ${studentSummaries.map(s => `
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px;">${s.name}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.passed}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.need}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.sessions}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.avg}%</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض بياناتهم.</p>'}
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">الشواهد المتاحة من المنصة</h3>
+        <div style="margin-bottom:10px;font-size:14px;">
+          <p>✅ سجل الجلسات السحابي (${totalSessions} جلسة)</p>
+          <p>✅ التقارير الفردية للطلاب</p>
+          <p>✅ التشخيص الشامل للحروف</p>
+          <p>✅ التسجيل الصوتي والتغذية الراجعة</p>
+          <p>✅ ملفات إنجاز الطلاب</p>
+          <p>✅ الخطط الفردية (IEP)</p>
+          <p>✅ قوائم المفردات التفاعلية</p>
+          <p>✅ أدوات التقييم المتنوعة (أتقن/تدريب/غير واضح)</p>
+        </div>
+        <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذا التقرير تلقائياً من منصة منارة النطق</div>
+      </div>
+    `;
+    window.print();
+    setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+  } catch (e) {
+    console.error('خطأ في توليد الشواهد:', e);
+    showToast('❌ فشل توليد الشواهد');
+  }
+}
+/* ─── [END SEC-55] ─── */
+
+
+/* ─── [SEC-56] طباعة ملف إنجاز المعلم — Print Teacher Achievement ─── */
+function printTeacherAchievement(teacherName, existingFiles) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز المعلم</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <div style="margin-bottom:15px;text-align:center;"><strong>اسم المعلم:</strong> ${teacherName}</div>
+      ${TEACHER_STANDARDS.map(standard => `
+        <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
+          <strong>${standard.id}. ${standard.title}</strong>
+          <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
+          ${(existingFiles[standard.id] || []).map(file => `<div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>`).join('')}
+        </div>
+      `).join('')}
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+/* ─── [END SEC-56] ─── */
+
+
+/* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
+async function renderAchievement(app) {
+  if (!state.currentStudent) {
+    showToast('اختر طالباً أولاً');
+    state.view = 'teacher-dashboard';
+    return render();
+  }
+  renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
+    render();
+  });
+  try {
+    const studentRef = doc(db, "users", state.currentStudent.id);
+    const studentDoc = await getDoc(studentRef);
+    const studentData = studentDoc.exists() ? studentDoc.data() : {};
+    const diag = studentData.diagnostic || {};
+    const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
+    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+    const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
+    const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+    const sessionsSnap = await getDocs(sessionsQuery);
+    const sessions = [];
+    sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
+    sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
+    const totalSessions = sessions.length;
+    const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
+    const averageSuccess = evaluatedSessions.length > 0
+      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+      : 0;
+    const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
+    const points = calculateStudentPoints(studentData);
+    let achievementLevel = '';
+    let achievementIcon = '';
+    if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
+    else if (masteryPercentage >= 50) { achievementLevel = 'جيد جداً'; achievementIcon = '⭐'; }
+    else if (masteryPercentage >= 30) { achievementLevel = 'جيد'; achievementIcon = '👍'; }
+    else { achievementLevel = 'يحتاج متابعة'; achievementIcon = '💪'; }
+
+    const weeklyStats = getWeeklyStats(sessions);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+    card.style.border = '2px solid var(--mint-deep)';
+    card.innerHTML = `
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:60px;">${achievementIcon}</div>
+        <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
+        <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${passedLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">حروف متقنة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:#F57F17;">${needLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">تحتاج تدريب</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${totalSessions}</div>
+          <div style="font-size:13px;color:#6B7A99;">جلسة منفذة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${averageSuccess}%</div>
+          <div style="font-size:13px;color:#6B7A99;">متوسط النجاح</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${masteryPercentage}%</div>
+          <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
+          <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
+        </div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>نسبة الإتقان:</strong>
+        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${masteryPercentage}%;">${masteryPercentage}%</div></div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>📅 ملخص هذا الأسبوع:</strong><br>
+        الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
+        متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
+        الحروف المتدرب عليها: ${Object.keys(weeklyStats.lettersTrained).length ? Object.keys(weeklyStats.lettersTrained).join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف المتقنة:</strong> ${passedLetters.length ? passedLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف التي تحتاج تدريب:</strong> ${needLetters.length ? needLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف التي أتقنها بعد تدريب:</strong> ${trainedLetters.length ? trainedLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${passedLetters.length} حرف متقن (تحسن ${passedLetters.length} حرف)
+      </div>
+      <div style="text-align:center; margin-top:20px;">
+        <button class="btn btn-primary" id="printAchievementBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>
+      </div>
+    `;
+    app.appendChild(card);
+    const printBtn = card.querySelector('#printAchievementBtn');
+    if (printBtn) {
+      printBtn.onclick = () => {
+        printAchievement(state.currentStudent, {
+          passedLetters, needLetters, trainedLetters, totalSessions, averageSuccess,
+          masteryPercentage, achievementLevel, achievementIcon, points, weeklyStats
+        });
+      };
+    }
+  } catch (e) {
+    const errorCard = document.createElement('div');
+    errorCard.className = 'card';
+    errorCard.innerHTML = `<p class="muted">⚠️ خطأ في تحميل ملف الإنجاز: ${e.message}</p>`;
+    app.appendChild(errorCard);
+  }
+}
+
+function printAchievement(student, data) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز الطالب</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <div style="margin-bottom:15px;text-align:center;"><strong>اسم الطالب:</strong> ${student.fullName || student.email}<br><strong>المستوى:</strong> ${data.achievementLevel} ${data.achievementIcon}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+        <div><strong>الحروف المتقنة:</strong> ${data.passedLetters.length}</div>
+        <div><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length}</div>
+        <div><strong>عدد الجلسات:</strong> ${data.totalSessions}</div>
+        <div><strong>متوسط النجاح:</strong> ${data.averageSuccess}%</div>
+        <div><strong>نسبة الإتقان:</strong> ${data.masteryPercentage}%</div>
+        <div><strong>النقاط:</strong> ${data.points}</div>
+      </div>
+      <div style="margin-bottom:10px;"><strong>ملخص هذا الأسبوع:</strong><br>الجلسات: ${data.weeklyStats.totalThisWeek} | متوسط النجاح: ${data.weeklyStats.avgSuccess}%</div>
+      <div style="margin-bottom:10px;"><strong>الحروف المتقنة:</strong> ${data.passedLetters.length ? data.passedLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length ? data.needLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>الحروف التي أتقنها بعد تدريب:</strong> ${data.trainedLetters.length ? data.trainedLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${data.passedLetters.length} حرف متقن</div>
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+/* ─── [END SEC-57] ─── */
+
+
+/* ─── [SEC-58] التهيئة النهائية — Final Init ─── */
 function initApp() {
   initAccessibility();
   onAuthStateChanged(auth, (user) => {
@@ -4263,10 +4578,10 @@ function initApp() {
     }
   });
 }
+/* ─── [END SEC-58] ─── */
 
-/* ========================================
-   تصدير Firebase للذكاء الاصطناعي
-   ======================================== */
+
+/* ─── [SEC-59] تصدير Firebase للذكاء الاصطناعي — Export Firebase ─── */
 window.db = db;
 window.auth = auth;
 window.storage = storage;
@@ -4281,5 +4596,14 @@ window.collection = collection;
 window.query = query;
 window.where = where;
 window.getCurrentStudent = function() { return state.currentStudent; };
+/* ─── [END SEC-59] ─── */
 
+
+/* ─── [SEC-60] تشغيل التطبيق — Start App ─── */
 initApp();
+/* ─── [END SEC-60] ─── */
+
+
+/* ═══════════════════════════════════════════════════════════
+   نهاية الجزء 6/6 — نهاية app.js v2.0
+   ═══════════════════════════════════════════════════════════ */
