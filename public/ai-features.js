@@ -293,7 +293,7 @@ ${disorderText || 'لا توجد عيوب محددة'}
 }
 
 /* ========================================
-   6. 🆕 توليد قصة قصيرة تعليمية
+   6. توليد قصة قصيرة تعليمية
    ======================================== */
 async function generateShortStory(sessionData, studentData) {
   const sessionTypes = window.SESSION_TYPES || [
@@ -390,7 +390,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
 }
 
 /* ========================================
-   8. عرض التمارين المنزلية
+   8. عرض التمارين المنزلية - مع إصلاح الإرسال
    ======================================== */
 function showHomeworkModal(homeworkText, sessionData) {
   const modal = document.createElement('div');
@@ -428,32 +428,61 @@ function showHomeworkModal(homeworkText, sessionData) {
     });
   };
   
-  // 🔧 إصلاح: استخدام state مباشرة من window
+  // 🔧 إصلاح إرسال التمارين لولي الأمر
   modal.querySelector('#sendHWToParentBtn').onclick = () => {
     try {
-      // نحاول الوصول لـ state من مصادر متعددة
-      const currentState = window.state || (typeof state !== 'undefined' ? state : null);
+      console.log('🔍 محاولة إرسال التمارين...');
       
-      if (typeof sendSessionToParent !== 'function' && typeof window.sendSessionToParent !== 'function') {
+      // 1. البحث عن دالة الإرسال
+      const sendFunc = window.sendSessionToParent;
+      if (typeof sendFunc !== 'function') {
+        console.error('❌ sendSessionToParent غير متوفرة');
         if (typeof showToast === 'function') showToast('⚠️ دالة الإرسال غير متوفرة');
         return;
       }
+      console.log('✅ sendSessionToParent متوفرة');
       
-      const currentStudent = currentState?.currentStudent;
-      if (!currentStudent) {
+      // 2. البحث عن الطالب الحالي
+      let targetStudent = null;
+      
+      // محاولة من window.getCurrentStudent
+      if (typeof window.getCurrentStudent === 'function') {
+        targetStudent = window.getCurrentStudent();
+        console.log('✅ حصلنا على الطالب من window.getCurrentStudent');
+      }
+      
+      // محاولة من window.state
+      if (!targetStudent && window.state && window.state.currentStudent) {
+        targetStudent = window.state.currentStudent;
+        console.log('✅ حصلنا على الطالب من window.state');
+      }
+      
+      // محاولة من window.currentStudent مباشرة
+      if (!targetStudent && window.currentStudent) {
+        targetStudent = window.currentStudent;
+        console.log('✅ حصلنا على الطالب من window.currentStudent');
+      }
+      
+      if (!targetStudent) {
+        console.error('❌ لم يتم العثور على بيانات الطالب');
         if (typeof showToast === 'function') showToast('⚠️ اختر طالباً أولاً');
         return;
       }
       
+      console.log('👤 الطالب:', targetStudent.fullName || targetStudent.email);
+      
+      // 3. تجهيز بيانات الجلسة مع التمارين
       const sessionWithHW = { 
         ...sessionData, 
         recommendations: `📝 التمارين المنزلية:\n\n${homeworkText}` 
       };
       
-      const sendFunc = window.sendSessionToParent || sendSessionToParent;
-      sendFunc(sessionWithHW, currentStudent);
+      // 4. الإرسال
+      sendFunc(sessionWithHW, targetStudent);
+      console.log('✅ تم استدعاء sendSessionToParent');
+      
     } catch (e) {
-      console.error('خطأ في الإرسال:', e);
+      console.error('❌ خطأ في الإرسال:', e);
       if (typeof showToast === 'function') showToast('⚠️ خطأ: ' + e.message);
     }
   };
@@ -613,7 +642,7 @@ function showCustomPlanModal(planText, studentData) {
 }
 
 /* ========================================
-   11. 🆕 عرض القصة القصيرة
+   11. عرض القصة القصيرة
    ======================================== */
 function showShortStoryModal(storyText, sessionData) {
   const modal = document.createElement('div');
@@ -723,7 +752,7 @@ async function saveHomeworkToSession(sessionId, homeworkText) {
 }
 
 /* ========================================
-   14. 🆕 حفظ القصة في الجلسة
+   14. حفظ القصة في الجلسة
    ======================================== */
 async function saveStoryToSession(sessionId, storyText) {
   try {
@@ -889,7 +918,7 @@ function createCustomPlanButton(studentData) {
 }
 
 /* ========================================
-   19. 🆕 زر القصة القصيرة
+   19. زر القصة القصيرة
    ======================================== */
 function createShortStoryButton(sessionData, studentData) {
   const btn = document.createElement('button');
