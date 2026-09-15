@@ -1343,42 +1343,20 @@ function renderResetPassword(app) {
 
 /* ========================================
    21. جلب بيانات المستخدم - Fetch User Data
-   ======================================== */
-async function fetchUserData(uid) {
-  try {
-    const uDoc = await getDoc(doc(db, "users", uid));
-    if (uDoc.exists()) {
-      const uData = uDoc.data();
-      state.role = uData.role;
-      if (uData.comprehensive) state.comprehensive = uData.comprehensive;
-      if (state.role === 'teacher' || state.role === 'admin') {
-        state.view = 'teacher-dashboard';
-        await fetchTeacherStudents();
-      } else {
-        state.currentStudent = { id: uid, ...uData };
-        state.view = 'student-menu';
-        render();
-      }
-    }
-  } catch (e) { showToast('خطأ في جلب بيانات المستخدم'); }
-}
+   =
 
-async function fetchTeacherStudents() {
-  if (!state.user) return;
-  try {
-    const q = query(collection(db, "users"), where("role", "==", "student"));
-    const snap = await getDocs(q);
-    state.myStudents = [];
-    state.freeStudents = [];
-    snap.forEach(d => {
-      const data = d.data();
-      const obj = { id: d.id, ...data };
-      if (data.teacherId === state.user.uid) state.myStudents.push(obj);
-      else if (!data.teacherId) state.freeStudents.push(obj);
-    });
-    render();
-  } catch (e) { showToast('خطأ في تحميل بيانات الطلاب'); }
-}
+       const snap = await getDocs(q);
+       state.myStudents = [];
+       state.freeStudents = [];
+       snap.forEach(d => {
+         const data = d.data();
+         const obj = { id: d.id, ...data };
+         if (data.teacherId === state.user.uid) state.myStudents.push(obj);
+         else if (!data.teacherId) state.freeStudents.push(obj);
+       });
+       render();
+     } catch (e) { showToast('خطأ في تحميل بيانات الطلاب'); }
+   }
 
 /* ========================================
    22. لوحة المعلم - Teacher Dashboard
@@ -1410,7 +1388,7 @@ async function renderTeacherDashboard(app) {
   `;
   app.appendChild(summaryDashboard);
 
-  // 🆕 بطاقة الإجراءات السريعة — مع زر توليد محتوى الحروف
+  // 🆕 الإجراءات السريعة — بدون بطاقة "إدارة محتوى الحروف"
   const actCard = document.createElement('div');
   actCard.className = 'card no-print';
   actCard.innerHTML = `
@@ -1432,29 +1410,6 @@ async function renderTeacherDashboard(app) {
   if (btnAchievementList) btnAchievementList.onclick = () => { state.view = 'student-achievement-list'; render(); };
   const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
   if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
-
-  // 🆕 بطاقة إدارة محتوى الحروف
-  const lettersDataCard = document.createElement('div');
-  lettersDataCard.className = 'card';
-  lettersDataCard.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;';
-  lettersDataCard.innerHTML = `
-    <h3 style="margin:0 0 8px 0;color:#6D28D9;">📚 إدارة محتوى الحروف</h3>
-    <p style="font-size:13px;color:#555;margin-bottom:12px;">
-      قم بتوليد بيانات 28 حرفاً عربياً (حركات + كلمات + جمل) بالذكاء الاصطناعي لتحسين جلسات التدريب.
-    </p>
-    <div id="lettersDataButtonContainer" style="text-align:center;"></div>
-  `;
-  app.appendChild(lettersDataCard);
-
-  const lettersBtnContainer = lettersDataCard.querySelector('#lettersDataButtonContainer');
-  if (lettersBtnContainer) {
-    if (typeof window.createGenerateLettersButton === 'function') {
-      const generateBtn = window.createGenerateLettersButton();
-      lettersBtnContainer.appendChild(generateBtn);
-    } else {
-      lettersBtnContainer.innerHTML = '<p class="muted">⚠️ ميزة التوليد غير متوفرة</p>';
-    }
-  }
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
@@ -1967,7 +1922,7 @@ function renderGames(app) {
           setTimeout(generateMatchQuestion, 1500);
         } else {
           btn.classList.add('wrong');
-          matchFeedback.innerHTML = '<span class="feedback-wrong">❌ خطأ! حاول مرة أخرى</span>';
+          matchFeedback.innerHTML = '<span class="feedback-fwrong">❌ خطأ! حاول مرة أخرى</span>';
           speakText(item.word);
         }
       };
@@ -2017,113 +1972,7 @@ function renderParentGuide(app) {
     const tipDiv = document.createElement('div');
     tipDiv.className = 'parent-guide-tip';
     tipDiv.innerHTML = `<span class="icon">${tip.icon}</span><span>${tip.text}</span>`;
-    tipsSection.appendChild(tipDiv);
-  });
-  container.appendChild(tipsSection);
-
-  const exercisesSection = document.createElement('div');
-  exercisesSection.className = 'parent-guide-section';
-  exercisesSection.innerHTML = `<div class="parent-guide-title">🏋️ تمارين منزلية بسيطة</div>`;
-
-  const exercises = [
-    { title: 'تمارين اللسان', items: ['أخرج اللسان ثم أدخله ببطء (10 مرات).', 'حرك اللسان يميناً ويساراً (10 مرات).', 'المس طرف الأنف باللسان (5 مرات).', 'المس الذقن باللسان (5 مرات).'] },
-    { title: 'تمارين الشفاه', items: ['ضم الشفاه وانفخ خديك (5 ثوانٍ).', 'ابتسم ابتسامة عريضة (5 ثوانٍ).', 'قل "ووو" مع ضم الشفاه بقوة.', 'قل "إييي" مع توسيع الفم.'] },
-    { title: 'تمارين التنفس', items: ['نفخ بالونات أو ريشة خفيفة.', 'شم زهرة (شهيق عميق) ثم إطفاء شمعة (زفير بطيء).', 'نفخ فقاعات صابون.', 'تكرار أصوات الحروف مع الزفير مثل: سسسس، شششش، فففف.'] },
-    { title: 'تمارين التمييز السمعي', items: ['لعبة "اسمع وكرر": قل كلمة واطلب من طفلك تكرارها.', 'لعبة "من يجد الصورة؟": اعرض صوراً واطلب تحديد الصورة التي تبدأ بحرف معين.', 'لعبة "صوت الحيوان": قلد صوت حيوان واطلب من الطفل تخمينه.', 'استمع لأغاني أطفال تحتوي على تكرار الحروف.'] }
-  ];
-
-  exercises.forEach(ex => {
-    const box = document.createElement('div');
-    box.className = 'exercise-box';
-    box.innerHTML = `
-      <h4>${ex.title}</h4>
-      <ul>
-        ${ex.items.map(item => `<li>${item}</li>`).join('')}
-      </ul>
-    `;
-    exercisesSection.appendChild(box);
-  });
-  container.appendChild(exercisesSection);
-
-  const weeklyTableSection = document.createElement('div');
-  weeklyTableSection.className = 'parent-guide-section';
-  weeklyTableSection.innerHTML = `<div class="parent-guide-title">📅 جدول متابعة أسبوعي مقترح</div>`;
-  const weeklyTable = document.createElement('div');
-  weeklyTable.className = 'card';
-  weeklyTable.innerHTML = `
-    <table class="sessions-table" style="font-size:13px;">
-      <thead>
-        <tr><th>اليوم</th><th>النشاط</th><th>المدة</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>السبت</td><td>تمارين اللسان + تكرار الحرف المستهدف</td><td>10 دقائق</td></tr>
-        <tr><td>الأحد</td><td>قراءة قصة + مناقشة الصور</td><td>10 دقائق</td></tr>
-        <tr><td>الإثنين</td><td>تمارين الشفاه + لعبة التمييز السمعي</td><td>10 دقائق</td></tr>
-        <tr><td>الثلاثاء</td><td>نفخ وتنفس + تكرار كلمات بالحرف المستهدف</td><td>10 دقائق</td></tr>
-        <tr><td>الأربعاء</td><td>لعبة "اختر الصورة" أو "اختر الحرف"</td><td>10 دقائق</td></tr>
-        <tr><td>الخميس</td><td>مراجعة شاملة + مكافأة</td><td>10 دقائق</td></tr>
-      </tbody>
-    </table>
-  `;
-  weeklyTableSection.appendChild(weeklyTable);
-  container.appendChild(weeklyTableSection);
-
-  const frustrationSection = document.createElement('div');
-  frustrationSection.className = 'parent-guide-section';
-  frustrationSection.innerHTML = `<div class="parent-guide-title">💪 عند شعور الطفل بالإحباط</div>`;
-  const frustrationCard = document.createElement('div');
-  frustrationCard.className = 'card';
-  frustrationCard.innerHTML = `
-    <ul style="list-style:disc;padding-right:20px;font-size:14px;line-height:1.8;">
-      <li>لا تظهر الغضب أو الاستعجال.</li>
-      <li>قلل صعوبة التمرين وارجع خطوة للخلف.</li>
-      <li>استخدم التشجيع اللفظي: "أحسنت المحاولة، أنا فخور بك".</li>
-      <li>خذ استراحة قصيرة وعد للتدريب لاحقاً.</li>
-      <li>احتفل بالإنجازات الصغيرة مهما كانت.</li>
-    </ul>
-  `;
-  frustrationSection.appendChild(frustrationCard);
-  container.appendChild(frustrationSection);
-
-  const printDiv = document.createElement('div');
-  printDiv.className = 'print-btn-guide';
-  printDiv.innerHTML = `<button class="btn btn-primary" id="printGuideBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>`;
-  container.appendChild(printDiv);
-
-  app.appendChild(container);
-
-  const printBtn = container.querySelector('#printGuideBtn');
-  if (printBtn) {
-    printBtn.onclick = () => {
-      printParentGuide(container.innerHTML);
-    };
-  }
-}
-
-function printParentGuide(contentHTML) {
-  let printArea = document.getElementById('iep-print-area');
-  if (!printArea) {
-    printArea = document.createElement('div');
-    printArea.id = 'iep-print-area';
-    document.body.appendChild(printArea);
-  }
-  printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:14px;color:#555;">توجيهات أولياء الأمور</p>
-        <hr style="border:1px solid #ddd;margin:10px 0;">
-      </div>
-      ${contentHTML}
-      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الدليل بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
-    </div>
-  `;
-  window.print();
-  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
-}
-
-
-
+   
 
 
 
