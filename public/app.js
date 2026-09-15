@@ -4438,5 +4438,6 @@ window.deleteDoc = deleteDoc;
 window.collection = collection;
 window.query = query;
 window.where = where;
+window.getCurrentStudent = function() { return state.currentStudent; };
 
 initApp();
