@@ -1410,7 +1410,7 @@ async function renderTeacherDashboard(app) {
   `;
   app.appendChild(summaryDashboard);
 
-  // 🆕 بعد التعديل: 3 أزرار فقط (بدون السجل السحابي + الخطة الأسبوعية + التوجيهات)
+  // 🆕 بطاقة الإجراءات السريعة — مع زر توليد محتوى الحروف
   const actCard = document.createElement('div');
   actCard.className = 'card no-print';
   actCard.innerHTML = `
@@ -1432,6 +1432,29 @@ async function renderTeacherDashboard(app) {
   if (btnAchievementList) btnAchievementList.onclick = () => { state.view = 'student-achievement-list'; render(); };
   const btnTeacherAchievement = actCard.querySelector('#btnTeacherAchievement');
   if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
+
+  // 🆕 بطاقة إدارة محتوى الحروف
+  const lettersDataCard = document.createElement('div');
+  lettersDataCard.className = 'card';
+  lettersDataCard.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;';
+  lettersDataCard.innerHTML = `
+    <h3 style="margin:0 0 8px 0;color:#6D28D9;">📚 إدارة محتوى الحروف</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:12px;">
+      قم بتوليد بيانات 28 حرفاً عربياً (حركات + كلمات + جمل) بالذكاء الاصطناعي لتحسين جلسات التدريب.
+    </p>
+    <div id="lettersDataButtonContainer" style="text-align:center;"></div>
+  `;
+  app.appendChild(lettersDataCard);
+
+  const lettersBtnContainer = lettersDataCard.querySelector('#lettersDataButtonContainer');
+  if (lettersBtnContainer) {
+    if (typeof window.createGenerateLettersButton === 'function') {
+      const generateBtn = window.createGenerateLettersButton();
+      lettersBtnContainer.appendChild(generateBtn);
+    } else {
+      lettersBtnContainer.innerHTML = '<p class="muted">⚠️ ميزة التوليد غير متوفرة</p>';
+    }
+  }
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
@@ -1956,7 +1979,6 @@ function renderGames(app) {
 
 /* ========================================
    24. توجيهات أولياء الأمور - Parent Guide
-   (تبقى موجودة لكن لا زر لها في لوحة المعلم)
    ======================================== */
 function renderParentGuide(app) {
   renderTopbar(app, '👨‍👩‍👧 توجيهات أولياء الأمور', 'دليل شامل لتدريب النطق في المنزل', () => {
@@ -3523,10 +3545,12 @@ async function renderSpeechSessions(app) {
 
 
 
+
+
 /* ========================================
    34. عرض جلسة واحدة - Single Session
    ======================================== */
-function renderSingleSession(app) {
+async function renderSingleSession(app) {
   const sess = state.currentSession;
   if (!sess) { state.view = 'student-menu'; return render(); }
 
@@ -3541,12 +3565,25 @@ function renderSingleSession(app) {
     render();
   });
 
-  const letterData = LETTER_DATABASE[letter] || {
-    place: 'مخرج الحرف العام',
-    vowels: { fatha: `${letter}َ`, damma: `${letter}ُ`, kasra: `${letter}ِ`, sukoon: `${letter}ْ` },
-    words: { start: [`${letter}َـ`], middle: [`ـ${letter}ـ`], end: [`ـ${letter}`] },
-    sentences: [`جملة تدريبية لحرف ${letter}.`]
-  };
+  // 🆕 قراءة بيانات الحرف من Firebase (أو fallback إلى LETTER_DATABASE)
+  let letterData = null;
+  try {
+    if (typeof window.getLetterData === 'function') {
+      letterData = await window.getLetterData(letter);
+    }
+  } catch (e) {
+    console.warn('تعذر جلب بيانات الحرف من Firebase:', e);
+  }
+  
+  // fallback إلى LETTER_DATABASE المحلي
+  if (!letterData) {
+    letterData = LETTER_DATABASE[letter] || {
+      place: 'مخرج الحرف العام',
+      vowels: { fatha: `${letter}َ`, damma: `${letter}ُ`, kasra: `${letter}ِ`, sukoon: `${letter}ْ` },
+      words: { start: [`${letter}َـ`], middle: [`ـ${letter}ـ`], end: [`ـ${letter}`] },
+      sentences: [`جملة تدريبية لحرف ${letter}.`]
+    };
+  }
 
   const currentEval = sess.evaluation || 'none';
   const evalLabels = { 'passed': '✅ اجتاز', 'trained': '🔄 اجتاز بعد تدريب', 'need': '⚠️ يحتاج تدريب', 'unclear': '❌ غير واضح', 'none': '⏳ قيد التقييم' };
@@ -3567,7 +3604,7 @@ function renderSingleSession(app) {
     </div>
     <div><strong>🎯 الهدف:</strong> ${sess.goal}</div>
     <div><strong>🛠️ الأدوات:</strong> ${sess.tools || 'غير محدد'}</div>
-    <div><strong>📍 مخرج الحرف:</strong> ${sess.place || 'غير محدد'}</div>
+    <div><strong>📍 مخرج الحرف:</strong> ${sess.place || letterData.place || 'غير محدد'}</div>
     <div><strong>📋 الطريقة:</strong> ${sess.method || 'غير محددة'}</div>
 
     <div style="margin-top:12px;">
@@ -3628,20 +3665,28 @@ function renderSingleSession(app) {
       aiSection.className = 'card';
       aiSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
       aiSection.innerHTML = `
-        <h3 style="color:#6D28D9;margin-bottom:8px;">🤖 توصيات الذكاء الاصطناعي</h3>
+        <h3 style="color:#6D28D9;margin-bottom:8px;">🤖 أدوات الذكاء الاصطناعي</h3>
         <p style="font-size:13px;color:#555;margin-bottom:12px;">
-          احصل على تحليل ذكي لأداء الطالب وتوصيات مخصصة للجلسة القادمة
+          احصل على تحليل ذكي، توصيات، تمارين منزلية، وقصة تعليمية
         </p>
         <div id="aiButtonsContainer" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;"></div>
       `;
       const buttonsContainer = aiSection.querySelector('#aiButtonsContainer');
       
+      // زر التوصيات الذكية
       const aiBtn = window.createAIButton(sess, state.currentStudent || {});
       buttonsContainer.appendChild(aiBtn);
       
+      // زر التمارين المنزلية
       if (typeof window.createHomeworkButton === 'function') {
         const hwBtn = window.createHomeworkButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(hwBtn);
+      }
+      
+      // 🆕 زر القصة القصيرة
+      if (typeof window.createShortStoryButton === 'function') {
+        const storyBtn = window.createShortStoryButton(sess, state.currentStudent || {});
+        buttonsContainer.appendChild(storyBtn);
       }
       
       app.appendChild(aiSection);
@@ -3772,6 +3817,7 @@ function renderSingleSession(app) {
   `;
 
   if (st === 1) {
+    // 🆕 الجلسة 1: الحرف مجرداً
     content = `
       <div style="text-align:center;padding:20px;">
         <div style="font-size:80px;font-weight:bold;color:var(--mint-deep);cursor:pointer;padding:20px;background:white;border-radius:30px;display:inline-block;" onclick="speakText('${letter}')">${letter}</div>
@@ -3779,11 +3825,12 @@ function renderSingleSession(app) {
         ${recordSection}
         <div style="margin-top:20px;background:#f9f9f9;padding:15px;border-radius:12px;text-align:right;">
           <p style="font-weight:bold;">📍 مخرج الحرف:</p>
-          <p>${letterData.place}</p>
+          <p>${letterData.place || 'غير محدد'}</p>
         </div>
       </div>
     `;
   } else if (st === 2) {
+    // 🆕 الجلسة 2: الحرف مع الحركات
     const vowelKeys = ['fatha', 'damma', 'kasra', 'sukoon'];
     const vowelLabels = { fatha: 'فتحة', damma: 'ضمة', kasra: 'كسرة', sukoon: 'سكون' };
     const vowelChars = letterData.vowels || {};
@@ -3802,6 +3849,7 @@ function renderSingleSession(app) {
       </div>
     `;
   } else if (st === 3) {
+    // 🆕 الجلسة 3: الحرف في كلمات
     const positionsData = letterData.words || {};
     const positions = [
       { label: 'بداية الكلمة', words: positionsData.start || [] },
@@ -3825,6 +3873,7 @@ function renderSingleSession(app) {
       </div>
     `;
   } else if (st === 4) {
+    // 🆕 الجلسة 4: الحرف في جمل
     const sentences = letterData.sentences || [];
     content = `
       <div>
@@ -3901,7 +3950,7 @@ async function checkAndSuggestMastery(studentId, letter) {
 }
 
 /* ========================================
-   36. سجل الجلسات - Sessions Log (مُحدَّث)
+   36. سجل الجلسات - Sessions Log
    ======================================== */
 async function renderSessionsLog(app) {
   renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات مرتبة حسب التاريخ', () => {
@@ -3964,7 +4013,6 @@ async function renderSessionsLog(app) {
     const snap = await getDocs(collection(db, "sessions"));
     snap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
     
-    // 🆕 ترتيب حسب التاريخ (الأحدث أولاً)
     allSessions.sort((a, b) => {
       const dateA = new Date(a.date || 0);
       const dateB = new Date(b.date || 0);
@@ -3972,7 +4020,6 @@ async function renderSessionsLog(app) {
       return (b.sessionNumber || 0) - (a.sessionNumber || 0);
     });
 
-    // 🆕 إحصائيات
     const statsBox = card.querySelector('#sessionsStatsBox');
     if (statsBox) {
       const totalSessions = allSessions.length;
@@ -4045,9 +4092,6 @@ async function renderSessionsLog(app) {
   }
 }
 
-/* ========================================
-   🆕 دالة طباعة جدول الجلسات
-   ======================================== */
 function printSessionsLog() {
   let printArea = document.getElementById('iep-print-area');
   if (!printArea) {
@@ -4107,7 +4151,7 @@ function printSessionsLog() {
 }
 
 /* ========================================
-   37. قائمة IEP - IEP Session List (مُحدَّث)
+   37. قائمة IEP - IEP Session List
    ======================================== */
 async function renderIEPSession(app) {
   renderTopbar(app, '📋 الخطط الفردية (IEP)', 'اختر طالباً لعرض خطته', () => {
@@ -4146,9 +4190,6 @@ async function renderIEPSession(app) {
   });
 }
 
-/* ========================================
-   🆕 صفحة عرض الخطة الفردية لطالب واحد
-   ======================================== */
 async function renderIEPSingleStudent(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
@@ -4287,9 +4328,6 @@ async function renderIEPSingleStudent(app) {
   }
 }
 
-/* ========================================
-   دالة عرض IEP المنبثقة (احتياطي)
-   ======================================== */
 function showIEPModal(student, iepData) {
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
