@@ -770,7 +770,7 @@ window.sendSessionToParent = sendSessionToParent;
    🆕 14-ب. تصدير الدوال والبيانات لـ ai-features.js
    Export Functions & Data for AI Module
    ======================================== */
-window.state = state;
+
 window.db = db;
 window.auth = auth;
 window.storage = storage;
