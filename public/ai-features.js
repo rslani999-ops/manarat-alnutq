@@ -1,24 +1,23 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v9.0 — 7 features + bug fixes
+   v9.1 — إضافة توليد الصور + التخزين المؤقت
    ========================================
    
-   📋 التغييرات في v9.0:
-   ✅ إضافة createGenerateLettersButton (توليد كل الحروف دفعة واحدة)
-   ✅ إضافة sendSessionToParent كاملة (بريد + واتساب)
-   ✅ إصلاح استدعاء render() ليعمل من خارج app.js
-   ✅ استخدام window.SESSION_TYPES / window.ALL_LETTERS / window.letterTitleMap
-   ✅ إضافة دوال مساعدة آمنة (safeRender, safeToast, safeNotify)
+   📋 التغييرات في v9.1:
+   ✅ إضافة توليد صور الكلمات عبر Cloudflare Workers AI
+   ✅ إضافة تخزين مؤقت في Firebase Storage (توفير رصيد AI)
+   ✅ إضافة عرض الصور في نافذة للمعلم
+   ✅ إصلاح: حذف createGenerateLettersButton (توليد جماعي)
+   ✅ تحسين: استخدام window.render / window.showToast الآمنة
    ======================================== */
 
-console.log('🚀 Starting ai-features.js v9.0...');
+console.log('🚀 Starting ai-features.js v9.1...');
 
 /* ========================================
    0. دوال مساعدة آمنة (Safe Helpers)
    ======================================== */
 
-// استدعاء آمن لـ render
 function safeRender() {
   if (typeof window.render === 'function') {
     window.render();
@@ -27,7 +26,6 @@ function safeRender() {
   }
 }
 
-// استدعاء آمن لـ showToast
 function safeToast(msg) {
   if (typeof window.showToast === 'function') {
     window.showToast(msg);
@@ -36,14 +34,12 @@ function safeToast(msg) {
   }
 }
 
-// استدعاء آمن لـ showNotification
 function safeNotify(msg, type = 'info') {
   if (typeof window.showNotification === 'function') {
     window.showNotification(msg, type);
   }
 }
 
-// قراءة SESSION_TYPES من window أو fallback
 function getSessionTypes() {
   return window.SESSION_TYPES || [
     { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
@@ -53,7 +49,6 @@ function getSessionTypes() {
   ];
 }
 
-// قراءة ALL_LETTERS من window أو fallback
 function getAllLetters() {
   return window.ALL_LETTERS || [
     'ب','م','و','ف','ت','ث','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ل','ن',
@@ -61,10 +56,295 @@ function getAllLetters() {
   ];
 }
 
-// قراءة letterTitleMap من window أو fallback
 function getLetterTitle(letter) {
   return window.letterTitleMap?.[letter] || '';
 }
+
+/* ========================================
+   🆕 القسم الجديد: توليد الصور
+   ======================================== */
+
+// عنوان Cloudflare Worker
+const CLOUDFLARE_WORKER_URL = 'https://manarat-alnutq.rslani999.workers.dev';
+
+/* ========================================
+   🆕 0.1 توليد صورة من Cloudflare Worker
+   ======================================== */
+async function generateWordImage(word) {
+  if (!word) throw new Error('الكلمة مطلوبة');
+  
+  try {
+    console.log(`🎨 جاري توليد صورة للكلمة: ${word}`);
+    
+    const response = await fetch(`${CLOUDFLARE_WORKER_URL}/api/ai-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: word })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`فشل الاتصال: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success || !data.image) {
+      throw new Error(data.message || 'لم يتم توليد صورة');
+    }
+    
+    console.log(`✅ تم توليد صورة للكلمة: ${word}`);
+    return data.image; // data:image/png;base64,...
+    
+  } catch (error) {
+    console.error('❌ خطأ في توليد الصورة:', error);
+    throw error;
+  }
+}
+
+/* ========================================
+   🆕 0.2 البحث عن صورة في Firebase Cache
+   ======================================== */
+async function getCachedImage(word) {
+  try {
+    const fbDb = window.db;
+    const fbDoc = window.doc;
+    const fbGetDoc = window.getDoc;
+    
+    if (!fbDb || !fbDoc || !fbGetDoc) {
+      console.warn('⚠️ Firebase غير جاهز — تخطي التخزين المؤقت');
+      return null;
+    }
+    
+    // استخدام اسم آمن للملف (لتجنب مشاكل الرموز العربية)
+    const cacheKey = encodeURIComponent(word);
+    const ref = fbDoc(fbDb, "images_cache", cacheKey);
+    const snap = await fbGetDoc(ref);
+    
+    if (snap.exists()) {
+      const data = snap.data();
+      console.log(`✅ صورة موجودة في Cache: ${word}`);
+      return data.imageUrl || null;
+    }
+    
+    return null;
+    
+  } catch (e) {
+    console.warn('⚠️ خطأ في البحث عن صورة مخزنة:', e);
+    return null;
+  }
+}
+
+/* ========================================
+   🆕 0.3 حفظ صورة في Firebase Cache
+   ======================================== */
+async function saveImageToCache(word, imageData) {
+  try {
+    const fbDb = window.db;
+    const fbDoc = window.doc;
+    const fbSetDoc = window.setDoc;
+    
+    if (!fbDb || !fbDoc || !fbSetDoc) {
+      console.warn('⚠️ Firebase غير جاهز — لا يمكن الحفظ');
+      return false;
+    }
+    
+    const cacheKey = encodeURIComponent(word);
+    const ref = fbDoc(fbDb, "images_cache", cacheKey);
+    
+    await fbSetDoc(ref, {
+      word: word,
+      imageUrl: imageData,
+      createdAt: new Date().toISOString()
+    });
+    
+    console.log(`💾 تم حفظ صورة في Cache: ${word}`);
+    return true;
+    
+  } catch (e) {
+    console.warn('⚠️ خطأ في حفظ الصورة:', e);
+    return false;
+  }
+}
+
+/* ========================================
+   🆕 0.4 الدالة الموحدة: getOrGenerateImage
+   (تتحقق من Cache أولاً، ثم تولد إن لم توجد)
+   ======================================== */
+async function getOrGenerateImage(word) {
+  if (!word) throw new Error('الكلمة مطلوبة');
+  
+  // 1. البحث في Cache
+  let cachedImage = await getCachedImage(word);
+  if (cachedImage) {
+    return { image: cachedImage, fromCache: true };
+  }
+  
+  // 2. التوليد من Cloudflare
+  const newImage = await generateWordImage(word);
+  
+  // 3. الحفظ في Cache (بدون انتظار)
+  saveImageToCache(word, newImage).catch(e => 
+    console.warn('⚠️ فشل حفظ الصورة في Cache:', e)
+  );
+  
+  return { image: newImage, fromCache: false };
+}
+
+/* ========================================
+   🆕 0.5 عرض الصورة في نافذة
+   ======================================== */
+function showImageModal(imageUrl, word) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+  
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:600px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;color:#7C3AED;">🖼️ صورة كلمة: ${word}</h3>
+        <button id="closeImageModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+      </div>
+      
+      <div style="background:#F8FAFC;border-radius:16px;padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;min-height:300px;">
+        <img src="${imageUrl}" alt="${word}" style="max-width:100%;max-height:400px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="downloadImageBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">
+          💾 تنزيل الصورة
+        </button>
+        <button class="btn btn-soft" id="closeImageModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const closeModal = () => modal.remove();
+  modal.querySelector('#closeImageModal').onclick = closeModal;
+  modal.querySelector('#closeImageModalBtn').onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  
+  modal.querySelector('#downloadImageBtn').onclick = () => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `image_${word}.png`;
+    link.click();
+    safeToast('✅ جاري تنزيل الصورة');
+  };
+}
+
+/* ========================================
+   🆕 0.6 زر توليد صورة للكلمة (للاستخدام في الجلسة)
+   ======================================== */
+function createImageButton(word) {
+  const btn = document.createElement('button');
+  btn.className = 'generate-image-btn';
+  btn.style.cssText = 'background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:20px;padding:6px 14px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:12px;margin-right:6px;transition:0.2s;';
+  btn.innerHTML = `🖼️ صورة`;
+  btn.title = `توليد صورة لكلمة "${word}"`;
+  
+  btn.onclick = async (e) => {
+    e.stopPropagation();
+    
+    // تعطيل الزر
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ جاري التوليد...';
+    
+    try {
+      const result = await getOrGenerateImage(word);
+      
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = originalText;
+      
+      // عرض الصورة
+      showImageModal(result.image, word);
+      
+      // إشعار
+      if (result.fromCache) {
+        safeToast(`✅ صورة "${word}" من الذاكرة`);
+      } else {
+        safeToast(`✅ تم توليد صورة "${word}"`);
+        safeNotify(`تم توليد صورة جديدة لكلمة "${word}"`, 'success');
+      }
+      
+    } catch (error) {
+      console.error('❌ فشل توليد الصورة:', error);
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = originalText;
+      safeToast(`❌ فشل: ${error.message}`);
+    }
+  };
+  
+  return btn;
+}
+
+/* ========================================
+   🆕 0.7 زر توليد محتوى الحرف (للجلسة)
+   ======================================== */
+function createGenerateLetterButtonForSession(letter, onSuccess) {
+  const btn = document.createElement('button');
+  btn.id = `generateLetterBtn_${letter}`;
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 28px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;transition:0.2s;';
+  btn.innerHTML = `📚 توليد محتوى حرف (${letter}) بالذكاء الاصطناعي`;
+  
+  btn.onclick = async () => {
+    try {
+      const confirmed = await showGenerateLetterConfirmModal(letter);
+      if (!confirmed) return;
+      
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      btn.innerHTML = '⏳ جاري التوليد...';
+      
+      const data = await generateSingleLetterData(letter);
+      await saveLetterData(letter, data);
+      
+      showLetterSuccessModal(letter);
+      
+      safeToast(`✅ تم توليد بيانات حرف (${letter})`);
+      safeNotify(`تم توليد محتوى حرف (${letter})`, 'success');
+      
+      if (typeof onSuccess === 'function') onSuccess(data);
+      
+    } catch (error) {
+      console.error('❌ فشل التوليد:', error);
+      safeToast('❌ فشل التوليد: ' + error.message);
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = `📚 إعادة محاولة توليد حرف (${letter})`;
+    }
+  };
+  
+  return btn;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ========================================
    1. الدالة الرئيسية لاستدعاء Gemini AI
@@ -567,275 +847,12 @@ function showLetterSuccessModal(letter) {
   
   modal.querySelector('#reloadPageBtn').onclick = () => {
     modal.remove();
-    safeRender(); // ✅ إصلاح الخطأ #3
-  };
-}
-
-/* ========================================
-   12. زر توليد الحرف في صفحة الجلسة
-   ======================================== */
-function createGenerateLetterButton(letter, onSuccess) {
-  const btn = document.createElement('button');
-  btn.id = `generateLetterBtn_${letter}`;
-  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 28px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;transition:0.2s;';
-  btn.innerHTML = `📚 توليد محتوى حرف (${letter}) بالذكاء الاصطناعي`;
-  
-  btn.onclick = async () => {
-    try {
-      const confirmed = await showGenerateLetterConfirmModal(letter);
-      if (!confirmed) return;
-      
-      btn.disabled = true;
-      btn.style.opacity = '0.6';
-      btn.innerHTML = '⏳ جاري التوليد...';
-      
-      const data = await generateSingleLetterData(letter);
-      await saveLetterData(letter, data);
-      
-      showLetterSuccessModal(letter);
-      
-      safeToast(`✅ تم توليد بيانات حرف (${letter})`);
-      safeNotify(`تم توليد محتوى حرف (${letter})`, 'success');
-      
-      if (typeof onSuccess === 'function') onSuccess(data);
-      
-    } catch (error) {
-      console.error('❌ فشل التوليد:', error);
-      safeToast('❌ فشل التوليد: ' + error.message);
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.innerHTML = `📚 إعادة محاولة توليد حرف (${letter})`;
-    }
-  };
-  
-  return btn;
-}
-
-/* ========================================
-   13. 🆕 إصلاح الخطأ #1: زر توليد كل الحروف دفعة واحدة
-   (الدالة كانت مفقودة تماماً في v8.0)
-   ======================================== */
-function createGenerateLettersButton() {
-  const btn = document.createElement('button');
-  btn.id = 'generateAllLettersBtn';
-  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:14px 32px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;transition:0.2s;box-shadow:0 4px 15px rgba(124,58,237,0.3);';
-  btn.innerHTML = '🚀 توليد بيانات جميع الحروف (28 حرفاً)';
-  
-  btn.onclick = async () => {
-    const confirmed = await showGenerateAllLettersConfirmModal();
-    if (!confirmed) return;
-    
-    const letters = getAllLetters();
-    btn.disabled = true;
-    btn.style.opacity = '0.6';
-    
-    let successCount = 0;
-    let failCount = 0;
-    const failedLetters = [];
-    
-    // عرض نافذة تقدم
-    const progressModal = showProgressModal(letters.length);
-    
-    for (let i = 0; i < letters.length; i++) {
-      const letter = letters[i];
-      try {
-        btn.innerHTML = `⏳ جاري توليد (${letter}) — ${i + 1}/${letters.length}`;
-        progressModal.update(i + 1, letters.length, letter, 'processing');
-        
-        const data = await generateSingleLetterData(letter);
-        await saveLetterData(letter, data);
-        successCount++;
-        progressModal.update(i + 1, letters.length, letter, 'done');
-        
-        // انتظار قصير بين الطلبات لتجنب rate limiting
-        await new Promise(r => setTimeout(r, 800));
-        
-      } catch (error) {
-        console.error(`❌ فشل توليد حرف (${letter}):`, error);
-        failCount++;
-        failedLetters.push(letter);
-        progressModal.update(i + 1, letters.length, letter, 'failed');
-      }
-    }
-    
-    progressModal.close();
-    
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.innerHTML = '🚀 توليد بيانات جميع الحروف (28 حرفاً)';
-    
-    safeToast(`✅ اكتمل التوليد: ${successCount} نجح، ${failCount} فشل`);
-    safeNotify(`تم توليد ${successCount} حرفاً بنجاح`, 'success');
-    
-    showGenerateAllLettersResultsModal(successCount, failCount, failedLetters);
-  };
-  
-  return btn;
-}
-
-/* نافذة تأكيد توليد كل الحروف */
-function showGenerateAllLettersConfirmModal() {
-  return new Promise((resolve) => {
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
-    
-    modal.innerHTML = `
-      <div style="background:white;padding:30px;border-radius:20px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
-        <div style="text-align:center;margin-bottom:20px;">
-          <div style="font-size:60px;margin-bottom:10px;">📚</div>
-          <h2 style="margin:0;color:#7C3AED;">توليد بيانات كل الحروف</h2>
-        </div>
-        
-        <div style="background:#FEF3C7;padding:18px;border-radius:12px;margin-bottom:20px;border-right:4px solid #F59E0B;">
-          <p style="margin:0;font-size:14px;color:#92400E;line-height:1.7;font-weight:bold;">
-            ⚠️ تنبيه مهم:
-          </p>
-          <ul style="margin:10px 0 0 0;padding-right:20px;font-size:13px;color:#333;line-height:1.8;">
-            <li>سيتم توليد بيانات <strong>28 حرفاً</strong></li>
-            <li>سيستغرق ذلك حوالي <strong>5-8 دقائق</strong></li>
-            <li>لا تغلق الصفحة أثناء العملية</li>
-            <li>يمكن استئناف التوليد لاحقاً للحروف الفاشلة فقط</li>
-          </ul>
-        </div>
-        
-        <p style="margin:0 0 15px 0;font-size:13px;color:#555;text-align:center;">
-          هل أنت جاهز للبدء؟
-        </p>
-        
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-          <button class="btn" id="confirmAllBtn" style="background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
-            🚀 ابدأ التوليد
-          </button>
-          <button class="btn" id="cancelAllBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
-            إلغاء
-          </button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const closeModal = (result) => {
-      modal.remove();
-      resolve(result);
-    };
-    
-    modal.querySelector('#confirmAllBtn').onclick = () => closeModal(true);
-    modal.querySelector('#cancelAllBtn').onclick = () => closeModal(false);
-    modal.onclick = (e) => { if (e.target === modal) closeModal(false); };
-  });
-}
-
-/* نافذة تقدم التوليد */
-function showProgressModal(totalLetters) {
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
-  
-  modal.innerHTML = `
-    <div style="background:white;padding:30px;border-radius:20px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:50px;margin-bottom:10px;">⏳</div>
-        <h2 style="margin:0;color:#7C3AED;">جاري توليد بيانات الحروف</h2>
-      </div>
-      
-      <div style="background:#F3E8FF;padding:16px;border-radius:12px;margin-bottom:20px;">
-        <div style="font-size:16px;font-weight:bold;color:#5B21B6;text-align:center;margin-bottom:8px;" id="progressText">
-          جاري البدء...
-        </div>
-        <div style="background:#E9D5FF;border-radius:20px;height:24px;overflow:hidden;">
-          <div id="progressBar" style="height:100%;background:linear-gradient(90deg, #A855F7, #7C3AED);width:0%;transition:width 0.3s;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:bold;">
-            0%
-          </div>
-        </div>
-      </div>
-      
-      <div id="currentLetterDisplay" style="text-align:center;padding:20px;background:#FAF5FF;border-radius:12px;margin-bottom:15px;">
-        <div style="font-size:14px;color:#6B7A99;">الحرف الحالي:</div>
-        <div style="font-size:40px;font-weight:bold;color:#7C3AED;margin-top:8px;">—</div>
-      </div>
-      
-      <p style="text-align:center;font-size:12px;color:#999;margin:0;">
-        ⚠️ لا تغلق الصفحة
-      </p>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-  
-  return {
-    update: (current, total, letter, status) => {
-      const percent = Math.round((current / total) * 100);
-      const bar = modal.querySelector('#progressBar');
-      const text = modal.querySelector('#progressText');
-      const letterDisplay = modal.querySelector('#currentLetterDisplay');
-      
-      if (bar) {
-        bar.style.width = percent + '%';
-        bar.textContent = percent + '%';
-      }
-      if (text) {
-        text.textContent = `${current} / ${total} — ${status === 'done' ? '✅ تم' : status === 'failed' ? '❌ فشل' : '⏳ جاري...'}`;
-      }
-      if (letterDisplay) {
-        letterDisplay.innerHTML = `
-          <div style="font-size:14px;color:#6B7A99;">الحرف الحالي:</div>
-          <div style="font-size:40px;font-weight:bold;color:${status === 'failed' ? '#DC2626' : '#7C3AED'};margin-top:8px;">${letter}</div>
-        `;
-      }
-    },
-    close: () => modal.remove()
-  };
-}
-
-/* نافذة نتائج التوليد */
-function showGenerateAllLettersResultsModal(successCount, failCount, failedLetters) {
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
-  
-  modal.innerHTML = `
-    <div style="background:white;padding:30px;border-radius:20px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:70px;margin-bottom:10px;">${failCount === 0 ? '🎉' : '⚠️'}</div>
-        <h2 style="margin:0;color:${failCount === 0 ? '#16A34A' : '#F59E0B'};">اكتمل التوليد</h2>
-      </div>
-      
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-        <div style="background:#DCFCE7;padding:16px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:#16A34A;">${successCount}</div>
-          <div style="font-size:13px;color:#166534;">نجح</div>
-        </div>
-        <div style="background:#FEE2E2;padding:16px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:#DC2626;">${failCount}</div>
-          <div style="font-size:13px;color:#991B1B;">فشل</div>
-        </div>
-      </div>
-      
-      ${failedLetters.length > 0 ? `
-        <div style="background:#FEF3C7;padding:14px;border-radius:12px;margin-bottom:20px;border-right:4px solid #F59E0B;">
-          <p style="margin:0 0 8px 0;font-size:13px;font-weight:bold;color:#92400E;">الحروف التي فشل توليدها:</p>
-          <div style="font-size:20px;font-weight:bold;color:#DC2626;letter-spacing:8px;direction:rtl;">${failedLetters.join(' ')}</div>
-          <p style="margin:8px 0 0 0;font-size:12px;color:#92400E;">يمكنك إعادة توليدها بشكل فردي من صفحة الجلسة</p>
-        </div>
-      ` : ''}
-      
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-        <button class="btn" id="closeResultsBtn" style="background:linear-gradient(135deg, #16A34A, #22C55E);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">
-          ✅ حسناً
-        </button>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-  
-  modal.querySelector('#closeResultsBtn').onclick = () => {
-    modal.remove();
     safeRender();
   };
 }
 
 /* ========================================
-   14. 🆕 إصلاح الخطأ #2: دالة إرسال التقرير لولي الأمر
+   12. إصلاح الخطأ #2: دالة إرسال التقرير لولي الأمر
    ======================================== */
 async function sendSessionToParent(sessionData, studentData) {
   try {
@@ -846,8 +863,6 @@ async function sendSessionToParent(sessionData, studentData) {
     
     const parentEmail = studentData.parentEmail || '';
     const parentPhone = studentData.parentPhone || '';
-    const parentName = studentData.parentName || 'ولي الأمر';
-    const studentName = studentData.fullName || studentData.email || 'الطالب';
     
     if (!parentEmail && !parentPhone) {
       safeToast('⚠️ لا توجد بيانات ولي الأمر — يرجى إضافتها في الملف الشخصي');
@@ -855,7 +870,6 @@ async function sendSessionToParent(sessionData, studentData) {
       return;
     }
     
-    // عرض نافذة خيارات الإرسال
     showSendToParentOptionsModal(sessionData, studentData);
     
   } catch (e) {
@@ -864,7 +878,6 @@ async function sendSessionToParent(sessionData, studentData) {
   }
 }
 
-/* نافذة خيارات الإرسال لولي الأمر */
 function showSendToParentOptionsModal(sessionData, studentData) {
   const parentEmail = studentData.parentEmail || '';
   const parentPhone = studentData.parentPhone || '';
@@ -923,12 +936,10 @@ function showSendToParentOptionsModal(sessionData, studentData) {
   modal.querySelector('#closeSendModal').onclick = closeModal;
   modal.onclick = (e) => { if (e.target === modal) closeModal(); };
   
-  // توليد نص التقرير
   const reportText = generateParentReportText(sessionData, studentData);
   const previewEl = modal.querySelector('#reportPreview');
   if (previewEl) previewEl.textContent = reportText;
   
-  // إرسال بالبريد
   const emailBtn = modal.querySelector('#sendViaEmailBtn');
   if (emailBtn && !emailBtn.disabled) {
     emailBtn.onclick = () => {
@@ -940,7 +951,6 @@ function showSendToParentOptionsModal(sessionData, studentData) {
     };
   }
   
-  // إرسال بواتساب
   const whatsappBtn = modal.querySelector('#sendViaWhatsappBtn');
   if (whatsappBtn && !whatsappBtn.disabled) {
     whatsappBtn.onclick = () => {
@@ -954,7 +964,6 @@ function showSendToParentOptionsModal(sessionData, studentData) {
     };
   }
   
-  // نسخ النص
   const copyBtn = modal.querySelector('#copyReportBtn');
   if (copyBtn) {
     copyBtn.onclick = () => {
@@ -968,7 +977,6 @@ function showSendToParentOptionsModal(sessionData, studentData) {
   }
 }
 
-/* توليد نص التقرير لولي الأمر */
 function generateParentReportText(sessionData, studentData) {
   const studentName = studentData.fullName || studentData.email || 'الطالب';
   const parentName = studentData.parentName || 'ولي الأمر';
@@ -1023,7 +1031,7 @@ function generateParentReportText(sessionData, studentData) {
 }
 
 /* ========================================
-   15. عرض توصيات AI
+   13. عرض توصيات AI
    ======================================== */
 function showAIRecommendationsModal(recommendations, sessionData) {
   const modal = document.createElement('div');
@@ -1067,7 +1075,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
 }
 
 /* ========================================
-   16. عرض التمارين المنزلية
+   14. عرض التمارين المنزلية
    ======================================== */
 function showHomeworkModal(homeworkText, sessionData) {
   const modal = document.createElement('div');
@@ -1125,7 +1133,6 @@ function showHomeworkModal(homeworkText, sessionData) {
         recommendations: `📝 التمارين المنزلية:\n\n${homeworkText}` 
       };
       
-      // استخدام الدالة المُصلَحة
       sendSessionToParent(sessionWithHW, targetStudent);
       closeModal();
     } catch (e) {
@@ -1141,7 +1148,7 @@ function showHomeworkModal(homeworkText, sessionData) {
 }
 
 /* ========================================
-   17. عرض تحليل التقدم
+   15. عرض تحليل التقدم
    ======================================== */
 function showProgressAnalysisModal(analysisText, studentData, stats) {
   const modal = document.createElement('div');
@@ -1224,7 +1231,7 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
 }
 
 /* ========================================
-   18. عرض خطة التدريب المخصصة
+   16. عرض خطة التدريب المخصصة
    ======================================== */
 function showCustomPlanModal(planText, studentData) {
   const modal = document.createElement('div');
@@ -1289,7 +1296,7 @@ function showCustomPlanModal(planText, studentData) {
 }
 
 /* ========================================
-   19. عرض القصة القصيرة
+   17. عرض القصة القصيرة
    ======================================== */
 function showShortStoryModal(storyText, sessionData) {
   const modal = document.createElement('div');
@@ -1359,7 +1366,7 @@ function showShortStoryModal(storyText, sessionData) {
 }
 
 /* ========================================
-   20. دوال الحفظ
+   18. دوال الحفظ
    ======================================== */
 async function saveAIToSession(sessionId, recommendations) {
   try {
@@ -1404,7 +1411,7 @@ async function saveStoryToSession(sessionId, storyText) {
 }
 
 /* ========================================
-   21. أزرار التوليد
+   19. أزرار التوليد
    ======================================== */
 function createAIButton(sessionData, studentData) {
   const btn = document.createElement('button');
@@ -1560,7 +1567,7 @@ function createShortStoryButton(sessionData, studentData) {
 }
 
 /* ========================================
-   22. تصدير الدوال للنطاق العام
+   20. تصدير الدوال للنطاق العام
    ======================================== */
 window.callGeminiAI = callGeminiAI;
 window.generateSessionRecommendations = generateSessionRecommendations;
@@ -1573,9 +1580,8 @@ window.getLetterData = getLetterData;
 window.saveLetterData = saveLetterData;
 window.showGenerateLetterConfirmModal = showGenerateLetterConfirmModal;
 window.showLetterSuccessModal = showLetterSuccessModal;
-window.createGenerateLetterButton = createGenerateLetterButton;
-window.createGenerateLettersButton = createGenerateLettersButton; // ✅ إصلاح الخطأ #1
-window.sendSessionToParent = sendSessionToParent; // ✅ إصلاح الخطأ #2
+window.createGenerateLetterButton = createGenerateLetterButtonForSession;
+window.sendSessionToParent = sendSessionToParent;
 window.generateParentReportText = generateParentReportText;
 window.showAIRecommendationsModal = showAIRecommendationsModal;
 window.showHomeworkModal = showHomeworkModal;
@@ -1591,6 +1597,17 @@ window.createProgressAnalysisButton = createProgressAnalysisButton;
 window.createCustomPlanButton = createCustomPlanButton;
 window.createShortStoryButton = createShortStoryButton;
 
-console.log('✅ AI Features loaded — v9.0');
-console.log('🔍 createGenerateLettersButton:', typeof window.createGenerateLettersButton);
-console.log('🔍 sendSessionToParent:', typeof window.sendSessionToParent);
+// 🆕 تصدير دوال توليد الصور
+window.generateWordImage = generateWordImage;
+window.getCachedImage = getCachedImage;
+window.saveImageToCache = saveImageToCache;
+window.getOrGenerateImage = getOrGenerateImage;
+window.showImageModal = showImageModal;
+window.createImageButton = createImageButton;
+window.createGenerateLetterButtonForSession = createGenerateLetterButtonForSession;
+
+console.log('✅ AI Features loaded — v9.1');
+console.log('🖼️ Image generation ready');
+console.log('🔍 createGenerateLetterButtonForSession:', typeof window.createGenerateLetterButtonForSession);
+console.log('🔍 createImageButton:', typeof window.createImageButton);
+console.log('🔍 getOrGenerateImage:', typeof window.getOrGenerateImage);
