@@ -1010,7 +1010,6 @@ async function renderTeacherDashboard(app) {
   `;
   app.appendChild(summaryDashboard);
 
-  /* ✅ إصلاح الخطأ #9: إضافة زر renderWeeklyPlan */
   const actCard = document.createElement('div');
   actCard.className = 'card no-print';
   actCard.innerHTML = `
@@ -1035,29 +1034,6 @@ async function renderTeacherDashboard(app) {
   if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
   const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
   if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
-
-  /* بطاقة إدارة محتوى الحروف */
-  const lettersDataCard = document.createElement('div');
-  lettersDataCard.className = 'card';
-  lettersDataCard.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;';
-  lettersDataCard.innerHTML = `
-    <h3 style="margin:0 0 8px 0;color:#6D28D9;">📚 إدارة محتوى الحروف</h3>
-    <p style="font-size:13px;color:#555;margin-bottom:12px;">
-      قم بتوليد بيانات 28 حرفاً عربياً (حركات + كلمات + جمل) بالذكاء الاصطناعي لتحسين جلسات التدريب.
-    </p>
-    <div id="lettersDataButtonContainer" style="text-align:center;"></div>
-  `;
-  app.appendChild(lettersDataCard);
-
-  const lettersBtnContainer = lettersDataCard.querySelector('#lettersDataButtonContainer');
-  if (lettersBtnContainer) {
-    if (typeof window.createGenerateLettersButton === 'function') {
-      const generateBtn = window.createGenerateLettersButton();
-      lettersBtnContainer.appendChild(generateBtn);
-    } else {
-      lettersBtnContainer.innerHTML = '<p class="muted">⚠️ ميزة التوليد غير متوفرة</p>';
-    }
-  }
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
