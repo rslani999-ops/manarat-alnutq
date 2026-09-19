@@ -1,8 +1,8 @@
 {
-  "$schema":"https://unpkg.com/wrangler@latest/config-schema.json",
-  "name":"manarat-alnutq",
-  "main":"index.js",
-  "compatibility_date":"2026-08-12",
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "manarat-alnutq",
+  "main": "cloudflare/index.js",
+  "compatibility_date": "2026-08-12",
   "assets": { "directory": "./public" },
-  "ai":{"binding":"AI"}
+  "ai": { "binding": "AI" }
 }
