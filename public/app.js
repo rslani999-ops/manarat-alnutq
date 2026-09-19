@@ -2,26 +2,7 @@
    منارة النطق - التطبيق الرئيسي
    Manarat Al-Nutq - Main Application
    v2.0 — إصلاح شامل للأخطاء
-   ═══════════════════════════════════════════════════════════
-   
-   📋 الأخطاء المُصلَحة في هذا الإصدار:
-   ✅ الخطأ #4: تصدير SESSION_TYPES و ALL_LETTERS و letterTitleMap
-   ✅ الخطأ #5: حذف حقل "نوع العيب" المكرر في التشخيص
-   ✅ الخطأ #6: حفظ تلقائي لـ comprehensive عند التغيير
-   ✅ الخطأ #7: حذف showIEPModal (دالة ميتة)
-   ✅ الخطأ #9: إضافة زر renderWeeklyPlan في لوحة المعلم
-   ✅ الخطأ #10: إضافة نوع العيب في الجلسة الفردية
-   ✅ إصلاح إضافي: تصدير window.render (تحتاجه ai-features.js)
-   
-   📂 الأجزاء:
-   - الجزء 1/6: الاستيراد + Firebase + البيانات الثابتة
-   - الجزء 2/6: الصوت + التسجيل + التحليل + الحالة + التنبيهات
-   - الجزء 3/6: المصادقة + لوحة المعلم
-   - الجزء 4/6: التشخيص + IEP + الجلسات
-   - الجزء 5/6: الألعاب + ولي الأمر + الخطة الأسبوعية + ملفات الإنجاز
-   - الجزء 6/6: التهيئة النهائية + التصدير
    ═══════════════════════════════════════════════════════════ */
-
 
 /* ─── [SEC-01] Firebase Imports ─── */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -259,8 +240,7 @@ const DISORDER_DEFINITIONS = {
   'نعومة الصوت': 'صوت ضعيف جداً أو هامس.',
   'بطء في الكلام': 'بطء غير طبيعي في وتيرة الكلام.',
   'سرعة في الكلام': 'سرعة مفرطة في الكلام.',
-  'كلام طفولي': 'استخدام أنماط كلام غير ناضج
-     ة مقارنة بالعمر.'
+  'كلام طفولي': 'استخدام أنماط كلام غير ناضجة مقارنة بالعمر.'
 };
 /* ─── [END SEC-11] ─── */
 
@@ -1764,7 +1744,6 @@ function renderLetterTraining(app) {
 async function showTrainingSession(area, letter) {
   const titleStr = letterTitleMap[letter] || '';
   
-  // استخدام بيانات Firebase إن وُجدت
   let letterData = null;
   try {
     if (typeof window.getLetterData === 'function') {
@@ -2125,7 +2104,6 @@ function renderComprehensiveDiagnosis(container) {
   `;
   container.appendChild(card);
 
-  /* ✅ إصلاح الخطأ #6: حفظ تلقائي لـ comprehensive عند التغيير */
   const autoSaveComprehensive = async () => {
     if (!state.currentStudent?.id) return;
     try {
@@ -2282,7 +2260,6 @@ function renderDiagnosticSession(app) {
       const isOrganic = letterData.isOrganic !== undefined ? letterData.isOrganic : null;
       const notes = letterData.notes || '';
 
-      /* ✅ إصلاح الخطأ #5: إزالة حقل "نوع العيب" المكرر */
       card.innerHTML = `
         <div class="letter-circle" onclick="speakText('${letter}')">${letter}</div>
         <span class="letter-title">${titleStr}</span>
@@ -2842,7 +2819,6 @@ async function renderSingleSession(app) {
     render();
   });
 
-  /* تحميل بيانات الحرف من Firebase */
   let letterData = null;
   try {
     if (typeof window.getLetterData === 'function') {
@@ -2868,7 +2844,6 @@ async function renderSingleSession(app) {
   const recommendations = sess.recommendations || sess.notes || '';
   const currentDisorderType = sess.disorderType || 'طبيعي';
 
-  /* ===== بطاقة المعلومات الأساسية ===== */
   const infoCard = document.createElement('div');
   infoCard.className = 'card';
   infoCard.style.borderRadius = '24px';
@@ -2936,7 +2911,6 @@ async function renderSingleSession(app) {
   if (sendToParentBtn) {
     sendToParentBtn.onclick = () => {
       const studentData = state.currentStudent || {};
-      /* ✅ إصلاح النسبة: نستخدم البيانات المحدثة من sess */
       const sessionData = {
         ...sess,
         recommendations: document.getElementById('recommendationsInput')?.value || sess.recommendations || '',
@@ -2951,7 +2925,6 @@ async function renderSingleSession(app) {
     };
   }
 
-  /* ===== قسم الذكاء الاصطناعي ===== */
   if (state.role === 'teacher' || state.role === 'admin') {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
@@ -2966,19 +2939,16 @@ async function renderSingleSession(app) {
       `;
       const buttonsContainer = aiSection.querySelector('#aiButtonsContainer');
 
-      /* ✅ إصلاح: نستخدم sess المحدثة (state.currentSession) */
-      const currentSessionData = state.currentSession || sess;
-
-      const aiBtn = window.createAIButton(currentSessionData, state.currentStudent || {});
+      const aiBtn = window.createAIButton(sess, state.currentStudent || {});
       buttonsContainer.appendChild(aiBtn);
 
       if (typeof window.createHomeworkButton === 'function') {
-        const hwBtn = window.createHomeworkButton(currentSessionData, state.currentStudent || {});
+        const hwBtn = window.createHomeworkButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(hwBtn);
       }
 
       if (typeof window.createShortStoryButton === 'function') {
-        const storyBtn = window.createShortStoryButton(currentSessionData, state.currentStudent || {});
+        const storyBtn = window.createShortStoryButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(storyBtn);
       }
 
@@ -2986,7 +2956,6 @@ async function renderSingleSession(app) {
     }
   }
 
-  /* ===== ربط أحداث التقييم ===== */
   if (state.role === 'teacher' || state.role === 'admin') {
     let selectedEval = currentEval;
     let selectedRate = sess.successRate || 0;
@@ -3023,8 +2992,6 @@ async function renderSingleSession(app) {
     if (saveRateBtn) saveRateBtn.onclick = async () => {
       try {
         await updateDoc(doc(db, "sessions", sess.id), { successRate: selectedRate });
-        /* ✅ إصلاح: تحديث state.currentSession */
-        state.currentSession = { ...sess, successRate: selectedRate };
         showToast('تم حفظ نسبة النجاح');
       } catch (e) { showToast('خطأ في حفظ النسبة: ' + e.message); }
     };
@@ -3039,15 +3006,8 @@ async function renderSingleSession(app) {
           recommendations: recText,
           disorderType: selectedDisorder
         });
-        showToast('✅ تم حفظ التقييم والتوصيات');
-        /* ✅ إصلاح مهم: تحديث state.currentSession قبل إعادة التصيير */
-        state.currentSession = {
-          ...sess,
-          evaluation: selectedEval,
-          successRate: selectedRate,
-          recommendations: recText,
-          disorderType: selectedDisorder
-        };
+        showToast('تم حفظ التقييم والتوصيات');
+        state.currentSession = { ...sess, evaluation: selectedEval, successRate: selectedRate, recommendations: recText, disorderType: selectedDisorder };
         renderSingleSession(app);
         checkAndSuggestMastery(sess.studentId, sess.letter);
       } catch (e) { showToast('خطأ في الحفظ: ' + e.message); }
@@ -3118,7 +3078,6 @@ async function renderSingleSession(app) {
     };
   }
 
-  /* ===== بطاقة التدريب التفاعلي ===== */
   const trainCard = document.createElement('div');
   trainCard.className = 'card';
   trainCard.style.borderRadius = '24px';
@@ -3175,11 +3134,9 @@ async function renderSingleSession(app) {
         ${positions.map(pos => `
           <div style="margin:15px 0;">
             <h4 style="color:var(--mint-deep);">${pos.label}</h4>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;" id="wordsContainer_${pos.label.replace(/\s/g, '_')}">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
               ${pos.words.map(word => `
-                <span class="word-chip" data-word="${word}" style="background:#EAF6F4;padding:8px 16px;border-radius:20px;font-size:18px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="speakText('${word}')">
-                  ${word}
-                </span>
+                <span style="background:#EAF6F4;padding:8px 16px;border-radius:20px;font-size:18px;font-weight:bold;cursor:pointer;" onclick="speakText('${word}')">${word}</span>
               `).join('')}
             </div>
           </div>
@@ -3194,11 +3151,9 @@ async function renderSingleSession(app) {
         <h3 style="text-align:center;">✍️ الحرف في جمل</h3>
         <div style="margin:20px 0;">
           ${sentences.map(sentence => `
-            <div style="background:white;padding:15px;border-radius:12px;margin-bottom:10px;font-size:18px;line-height:1.8;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-              <span style="flex:1;cursor:pointer;" onclick="speakText('${sentence}')">${sentence}</span>
-              <span class="sentence-actions" data-sentence="${sentence}">
-                <button class="speak-btn" onclick="speakText('${sentence}')" style="background:var(--mint);color:white;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;">🔊</button>
-              </span>
+            <div style="background:white;padding:15px;border-radius:12px;margin-bottom:10px;font-size:18px;line-height:1.8;cursor:pointer;" onclick="speakText('${sentence}')">
+              ${sentence}
+              <span style="float:left;">🔊</span>
             </div>
           `).join('')}
         </div>
@@ -3210,59 +3165,6 @@ async function renderSingleSession(app) {
   trainCard.innerHTML = content;
   app.appendChild(trainCard);
 
-  /* ===== زر توليد محتوى الحرف (للمعلم فقط) ===== */
-  if (state.role === 'teacher' || state.role === 'admin') {
-    const generateLetterSection = document.createElement('div');
-    generateLetterSection.className = 'card';
-    generateLetterSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
-    generateLetterSection.innerHTML = `
-      <h3 style="color:#6D28D9;margin-bottom:8px;">📚 توليد محتوى هذا الحرف بالذكاء الاصطناعي</h3>
-      <p style="font-size:13px;color:#555;margin-bottom:12px;">
-        إذا لم تكن بيانات الحرف كافية، يمكنك توليدها بالذكاء الاصطناعي (حركات + كلمات + جمل).
-      </p>
-      <div id="generateLetterContainer" style="text-align:center;"></div>
-    `;
-    const genContainer = generateLetterSection.querySelector('#generateLetterContainer');
-    if (typeof window.createGenerateLetterButtonForSession === 'function') {
-      const genBtn = window.createGenerateLetterButtonForSession(letter, () => {
-        /* إعادة تحميل الصفحة بعد التوليد */
-        setTimeout(() => { renderSingleSession(app); }, 1000);
-      });
-      genContainer.appendChild(genBtn);
-    } else {
-      genContainer.innerHTML = '<p class="muted">⚠️ ميزة التوليد غير متوفرة</p>';
-    }
-    app.appendChild(generateLetterSection);
-  }
-
-  /* ===== إضافة أزرار توليد الصور بجانب الكلمات ===== */
-  if (state.role === 'teacher' || state.role === 'admin') {
-    if (typeof window.createImageButton === 'function') {
-      /* إضافة زر صورة لكل كلمة */
-      trainCard.querySelectorAll('.word-chip').forEach(chip => {
-        const word = chip.dataset.word;
-        if (word) {
-          const imgBtn = window.createImageButton(word);
-          chip.appendChild(imgBtn);
-        }
-      });
-
-      /* إضافة زر صورة لكل جملة */
-      trainCard.querySelectorAll('.sentence-actions').forEach(container => {
-        const sentence = container.dataset.sentence;
-        if (sentence) {
-          /* استخراج الكلمة الرئيسية من الجملة (أول كلمة) */
-          const mainWord = sentence.split(' ')[0].replace(/[.,!؟]/g, '');
-          if (mainWord && mainWord.length > 2) {
-            const imgBtn = window.createImageButton(mainWord);
-            container.appendChild(imgBtn);
-          }
-        }
-      });
-    }
-  }
-
-  /* ===== ربط زر التسجيل الصوتي ===== */
   const sessionRecordBtn = trainCard.querySelector('#sessionRecordBtn');
   if (sessionRecordBtn) {
     sessionRecordBtn.onclick = function() {
