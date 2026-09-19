@@ -4189,611 +4189,473 @@ async function renderStudentAchievementList(app) {
    نهاية الجزء 5/6
    ═══════════════════════════════════════════════════════════ */
 /* ═══════════════════════════════════════════════════════════
-   الجزء 1/6 — الاستيراد + Firebase + البيانات الثابتة
-   ═══════════════════════════════════════════════════════════ */
-/* ═══════════════════════════════════════════════════════════
-   منارة النطق - التطبيق الرئيسي
-   Manarat Al-Nutq - Main Application
-   v3.0 — قوائم كلمات معتمدة من منهج وزارة التعليم
-   ═══════════════════════════════════════════════════════════
-   
-   📋 التغييرات في v3.0:
-   ✅ تحديث alphabetData بكلمات من منهج لغتي
-   ✅ إعادة بناء VOCAB_LISTS (10 فئات × 15 كلمة مألوفة)
-   ✅ إضافة LETTER_DATABASE كامل (28 حرفاً × 6 كلمات)
-   ✅ حذف الكلمات النادرة (هدهد، وروار، باز، بغوث...)
-   
-   📂 الأجزاء:
-   - الجزء 1/6: الاستيراد + Firebase + البيانات الثابتة
-   - الجزء 2/6: الصوت + التسجيل + التحليل + الحالة + التنبيهات
-   - الجزء 3/6: المصادقة + لوحة المعلم
-   - الجزء 4/6: التشخيص + IEP + الجلسات
-   - الجزء 5/6: الألعاب + ولي الأمر + الخطة الأسبوعية + ملفات الإنجاز
-   - الجزء 6/6: التهيئة النهائية + التصدير
+   الجزء 6/6 — ملفات الإنجاز + التهيئة النهائية + التصدير
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-01] Firebase Imports ─── */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
-  sendPasswordResetEmail
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import {
-  getFirestore,
-  setDoc,
-  doc,
-  getDoc,
-  updateDoc,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  deleteDoc
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-/* ─── [END SEC-01] ─── */
+/* ─── [SEC-53] معايير ملف إنجاز المعلم — Teacher Standards ─── */
+const TEACHER_STANDARDS = [
+  { id: 1, title: 'أداء الواجبات الوظيفية', evidences: 'سجل الدوام، سجل المناوبة والإشراف، سجل الانتظار، خطة توزيع المنهج.' },
+  { id: 2, title: 'التفاعل مع المجتمع المحلي', evidences: 'سجل مجتمعات التعلم، سجل تبادل الزيارات، تقرير درس تطبيقي، شهادات حضور.' },
+  { id: 3, title: 'التفاعل مع أولياء الأمور', evidences: 'صور من الجمعية العمومية، تقرير اجتماع مع ولي الأمر، نسخة من الخطة الأسبوعية.' },
+  { id: 4, title: 'التنويع في استراتيجيات التدريس', evidences: 'تقرير عن تطبيق استراتيجية، ملف إنجاز المعلم.' },
+  { id: 5, title: 'تحسين نتائج المتعلمين', evidences: 'نتائج الاختبارات القبلية والبعدية، كشف متابعة الطلاب.' },
+  { id: 6, title: 'إعداد وتنفيذ خطة التعلم', evidences: 'خطة توزيع المنهج، نماذج من إعداد الدروس، نماذج من الواجبات والاختبارات.' },
+  { id: 7, title: 'توظيف تقنيات ووسائل التعلم', evidences: 'صور من الوسائل التعليمية، تقرير عن برنامج تقني.' },
+  { id: 8, title: 'تهيئة البيئة التعليمية', evidences: 'تقرير تصنيف الطلاب حسب أنماط التعلم، نماذج من التحفيز المادي والمعنوي.' },
+  { id: 9, title: 'الإدارة الصفية', evidences: 'كشف المتابعة، تطبيق إدارة الصف.' },
+  { id: 10, title: 'تحليل نتائج المتعلمين', evidences: 'تقرير تحليل نتائج الطلاب، سجل معالجة الفاقد التعليمي.' },
+  { id: 11, title: 'تنوع أساليب التقويم', evidences: 'نماذج من الاختبارات، ملفات إنجاز الطلاب، نماذج من المهام الأدائية والمشاريع.' }
+];
+/* ─── [END SEC-53] ─── */
 
 
-/* ─── [SEC-02] Firebase Config & Init ─── */
-const firebaseConfig = {
-  apiKey: "AIzaSyDTst5UKgNJ6ThVOAVHOG3JoWfEvUp1asw",
-  authDomain: "manarat-alnutq.firebaseapp.com",
-  databaseURL: "https://manarat-alnutq-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "manarat-alnutq",
-  storageBucket: "manarat-alnutq.firebasestorage.app",
-  messagingSenderId: "543101731444",
-  appId: "1:543101731444:web:35a8daf145603c66978721",
-  measurementId: "G-ZFKWLDT384"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-/* ─── [END SEC-02] ─── */
-
-
-/* ─── [SEC-03] رفع ملفات المعلم إلى Storage ─── */
-async function uploadTeacherFile(teacherId, standardId, file) {
+/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement ─── */
+async function renderTeacherAchievement(app) {
+  renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
+    state.view = 'teacher-dashboard';
+    render();
+  });
+  if (!state.user) {
+    showToast('يجب تسجيل الدخول');
+    state.view = 'auth';
+    return render();
+  }
+  const teacherId = state.user.uid;
+  let teacherData = {};
   try {
-    const path = `teacher-files/${teacherId}/${standardId}/${Date.now()}_${file.name}`;
-    const fileRef = storageRef(storage, path);
-    await uploadBytes(fileRef, file);
-    const downloadURL = await getDownloadURL(fileRef);
-    return {
-      name: file.name,
-      url: downloadURL,
-      type: file.type,
-      uploadedAt: new Date().toISOString()
-    };
+    const teacherDoc = await getDoc(doc(db, "users", teacherId));
+    if (teacherDoc.exists()) teacherData = teacherDoc.data();
+  } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
+  const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
+
+  let existingFiles = {};
+  try {
+    const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
+    const filesSnap = await getDocs(filesQuery);
+    filesSnap.forEach(d => {
+      const data = d.data();
+      const standardId = data.standardId;
+      if (!existingFiles[standardId]) existingFiles[standardId] = [];
+      existingFiles[standardId].push({ id: d.id, ...data });
+    });
+  } catch (e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
+
+  const headerCard = document.createElement('div');
+  headerCard.className = 'card';
+  headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+  headerCard.style.border = '2px solid var(--mint-deep)';
+  headerCard.innerHTML = `
+    <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
+    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+      <button class="btn btn-primary btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">🖨️ طباعة / حفظ PDF</button>
+      <button class="btn btn-soft btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:8px 20px;">📄 توليد الشواهد تلقائياً</button>
+    </div>
+  `;
+  app.appendChild(headerCard);
+
+  const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
+  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
+  const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
+  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
+
+  TEACHER_STANDARDS.forEach(standard => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginBottom = '12px';
+    card.innerHTML = `
+      <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
+      <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+        <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
+        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
+        <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
+      </div>
+      <div id="filesList_${standard.id}" style="margin-top:8px;">
+        ${(existingFiles[standard.id] || []).map(file => `
+          <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
+            <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
+            <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    app.appendChild(card);
+
+    const fileInput = card.querySelector(`#fileInput_${standard.id}`);
+    const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
+    const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
+    if (uploadBtn && fileInput) {
+      uploadBtn.onclick = () => fileInput.click();
+      fileInput.onchange = async () => {
+        if (!fileInput.files || fileInput.files.length === 0) return;
+        fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
+        const uploadPromises = Array.from(fileInput.files).map(file => uploadTeacherFile(teacherId, standard.id, file));
+        const results = await Promise.all(uploadPromises);
+        const success = results.filter(r => r !== null);
+        if (success.length > 0) {
+          for (const fileInfo of success) {
+            try {
+              await addDoc(collection(db, "teacher_files"), {
+                teacherId,
+                standardId: standard.id,
+                name: fileInfo.name,
+                url: fileInfo.url,
+                type: fileInfo.type,
+                uploadedAt: fileInfo.uploadedAt
+              });
+            } catch (e) { console.error('خطأ في حفظ الملف:', e); }
+          }
+          showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
+          renderTeacherAchievement(app);
+        } else {
+          showToast('❌ فشل رفع الملفات');
+        }
+        fileInput.value = '';
+      };
+    }
+  });
+}
+/* ─── [END SEC-54] ─── */
+
+
+/* ─── [SEC-55] توليد الشواهد تلقائياً — Evidence Report ─── */
+async function generateEvidenceReport(teacherName) {
+  showToast('⏳ جاري توليد الشواهد تلقائياً...');
+  try {
+    const teacherId = state.user.uid;
+    const allSessionsSnap = await getDocs(collection(db, "sessions"));
+    const allSessions = [];
+    allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
+    const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
+    const totalSessions = teacherSessions.length;
+    const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
+    const averageSuccess = evaluatedSessions.length > 0
+      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+      : 0;
+    const totalStudents = state.myStudents.length;
+    const studentSummaries = [];
+    for (const student of state.myStudents) {
+      const studentDoc = await getDoc(doc(db, "users", student.id));
+      const studentData = studentDoc.exists() ? studentDoc.data() : {};
+      const diag = studentData.diagnostic || {};
+      const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
+      const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+      const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
+      const studentSessions = allSessions.filter(s => s.studentId === student.id && s.evaluation && s.evaluation !== 'none');
+      const studentAvg = studentSessions.length > 0
+        ? Math.round(studentSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / studentSessions.length)
+        : 0;
+      studentSummaries.push({
+        name: student.fullName || student.email,
+        passed: passedLetters.length,
+        need: needLetters.length,
+        trained: trainedLetters.length,
+        sessions: studentSessions.length,
+        avg: studentAvg
+      });
+    }
+    let printArea = document.getElementById('iep-print-area');
+    if (!printArea) {
+      printArea = document.createElement('div');
+      printArea.id = 'iep-print-area';
+      document.body.appendChild(printArea);
+    }
+    printArea.innerHTML = `
+      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+          <p style="margin:5px 0 0;font-size:14px;color:#555;">شواهد إنجاز المعلم - تقرير تلقائي</p>
+          <hr style="border:1px solid #ddd;margin:10px 0;">
+        </div>
+        <div style="margin-bottom:15px;text-align:center;">
+          <strong>اسم المعلم:</strong> ${teacherName}<br>
+          <strong>تاريخ التوليد:</strong> ${new Date().toLocaleDateString('ar-SA')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;background:#f5f5f5;padding:15px;border-radius:8px;">
+          <div><strong>عدد الطلاب:</strong> ${totalStudents}</div>
+          <div><strong>عدد الجلسات المنفذة:</strong> ${totalSessions}</div>
+          <div><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
+          <div><strong>عدد الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
+        </div>
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">ملخص أداء الطلاب</h3>
+        ${studentSummaries.length > 0 ? `
+          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+            <thead><tr style="background:#f0f0f0;">
+              <th style="border:1px solid #ddd;padding:8px;">الطالب</th>
+              <th style="border:1px solid #ddd;padding:8px;">حروف متقنة</th>
+              <th style="border:1px solid #ddd;padding:8px;">تحتاج تدريب</th>
+              <th style="border:1px solid #ddd;padding:8px;">جلسات</th>
+              <th style="border:1px solid #ddd;padding:8px;">متوسط النجاح</th>
+            </tr></thead>
+            <tbody>
+              ${studentSummaries.map(s => `
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px;">${s.name}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.passed}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.need}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.sessions}</td>
+                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.avg}%</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض بياناتهم.</p>'}
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">الشواهد المتاحة من المنصة</h3>
+        <div style="margin-bottom:10px;font-size:14px;">
+          <p>✅ سجل الجلسات السحابي (${totalSessions} جلسة)</p>
+          <p>✅ التقارير الفردية للطلاب</p>
+          <p>✅ التشخيص الشامل للحروف</p>
+          <p>✅ التسجيل الصوتي والتغذية الراجعة</p>
+          <p>✅ ملفات إنجاز الطلاب</p>
+          <p>✅ الخطط الفردية (IEP)</p>
+          <p>✅ قوائم المفردات التفاعلية</p>
+          <p>✅ أدوات التقييم المتنوعة (أتقن/تدريب/غير واضح)</p>
+        </div>
+        <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذا التقرير تلقائياً من منصة منارة النطق</div>
+      </div>
+    `;
+    window.print();
+    setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
   } catch (e) {
-    console.error('خطأ في رفع الملف:', e);
-    return null;
+    console.error('خطأ في توليد الشواهد:', e);
+    showToast('❌ فشل توليد الشواهد');
   }
 }
-window.uploadTeacherFile = uploadTeacherFile;
-/* ─── [END SEC-03] ─── */
+/* ─── [END SEC-55] ─── */
 
 
-/* ─── [SEC-04] البيانات الثابتة — مجموعات الحروف ─── */
-const LETTER_GROUPS = [
-  { name: 'حروف شفوية', letters: ['ب', 'م', 'و', 'ف'] },
-  { name: 'حروف أسنانية لثوية', letters: ['ت', 'ث', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ل', 'ن'] },
-  { name: 'حروف لهوية', letters: ['ج', 'ك', 'ق', 'ي'] },
-  { name: 'حروف حلقية', letters: ['أ', 'هـ', 'ع', 'ح', 'خ', 'غ'] }
-];
-const ALL_LETTERS = LETTER_GROUPS.flatMap(g => g.letters);
-/* ─── [END SEC-04] ─── */
-
-
-/* ─── [SEC-05] البيانات الثابتة — الأبجدية (محدّثة من منهج لغتي) ─── */
-const alphabetData = [
-  { letter: 'أ', title: 'أسد' },
-  { letter: 'ب', title: 'بطة' },
-  { letter: 'ت', title: 'تمر' },
-  { letter: 'ث', title: 'ثعلب' },
-  { letter: 'ج', title: 'جمل' },
-  { letter: 'ح', title: 'حصان' },
-  { letter: 'خ', title: 'خروف' },
-  { letter: 'د', title: 'دب' },
-  { letter: 'ذ', title: 'ذئب' },
-  { letter: 'ر', title: 'رمان' },
-  { letter: 'ز', title: 'زرافة' },
-  { letter: 'س', title: 'سمكة' },
-  { letter: 'ش', title: 'شمس' },
-  { letter: 'ص', title: 'صقر' },
-  { letter: 'ض', title: 'ضفدع' },
-  { letter: 'ط', title: 'طائرة' },
-  { letter: 'ظ', title: 'ظرف' },
-  { letter: 'ع', title: 'عصفور' },
-  { letter: 'غ', title: 'غزال' },
-  { letter: 'ف', title: 'فيل' },
-  { letter: 'ق', title: 'قطة' },
-  { letter: 'ك', title: 'كتاب' },
-  { letter: 'ل', title: 'ليمون' },
-  { letter: 'م', title: 'موز' },
-  { letter: 'ن', title: 'نحلة' },
-  { letter: 'هـ', title: 'هاتف' },
-  { letter: 'و', title: 'وردة' },
-  { letter: 'ي', title: 'يد' }
-];
-const letterTitleMap = {};
-alphabetData.forEach(item => { letterTitleMap[item.letter] = item.title; });
-/* ─── [END SEC-05] ─── */
-
-
-/* ─── [SEC-06] البيانات الثابتة — قوائم المفردات (محدّثة) ─── */
-const VOCAB_LISTS = {
-  'الفواكه': [
-    { word: 'تفاح', icon: '🍎' }, { word: 'موز', icon: '🍌' }, { word: 'برتقال', icon: '🍊' },
-    { word: 'عنب', icon: '🍇' }, { word: 'فراولة', icon: '🍓' }, { word: 'بطيخ', icon: '🍉' },
-    { word: 'مانجو', icon: '🥭' }, { word: 'أناناس', icon: '🍍' }, { word: 'رمان', icon: '🍎' },
-    { word: 'تين', icon: '🫐' }, { word: 'تمر', icon: '🌴' }, { word: 'ليمون', icon: '🍋' },
-    { word: 'خوخ', icon: '🍑' }, { word: 'كرز', icon: '🍒' }, { word: 'مشمش', icon: '🍑' }
-  ],
-  'الخضروات': [
-    { word: 'جزر', icon: '🥕' }, { word: 'طماطم', icon: '🍅' }, { word: 'خيار', icon: '🥒' },
-    { word: 'فلفل', icon: '🫑' }, { word: 'بصل', icon: '🧅' }, { word: 'ثوم', icon: '🧄' },
-    { word: 'بطاطس', icon: '🥔' }, { word: 'كوسا', icon: '🥒' }, { word: 'باذنجان', icon: '🍆' },
-    { word: 'قرنبيط', icon: '🥦' }, { word: 'سبانخ', icon: '🍃' }, { word: 'خس', icon: '🥬' },
-    { word: 'فجل', icon: '🥕' }, { word: 'ملفوف', icon: '🥬' }, { word: 'قرع', icon: '🎃' }
-  ],
-  'الحيوانات': [
-    { word: 'أسد', icon: '🦁' }, { word: 'نمر', icon: '🐅' }, { word: 'فيل', icon: '🐘' },
-    { word: 'زرافة', icon: '🦒' }, { word: 'حمار', icon: '🐴' }, { word: 'حصان', icon: '🐎' },
-    { word: 'بقرة', icon: '🐄' }, { word: 'خروف', icon: '🐑' }, { word: 'ماعز', icon: '🐐' },
-    { word: 'قرد', icon: '🐒' }, { word: 'ذئب', icon: '🐺' }, { word: 'ثعلب', icon: '🦊' },
-    { word: 'دب', icon: '🐻' }, { word: 'غزال', icon: '🦌' }, { word: 'جمل', icon: '🐫' }
-  ],
-  'الطيور': [
-    { word: 'عصفور', icon: '🐦' }, { word: 'حمامة', icon: '🕊️' }, { word: 'غراب', icon: '🐦' },
-    { word: 'نسر', icon: '🦅' }, { word: 'صقر', icon: '🦅' }, { word: 'بومة', icon: '🦉' },
-    { word: 'بطة', icon: '🦆' }, { word: 'دجاجة', icon: '🐔' }, { word: 'ديك', icon: '🐓' },
-    { word: 'طاووس', icon: '🦚' }, { word: 'نعامة', icon: '🦩' }, { word: 'بلبل', icon: '🐦' },
-    { word: 'بطريق', icon: '🐧' }, { word: 'بجعة', icon: '🦢' }, { word: 'كناري', icon: '🐤' }
-  ],
-  'النباتات': [
-    { word: 'وردة', icon: '🌹' }, { word: 'زهرة', icon: '🌸' }, { word: 'نخلة', icon: '🌴' },
-    { word: 'شجرة', icon: '🌳' }, { word: 'عشب', icon: '🌿' }, { word: 'نعناع', icon: '🍃' },
-    { word: 'ريحان', icon: '🌱' }, { word: 'صبار', icon: '🌵' }, { word: 'زيتون', icon: '🫒' },
-    { word: 'ياسمين', icon: '🌼' }, { word: 'بابونج', icon: '🌼' }, { word: 'لافندر', icon: '💜' },
-    { word: 'سرخس', icon: '🌿' }, { word: 'قرنفل', icon: '🌸' }, { word: 'توليب', icon: '🌷' }
-  ],
-  'أعضاء الجسم': [
-    { word: 'رأس', icon: '👤' }, { word: 'عين', icon: '👁️' }, { word: 'أنف', icon: '👃' },
-    { word: 'فم', icon: '👄' }, { word: 'أذن', icon: '👂' }, { word: 'يد', icon: '✋' },
-    { word: 'قدم', icon: '🦶' }, { word: 'قلب', icon: '🫀' }, { word: 'رئة', icon: '🫁' },
-    { word: 'معدة', icon: '🫃' }, { word: 'كبد', icon: '🧬' }, { word: 'عظم', icon: '🦴' },
-    { word: 'جلد', icon: '🧴' }, { word: 'لسان', icon: '👅' }, { word: 'أسنان', icon: '🦷' }
-  ],
-  'الأثاث': [
-    { word: 'كرسي', icon: '🪑' }, { word: 'طاولة', icon: '🪑' }, { word: 'سرير', icon: '🛏️' },
-    { word: 'خزانة', icon: '🗄️' }, { word: 'باب', icon: '🚪' }, { word: 'نافذة', icon: '🪟' },
-    { word: 'سجادة', icon: '🧶' }, { word: 'مرآة', icon: '🪞' }, { word: 'ساعة', icon: '🕰️' },
-    { word: 'مصباح', icon: '💡' }, { word: 'مكتب', icon: '🪑' }, { word: 'أريكة', icon: '🛋️' },
-    { word: 'وسادة', icon: '🛏️' }, { word: 'بطانية', icon: '🧣' }, { word: 'ستارة', icon: '🪟' }
-  ],
-  'الحشرات': [
-    { word: 'نحلة', icon: '🐝' }, { word: 'فراشة', icon: '🦋' }, { word: 'ذبابة', icon: '🪰' },
-    { word: 'بعوضة', icon: '🦟' }, { word: 'نملة', icon: '🐜' }, { word: 'خنفساء', icon: '🪲' },
-    { word: 'صرصور', icon: '🪳' }, { word: 'جندب', icon: '🦗' }, { word: 'دعسوقة', icon: '🐞' },
-    { word: 'عنكبوت', icon: '🕷️' }, { word: 'يعسوب', icon: '🦟' }, { word: 'دودة', icon: '🪱' },
-    { word: 'عقرب', icon: '🦂' }, { word: 'جرادة', icon: '🦗' }, { word: 'نمل', icon: '🐜' }
-  ],
-  'الألوان': [
-    { word: 'أحمر', icon: '🔴' }, { word: 'أزرق', icon: '🔵' }, { word: 'أصفر', icon: '🟡' },
-    { word: 'أخضر', icon: '🟢' }, { word: 'برتقالي', icon: '🟠' }, { word: 'بنفسجي', icon: '🟣' },
-    { word: 'وردي', icon: '💗' }, { word: 'بني', icon: '🟤' }, { word: 'رمادي', icon: '🔘' },
-    { word: 'أبيض', icon: '⚪' }, { word: 'أسود', icon: '⚫' }, { word: 'ذهبي', icon: '✨' },
-    { word: 'فضي', icon: '🔘' }, { word: 'تركوازي', icon: '💎' }, { word: 'كحلي', icon: '🔵' }
-  ],
-  'الأشكال': [
-    { word: 'دائرة', icon: '⭕' }, { word: 'مربع', icon: '🟨' }, { word: 'مثلث', icon: '🔺' },
-    { word: 'مستطيل', icon: '▬' }, { word: 'نجمة', icon: '⭐' }, { word: 'هلال', icon: '🌙' },
-    { word: 'معين', icon: '🔶' }, { word: 'بيضاوي', icon: '🥚' }, { word: 'خماسي', icon: '⬠' },
-    { word: 'سداسي', icon: '⬡' }, { word: 'كرة', icon: '⚽' }, { word: 'مكعب', icon: '🧊' },
-    { word: 'أسطوانة', icon: '🥫' }, { word: 'مخروط', icon: '🍦' }, { word: 'قلب مزدوج', icon: '💕' }
-  ]
-};
-const VOCAB_CATEGORIES = Object.keys(VOCAB_LISTS);
-/* ─── [END SEC-06] ─── */
-
-
-/* ─── [SEC-07] البيانات الثابتة — أنواع الجلسات ─── */
-const SESSION_TYPES = [
-  { id: 1, name: 'الحرف مجرداً', icon: '🔊' },
-  { id: 2, name: 'الحرف مع الحركات', icon: '📖' },
-  { id: 3, name: 'الحرف في كلمات', icon: '📝' },
-  { id: 4, name: 'الحرف في جمل', icon: '✍️' }
-];
-/* ─── [END SEC-07] ─── */
-
-
-/* ─── [SEC-08] البيانات الثابتة — خيارات الأدوات ─── */
-const TOOLS_OPTIONS = [
-  'بطاقات تعليمية', 'مرآة', 'ألعاب تفاعلية', 'تطبيق إلكتروني',
-  'أقلام وأوراق', 'صور ومجسمات', 'لوحة الكتابة', 'أخرى'
-];
-/* ─── [END SEC-08] ─── */
-
-
-/* ─── [SEC-09] البيانات الثابتة — خيارات المخارج ─── */
-const PLACE_OPTIONS = [
-  'شفوي (ب، م، و، ف)',
-  'أسناني لثوي (ت، ث، د، ذ، ر، ز، س، ش، ص، ض، ط، ظ، ل، ن)',
-  'لهوي (ج، ك، ق، ي)',
-  'حلقي (أ، هـ، ع، ح، خ، غ)'
-];
-/* ─── [END SEC-09] ─── */
-
-
-/* ─── [SEC-10] البيانات الثابتة — خيارات الطرق ─── */
-const METHOD_OPTIONS = [
-  'التكرار والمحاكاة', 'التدريب بالمرآة', 'الأنشطة الحركية',
-  'الاستماع والتكرار', 'التمييز السمعي', 'الألعاب التعليمية', 'القصص والصور'
-];
-/* ─── [END SEC-10] ─── */
-
-
-/* ─── [SEC-11] البيانات الثابتة — أنواع العيوب ─── */
-const DISORDER_TYPES = [
-  'طبيعي', 'إبدال', 'تشويه', 'حذف', 'إضافة', 'قلب', 'خنف',
-  'لجلجة', 'تأتأة / تلعثم', 'حبسة', 'بحة صوتية',
-  'خشونة الصوت', 'نعومة الصوت', 'بطء في الكلام',
-  'سرعة في الكلام', 'كلام طفولي'
-];
-
-const DISORDER_DEFINITIONS = {
-  'طبيعي': 'النطق سليم وصحيح.',
-  'إبدال': 'استبدال حرف بحرف آخر، مثل نطق (س) بدلاً من (ث).',
-  'تشويه': 'نطق الحرف بشكل مشوه وغير دقيق.',
-  'حذف': 'حذف حرف من الكلمة، مثل قول (باب) بدلاً من (بابا).',
-  'إضافة': 'إضافة حرف زائد في الكلمة.',
-  'قلب': 'عكس ترتيب الحروف أو المقاطع داخل الكلمة.',
-  'خنف': 'نطق الحرف بصوت أنفي مفرط.',
-  'لجلجة': 'عدم وضوح الكلام بسبب سرعة أو عيوب في ترتيب الكلمات.',
-  'تأتأة / تلعثم': 'تكرار أو توقف غير إرادي في الكلام.',
-  'حبسة': 'فقدان القدرة على الكلام أو فهمه بسبب إصابة دماغية.',
-  'بحة صوتية': 'خشونة في الصوت نتيجة مشاكل في الأحبال الصوتية.',
-  'خشونة الصوت': 'صوت خشن وغير صافٍ.',
-  'نعومة الصوت': 'صوت ضعيف جداً أو هامس.',
-  'بطء في الكلام': 'بطء غير طبيعي في وتيرة الكلام.',
-  'سرعة في الكلام': 'سرعة مفرطة في الكلام.',
-  'كلام طفولي': 'استخدام أنماط كلام غير ناضجة مقارنة بالعمر.'
-};
-/* ─── [END SEC-11] ─── */
-
-
-/* ─── [SEC-12] قاعدة بيانات الحروف الكاملة — من منهج لغتي ─── */
-const LETTER_DATABASE = {
-  'أ': {
-    place: 'من أقصى الحلق',
-    vowels: { fatha: 'أَ', damma: 'أُ', kasra: 'إِ', sukoon: 'أْ' },
-    words: {
-      start: ['أسد', 'أرنب', 'أب'],
-      middle: ['فأر', 'رأس', 'سأل'],
-      end: ['(كلمات قليلة)']
-    },
-    sentences: ['أَكَلَ الأَسَدُ اللَّحْمَ.', 'الأَرْنَبُ سَرِيعٌ.', 'أَبِي طَبِيبٌ.']
-  },
-  'ب': {
-    place: 'انطباق الشفتين',
-    vowels: { fatha: 'بَ', damma: 'بُ', kasra: 'بِ', sukoon: 'بْ' },
-    words: {
-      start: ['بقرة', 'باب', 'بطة'],
-      middle: ['ربان', 'كبدة', 'جبل'],
-      end: ['كلب', 'عنب', 'حليب']
-    },
-    sentences: ['البَقَرَةُ تَأْكُلُ العُشْبَ.', 'البَابُ مَفْتُوحٌ.', 'الكَلْبُ يَنْبَحُ.']
-  },
-  'ت': {
-    place: 'طرف اللسان مع اللثة العليا',
-    vowels: { fatha: 'تَ', damma: 'تُ', kasra: 'تِ', sukoon: 'تْ' },
-    words: {
-      start: ['تمر', 'توت', 'تاج'],
-      middle: ['كتاب', 'كتف', 'مكتب'],
-      end: ['بنت', 'حوت', 'زيت']
-    },
-    sentences: ['التَّمْرُ لَذِيذٌ.', 'الكِتَابُ مُفِيدٌ.', 'البِنْتُ تَقْرَأُ.']
-  },
-  'ث': {
-    place: 'طرف اللسان مع أطراف الثنايا العليا',
-    vowels: { fatha: 'ثَ', damma: 'ثُ', kasra: 'ثِ', sukoon: 'ثْ' },
-    words: {
-      start: ['ثعلب', 'ثوب', 'ثور'],
-      middle: ['مثلث', 'كمثرى', 'أثر'],
-      end: ['ليث', 'حارث', 'وريث']
-    },
-    sentences: ['الثَّعْلَبُ ذَكِيٌّ.', 'الثَّوْبُ جَمِيلٌ.', 'الثَّوْرُ قَوِيٌّ.']
-  },
-  'ج': {
-    place: 'وسط اللسان مع الحنك الأعلى',
-    vowels: { fatha: 'جَ', damma: 'جُ', kasra: 'جِ', sukoon: 'جْ' },
-    words: {
-      start: ['جمل', 'جندي', 'جبل'],
-      middle: ['رجب', 'نجم', 'حجر'],
-      end: ['دجاج', 'برج', 'خروج']
-    },
-    sentences: ['الجَمَلُ يَسِيرُ.', 'النَّجْمُ يُضِيءُ.', 'الدَّجَاجُ فِي الحَدِيقَةِ.']
-  },
-  'ح': {
-    place: 'وسط الحلق',
-    vowels: { fatha: 'حَ', damma: 'حُ', kasra: 'حِ', sukoon: 'حْ' },
-    words: {
-      start: ['حصان', 'حجر', 'حوت'],
-      middle: ['أحمد', 'لحم', 'سحاب'],
-      end: ['ملح', 'تفاح', 'سباح']
-    },
-    sentences: ['الحِصَانُ يَجْرِي.', 'السَّحَابُ فِي السَّمَاءِ.', 'التُّفَّاحُ لَذِيذٌ.']
-  },
-  'خ': {
-    place: 'أقصى الحلق',
-    vowels: { fatha: 'خَ', damma: 'خُ', kasra: 'خِ', sukoon: 'خْ' },
-    words: {
-      start: ['خروف', 'خيمة', 'خبز'],
-      middle: ['نخلة', 'أخي', 'مخبز'],
-      end: ['مطبخ', 'كوخ', 'شيخ']
-    },
-    sentences: ['الخَرُوفُ يَأْكُلُ.', 'الخُبْزُ طَازَجٌ.', 'النَّخْلَةُ طَوِيلَةٌ.']
-  },
-  'د': {
-    place: 'طرف اللسان مع اللثة العليا',
-    vowels: { fatha: 'دَ', damma: 'دُ', kasra: 'دِ', sukoon: 'دْ' },
-    words: {
-      start: ['دار', 'دب', 'دجاجة'],
-      middle: ['قدم', 'بديع', 'مدير'],
-      end: ['أسد', 'خالد', 'ولد']
-    },
-    sentences: ['الدَّارُ كَبِيرَةٌ.', 'الدُّبُّ يَنَامُ.', 'الوَلَدُ يَلْعَبُ.']
-  },
-  'ذ': {
-    place: 'طرف اللسان مع أطراف الثنايا العليا',
-    vowels: { fatha: 'ذَ', damma: 'ذُ', kasra: 'ذِ', sukoon: 'ذْ' },
-    words: {
-      start: ['ذيل', 'ذئب', 'ذهب'],
-      middle: ['حذاء', 'أذن', 'غذاء'],
-      end: ['تلميذ', 'لذيذ', 'حذاء']
-    },
-    sentences: ['الذِّئْبُ فِي الغَابَةِ.', 'الأُذُنُ تَسْمَعُ.', 'الذَّهَبُ غَالِي.']
-  },
-  'ر': {
-    place: 'طرف اللسان مع اللثة العليا',
-    vowels: { fatha: 'رَ', damma: 'رُ', kasra: 'رِ', sukoon: 'رْ' },
-    words: {
-      start: ['ريال', 'رمان', 'ريشة'],
-      middle: ['قرآن', 'أرض', 'جزر'],
-      end: ['خيار', 'سرير', 'خبز']
-    },
-    sentences: ['الرُّمَّانُ لَذِيذٌ.', 'القُرْآنُ كِتَابُ اللهِ.', 'السَّرِيرُ نَظِيفٌ.']
-  },
-  'ز': {
-    place: 'طرف اللسان مع اللثة السفلى',
-    vowels: { fatha: 'زَ', damma: 'زُ', kasra: 'زِ', sukoon: 'زْ' },
-    words: {
-      start: ['زهرة', 'زبدة', 'زرافة'],
-      middle: ['جزر', 'يزور', 'مزرعة'],
-      end: ['موز', 'خبز', 'أرز']
-    },
-    sentences: ['الزَّهْرَةُ جَمِيلَةٌ.', 'الزَّرَافَةُ طَوِيلَةٌ.', 'المَوْزُ لَذِيذٌ.']
-  },
-  'س': {
-    place: 'طرف اللسان مع اللثة السفلى',
-    vowels: { fatha: 'سَ', damma: 'سُ', kasra: 'سِ', sukoon: 'سْ' },
-    words: {
-      start: ['سيف', 'سمكة', 'سيارة'],
-      middle: ['لسان', 'أسماء', 'مسجد'],
-      end: ['كأس', 'شمس', 'ناس']
-    },
-    sentences: ['السَّمَكَةُ تَسْبَحُ.', 'السَّيَّارَةُ سَرِيعَةٌ.', 'الشَّمْسُ مُشْرِقَةٌ.']
-  },
-  'ش': {
-    place: 'وسط اللسان مع الحنك',
-    vowels: { fatha: 'شَ', damma: 'شُ', kasra: 'شِ', sukoon: 'شْ' },
-    words: {
-      start: ['شارع', 'شعر', 'شمس'],
-      middle: ['مشط', 'يشرب', 'مشهد'],
-      end: ['عش', 'مشمش', 'ريش']
-    },
-    sentences: ['الشَّارِعُ وَاسِعٌ.', 'الشَّمْسُ سَاطِعَةٌ.', 'المِشْطُ عَلَى الطَّاوِلَةِ.']
-  },
-  'ص': {
-    place: 'طرف اللسان مع اللثة السفلى',
-    vowels: { fatha: 'صَ', damma: 'صُ', kasra: 'صِ', sukoon: 'صْ' },
-    words: {
-      start: ['صقر', 'صابون', 'صورة'],
-      middle: ['بصل', 'إصبع', 'مصنع'],
-      end: ['مقص', 'قفص', 'خاص']
-    },
-    sentences: ['الصَّقْرُ يَطِيرُ.', 'الصَّابُونُ نَظِيفٌ.', 'الصُّورَةُ جَمِيلَةٌ.']
-  },
-  'ض': {
-    place: 'حافة اللسان مع الأضراس العليا',
-    vowels: { fatha: 'ضَ', damma: 'ضُ', kasra: 'ضِ', sukoon: 'ضْ' },
-    words: {
-      start: ['ضب', 'ضفدع', 'ضوء'],
-      middle: ['أخضر', 'مضر', 'بضاعة'],
-      end: ['بيض', 'أرض', 'مرضي']
-    },
-    sentences: ['الضِّفْدَعُ يَقْفِزُ.', 'الضَّوْءُ سَاطِعٌ.', 'البَيْضُ لَذِيذٌ.']
-  },
-  'ط': {
-    place: 'طرف اللسان مع أصول الثنايا العليا',
-    vowels: { fatha: 'طَ', damma: 'طُ', kasra: 'طِ', sukoon: 'طْ' },
-    words: {
-      start: ['طفل', 'طبيب', 'طائرة'],
-      middle: ['بطة', 'بطل', 'مطر'],
-      end: ['مشط', 'بسط', 'خط']
-    },
-    sentences: ['الطِّفْلُ يَلْعَبُ.', 'الطَّبِيبُ يُعَالِجُ.', 'الطَّائِرَةُ تُطِيرُ.']
-  },
-  'ظ': {
-    place: 'طرف اللسان مع أطراف الثنايا العليا',
-    vowels: { fatha: 'ظَ', damma: 'ظُ', kasra: 'ظِ', sukoon: 'ظْ' },
-    words: {
-      start: ['ظرف', 'ظل', 'ظبي'],
-      middle: ['عظم', 'عظيم', 'مظلوم'],
-      end: ['حظ', 'غليظ', 'لفظ']
-    },
-    sentences: ['الظَّرْفُ عَلَى الطَّاوِلَةِ.', 'الظِّلُّ بَارِدٌ.', 'الظَّبْيُ سَرِيعٌ.']
-  },
-  'ع': {
-    place: 'وسط الحلق',
-    vowels: { fatha: 'عَ', damma: 'عُ', kasra: 'عِ', sukoon: 'عْ' },
-    words: {
-      start: ['عصفور', 'عنب', 'عين'],
-      middle: ['شعر', 'سعودي', 'معلم'],
-      end: ['شمع', 'جائع', 'رابع']
-    },
-    sentences: ['العُصْفُورُ يُغَرِّدُ.', 'العِنَبُ لَذِيذٌ.', 'العَيْنُ تَرَى.']
-  },
-  'غ': {
-    place: 'أقصى الحلق',
-    vowels: { fatha: 'غَ', damma: 'غُ', kasra: 'غِ', sukoon: 'غْ' },
-    words: {
-      start: ['غزال', 'غنم', 'غيمة'],
-      middle: ['مغسلة', 'صغير', 'مغرور'],
-      end: ['صمغ', 'دبغ', 'بالغ']
-    },
-    sentences: ['الغَزَالُ سَرِيعٌ.', 'الغَيْمَةُ فِي السَّمَاءِ.', 'الغَنَمُ يَأْكُلُ.']
-  },
-  'ف': {
-    place: 'الشفة السفلى مع الثنايا العليا',
-    vowels: { fatha: 'فَ', damma: 'فُ', kasra: 'فِ', sukoon: 'فْ' },
-    words: {
-      start: ['فيل', 'فأر', 'فانوس'],
-      middle: ['فلفل', 'قفل', 'مفتاح'],
-      end: ['أنف', 'ملف', 'خفيف']
-    },
-    sentences: ['الفِيلُ كَبِيرٌ.', 'الفَأْرُ صَغِيرٌ.', 'الفَانُوسُ مُضِيءٌ.']
-  },
-  'ق': {
-    place: 'أقصى اللسان مع الحنك',
-    vowels: { fatha: 'قَ', damma: 'قُ', kasra: 'قِ', sukoon: 'قْ' },
-    words: {
-      start: ['قط', 'قمر', 'قلم'],
-      middle: ['برتقال', 'بقرة', 'مسجد'],
-      end: ['صندوق', 'رقاق', 'سوق']
-    },
-    sentences: ['القِطُّ يَنَامُ.', 'القَمَرُ مُنِيرٌ.', 'القَلَمُ فِي الحَقِيبَةِ.']
-  },
-  'ك': {
-    place: 'أقصى اللسان مع الحنك',
-    vowels: { fatha: 'كَ', damma: 'كُ', kasra: 'كِ', sukoon: 'كْ' },
-    words: {
-      start: ['كرة', 'كتاب', 'كرسي'],
-      middle: ['سكين', 'سكر', 'مكتب'],
-      end: ['ديك', 'سمك', 'ملك']
-    },
-    sentences: ['الكُرَةُ مُدَوَّرَةٌ.', 'الكِتَابُ مُفِيدٌ.', 'الكُرْسِيُّ خَشَبِيٌّ.']
-  },
-  'ل': {
-    place: 'طرف اللسان مع اللثة العليا',
-    vowels: { fatha: 'لَ', damma: 'لُ', kasra: 'لِ', sukoon: 'لْ' },
-    words: {
-      start: ['لبن', 'لعبة', 'ليمون'],
-      middle: ['علم', 'ولد', 'قلم'],
-      end: ['جمل', 'أمل', 'سهل']
-    },
-    sentences: ['اللَّبَنُ مُفِيدٌ.', 'اللُّعْبَةُ مُمْتِعَةٌ.', 'اللَّيْمُونُ حَامِضٌ.']
-  },
-  'م': {
-    place: 'انطباق الشفتين',
-    vowels: { fatha: 'مَ', damma: 'مُ', kasra: 'مِ', sukoon: 'مْ' },
-    words: {
-      start: ['موز', 'ماء', 'مدرسة'],
-      middle: ['حمل', 'حمام', 'معلم'],
-      end: ['فم', 'أم', 'قلم']
-    },
-    sentences: ['المَوْزُ لَذِيذٌ.', 'المَاءُ بَارِدٌ.', 'المَدْرَسَةُ كَبِيرَةٌ.']
-  },
-  'ن': {
-    place: 'طرف اللسان مع اللثة العليا',
-    vowels: { fatha: 'نَ', damma: 'نُ', kasra: 'نِ', sukoon: 'نْ' },
-    words: {
-      start: ['نار', 'نور', 'نحلة'],
-      middle: ['بنت', 'عنب', 'منزل'],
-      end: ['لبن', 'وزن', 'فنان']
-    },
-    sentences: ['النَّحْلَةُ تَطِيرُ.', 'النُّورُ سَاطِعٌ.', 'البِنْتُ تَلْعَبُ.']
-  },
-  'هـ': {
-    place: 'أقصى الحلق',
-    vowels: { fatha: 'هَ', damma: 'هُ', kasra: 'هِ', sukoon: 'هْ' },
-    words: {
-      start: ['هاتف', 'هدية', 'هرم'],
-      middle: ['سهم', 'نهر', 'شهر'],
-      end: ['وجه', 'هدية', 'الله']
-    },
-    sentences: ['الهَاتِفُ يَرِنُّ.', 'الهَدِيَّةُ جَمِيلَةٌ.', 'الوَجْهُ نَظِيفٌ.']
-  },
-  'و': {
-    place: 'انطباق الشفتين',
-    vowels: { fatha: 'وَ', damma: 'وُ', kasra: 'وِ', sukoon: 'وْ' },
-    words: {
-      start: ['وردة', 'ولد', 'وقت'],
-      middle: ['ثوب', 'حوت', 'سوق'],
-      end: ['دلو', 'حلو', 'نمو']
-    },
-    sentences: ['الوَرْدَةُ جَمِيلَةٌ.', 'الوَلَدُ يَلْعَبُ.', 'الثَّوْبُ نَظِيفٌ.']
-  },
-  'ي': {
-    place: 'وسط اللسان مع الحنك',
-    vowels: { fatha: 'يَ', damma: 'يُ', kasra: 'يِ', sukoon: 'يْ' },
-    words: {
-      start: ['يد', 'ياسمين', 'يقطين'],
-      middle: ['سيف', 'بيت', 'عين'],
-      end: ['شاي', 'كي', 'حي']
-    },
-    sentences: ['اليَدُ نَظِيفَةٌ.', 'البَيْتُ جَمِيلٌ.', 'اليَاسَمِينُ عَطِرٌ.']
+/* ─── [SEC-56] طباعة ملف إنجاز المعلم — Print Teacher Achievement ─── */
+function printTeacherAchievement(teacherName, existingFiles) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
   }
-};
-/* ─── [END SEC-12] ─── */
-
-
-/* ─── [SEC-13] دالة الهدف الافتراضي ─── */
-function getDefaultGoal(letter, type) {
-  const names = {
-    1: `نطق حرف (${letter}) بشكل مجرد`,
-    2: `نطق حرف (${letter}) مع الحركات (فتحة، ضمة، كسرة، سكون)`,
-    3: `نطق حرف (${letter}) في مواقع مختلفة من الكلمة`,
-    4: `نطق حرف (${letter}) في جمل بسيطة`
-  };
-  return names[type] || `تدريب حرف (${letter})`;
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز المعلم</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <div style="margin-bottom:15px;text-align:center;"><strong>اسم المعلم:</strong> ${teacherName}</div>
+      ${TEACHER_STANDARDS.map(standard => `
+        <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
+          <strong>${standard.id}. ${standard.title}</strong>
+          <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
+          ${(existingFiles[standard.id] || []).map(file => `<div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>`).join('')}
+        </div>
+      `).join('')}
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
-/* ─── [END SEC-13] ─── */
+/* ─── [END SEC-56] ─── */
+
+
+/* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
+async function renderAchievement(app) {
+  if (!state.currentStudent) {
+    showToast('اختر طالباً أولاً');
+    state.view = 'teacher-dashboard';
+    return render();
+  }
+  renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
+    render();
+  });
+  try {
+    const studentRef = doc(db, "users", state.currentStudent.id);
+    const studentDoc = await getDoc(studentRef);
+    const studentData = studentDoc.exists() ? studentDoc.data() : {};
+    const diag = studentData.diagnostic || {};
+    const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
+    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
+    const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
+    const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+    const sessionsSnap = await getDocs(sessionsQuery);
+    const sessions = [];
+    sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
+    sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
+    const totalSessions = sessions.length;
+    const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
+    const averageSuccess = evaluatedSessions.length > 0
+      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+      : 0;
+    const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
+    const points = calculateStudentPoints(studentData);
+    let achievementLevel = '';
+    let achievementIcon = '';
+    if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
+    else if (masteryPercentage >= 50) { achievementLevel = 'جيد جداً'; achievementIcon = '⭐'; }
+    else if (masteryPercentage >= 30) { achievementLevel = 'جيد'; achievementIcon = '👍'; }
+    else { achievementLevel = 'يحتاج متابعة'; achievementIcon = '💪'; }
+
+    const weeklyStats = getWeeklyStats(sessions);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+    card.style.border = '2px solid var(--mint-deep)';
+    card.innerHTML = `
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:60px;">${achievementIcon}</div>
+        <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
+        <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${passedLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">حروف متقنة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:#F57F17;">${needLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">تحتاج تدريب</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${totalSessions}</div>
+          <div style="font-size:13px;color:#6B7A99;">جلسة منفذة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${averageSuccess}%</div>
+          <div style="font-size:13px;color:#6B7A99;">متوسط النجاح</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${masteryPercentage}%</div>
+          <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
+          <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
+        </div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>نسبة الإتقان:</strong>
+        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${masteryPercentage}%;">${masteryPercentage}%</div></div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>📅 ملخص هذا الأسبوع:</strong><br>
+        الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
+        متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
+        الحروف المتدرب عليها: ${Object.keys(weeklyStats.lettersTrained).length ? Object.keys(weeklyStats.lettersTrained).join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف المتقنة:</strong> ${passedLetters.length ? passedLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف التي تحتاج تدريب:</strong> ${needLetters.length ? needLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>الحروف التي أتقنها بعد تدريب:</strong> ${trainedLetters.length ? trainedLetters.join(' - ') : 'لا يوجد'}
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${passedLetters.length} حرف متقن (تحسن ${passedLetters.length} حرف)
+      </div>
+      <div style="text-align:center; margin-top:20px;">
+        <button class="btn btn-primary" id="printAchievementBtn" style="border-radius:50px;padding:10px 30px;">🖨️ طباعة / حفظ PDF</button>
+      </div>
+    `;
+    app.appendChild(card);
+    const printBtn = card.querySelector('#printAchievementBtn');
+    if (printBtn) {
+      printBtn.onclick = () => {
+        printAchievement(state.currentStudent, {
+          passedLetters, needLetters, trainedLetters, totalSessions, averageSuccess,
+          masteryPercentage, achievementLevel, achievementIcon, points, weeklyStats
+        });
+      };
+    }
+  } catch (e) {
+    const errorCard = document.createElement('div');
+    errorCard.className = 'card';
+    errorCard.innerHTML = `<p class="muted">⚠️ خطأ في تحميل ملف الإنجاز: ${e.message}</p>`;
+    app.appendChild(errorCard);
+  }
+}
+
+function printAchievement(student, data) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز الطالب</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <div style="margin-bottom:15px;text-align:center;"><strong>اسم الطالب:</strong> ${student.fullName || student.email}<br><strong>المستوى:</strong> ${data.achievementLevel} ${data.achievementIcon}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+        <div><strong>الحروف المتقنة:</strong> ${data.passedLetters.length}</div>
+        <div><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length}</div>
+        <div><strong>عدد الجلسات:</strong> ${data.totalSessions}</div>
+        <div><strong>متوسط النجاح:</strong> ${data.averageSuccess}%</div>
+        <div><strong>نسبة الإتقان:</strong> ${data.masteryPercentage}%</div>
+        <div><strong>النقاط:</strong> ${data.points}</div>
+      </div>
+      <div style="margin-bottom:10px;"><strong>ملخص هذا الأسبوع:</strong><br>الجلسات: ${data.weeklyStats.totalThisWeek} | متوسط النجاح: ${data.weeklyStats.avgSuccess}%</div>
+      <div style="margin-bottom:10px;"><strong>الحروف المتقنة:</strong> ${data.passedLetters.length ? data.passedLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>الحروف التي تحتاج تدريب:</strong> ${data.needLetters.length ? data.needLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>الحروف التي أتقنها بعد تدريب:</strong> ${data.trainedLetters.length ? data.trainedLetters.join('، ') : 'لا يوجد'}</div>
+      <div style="margin-bottom:10px;"><strong>مقارنة قبل / بعد:</strong> قبل التدريب: 0 حرف متقن، بعد التدريب: ${data.passedLetters.length} حرف متقن</div>
+      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+/* ─── [END SEC-57] ─── */
+
+
+/* ─── [SEC-58] التهيئة النهائية — Final Init ─── */
+function initApp() {
+  initAccessibility();
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      state.user = user;
+      fetchUserData(user.uid);
+    } else {
+      state.user = null;
+      state.role = null;
+      state.view = 'home';
+      render();
+    }
+  });
+}
+/* ─── [END SEC-58] ─── */
+
+
+/* ─── [SEC-59] تصدير Firebase للذكاء الاصطناعي — Export Firebase ─── */
+window.db = db;
+window.auth = auth;
+window.storage = storage;
+window.doc = doc;
+window.getDoc = getDoc;
+window.setDoc = setDoc;
+window.updateDoc = updateDoc;
+window.addDoc = addDoc;
+window.getDocs = getDocs;
+window.deleteDoc = deleteDoc;
+window.collection = collection;
+window.query = query;
+window.where = where;
+window.getCurrentStudent = function() { return state.currentStudent; };
+/* ─── [END SEC-59] ─── */
+
+
+/* ─── [SEC-60] تشغيل التطبيق — Start App ─── */
+initApp();
+/* ─── [END SEC-60] ─── */
 
 
 /* ═══════════════════════════════════════════════════════════
-   نهاية الجزء 1/6
+   نهاية الجزء 6/6 — نهاية app.js v2.0
    ═══════════════════════════════════════════════════════════ */
-
-
-/* ═══════════════════════════════════════════════════════════
-   تصدير البيانات الثابتة إلى window
-   ═══════════════════════════════════════════════════════════ */
-window.LETTER_GROUPS = LETTER_GROUPS;
-window.ALL_LETTERS = ALL_LETTERS;
-window.alphabetData = alphabetData;
-window.letterTitleMap = letterTitleMap;
-window.VOCAB_LISTS = VOCAB_LISTS;
-window.VOCAB_CATEGORIES = VOCAB_CATEGORIES;
-window.SESSION_TYPES = SESSION_TYPES;
-window.TOOLS_OPTIONS = TOOLS_OPTIONS;
-window.PLACE_OPTIONS = PLACE_OPTIONS;
-window.METHOD_OPTIONS = METHOD_OPTIONS;
-window.DISORDER_TYPES = DISORDER_TYPES;
-window.DISORDER_DEFINITIONS = DISORDER_DEFINITIONS;
-window.LETTER_DATABASE = LETTER_DATABASE;
-window.getDefaultGoal = getDefaultGoal;
-/* ─── [END تصدير البيانات الثابتة] ─── */
