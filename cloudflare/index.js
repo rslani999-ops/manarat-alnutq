@@ -1,6 +1,6 @@
 /* ========================================
    منارة النطق - Cloudflare Worker
-   v5.0 — R2 Uploader فقط
+   v5.0 — R2 Uploader + AI
    ======================================== */
 
 var __defProp = Object.defineProperty;
@@ -30,15 +30,17 @@ var index_default = {
     if (r.method === "OPTIONS") return corsPreflight;
 
     try {
+      /* ============ /api/health ============ */
       if (u.pathname === "/api/health") {
         return json({ ok: true, app: "منارة النطق", version: "5.0", role: "R2 Uploader" });
       }
 
+      /* ============ /api/ai (POST) — النصوص ============ */
       if (u.pathname === "/api/ai" && r.method === "POST") {
         if (!e.AI) return json({ error: "Workers AI غير مفعّل" }, 503);
         const b = await r.json();
         const role = b.role === "student" ? "طفل من 4 إلى 12 سنة" : "معلم تدريبات نطق";
-        const p = `أنت مساعد تعليمي للنطق العربي للأطفال 4-12 سنة.
+        const p = `أنت مساعد تعليمي للنطق العربي للأطفال 4-12 سنة. لا تقدم تشخيصاً طبياً.
 الجمهور: ${role}
 الطالب: ${b.studentName || "الطالب"}
 الحرف: ${b.letter || ""}
@@ -49,6 +51,7 @@ var index_default = {
         return json({ ok: true, recommendation: x?.response || x });
       }
 
+      /* ============ /api/r2-upload (POST) — رفع إلى R2 ============ */
       if (u.pathname === "/api/r2-upload" && r.method === "POST") {
         try {
           const body = await r.json();
@@ -79,6 +82,24 @@ var index_default = {
         }
       }
 
+      /* ============ /api/students (GET) — طلاب قديم ============ */
+      if (u.pathname === "/api/students" && r.method === "GET") {
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/manarat-alnutq/databases/(default)/documents/students`;
+        const res = await fetch(firestoreUrl);
+        const data = await res.json();
+        const students = (data.documents || []).map((doc) => {
+          const fields = doc.fields || {};
+          const id = doc.name.split("/").pop();
+          return {
+            id,
+            name: fields.name?.stringValue || "",
+            createdAt: fields.createdAt?.stringValue || ""
+          };
+        });
+        return json({ success: true, students });
+      }
+
+      /* ============ الملفات الثابتة ============ */
       if (e.ASSETS) {
         return await e.ASSETS.fetch(r);
       }
