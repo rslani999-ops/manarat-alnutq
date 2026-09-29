@@ -1,13 +1,14 @@
 /* ========================================
    Manarat Al-Nutq - Vercel Function
    توليد الصور عبر Fanar
+   v2.0 — مع Worker الجديد (manarat-api-v3)
    ======================================== */
 
 const FANAR_API_KEY = process.env.FANAR_API_KEY || "6kUl68R2x4degWtI2eKeilDdyM3hLmUu";
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "https://pub-8f83fb6338db4c5aac3fd512bef2610f.r2.dev";
 
-// رفع إلى R2 عبر Cloudflare Worker
-const R2_UPLOAD_URL = process.env.R2_UPLOAD_URL || "https://manarat-alnutq.rslani999.workers.dev/api/r2-upload";
+/* ⚠️ مهم: Worker الجديد */
+const R2_UPLOAD_URL = process.env.R2_UPLOAD_URL || "https://manarat-api-v3.rslani999.workers.dev/api/r2-upload";
 
 function wordToFileName(word) {
   let hash = 0;
@@ -22,7 +23,7 @@ function wordToFileName(word) {
 }
 
 export default async function handler(req, res) {
-  // CORS
+  /* CORS */
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -42,10 +43,7 @@ export default async function handler(req, res) {
   console.log(`🎨 توليد صورة: ${word}`);
 
   try {
-    // 1. الترجمة (اختياري) — نستخدم Fanar مباشرة بالعربية
-    let prompt = word;
-
-    // 2. استدعاء Fanar
+    /* 1. استدعاء Fanar */
     const fanarResponse = await fetch('https://api.fanar.qa/v1/images/generations', {
       method: 'POST',
       headers: {
@@ -57,7 +55,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'Fanar-Oryx-IG-2',
-        prompt: prompt,
+        prompt: word,
         n: 1,
         size: '1024x1024'
       })
@@ -89,7 +87,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 3. رفع الصورة إلى R2 (عبر Cloudflare Worker)
+    /* 2. رفع الصورة إلى R2 */
     if (!base64Image.startsWith('http')) {
       try {
         const uploadResponse = await fetch(R2_UPLOAD_URL, {
@@ -101,7 +99,9 @@ export default async function handler(req, res) {
           })
         });
 
-        if (uploadResponse.ok) {
+        const uploadData = await uploadResponse.json();
+
+        if (uploadResponse.ok && uploadData.success) {
           console.log(`✅ تم حفظ الصورة في R2: ${fileName}`);
           return res.status(200).json({
             success: true,
@@ -112,13 +112,13 @@ export default async function handler(req, res) {
             model: 'fanar-oryx-ig-2'
           });
         } else {
-          console.warn('فشل رفع الصورة إلى R2');
+          console.warn('فشل رفع الصورة إلى R2:', uploadData);
         }
       } catch (r2Error) {
         console.error('خطأ R2:', r2Error.message);
       }
 
-      // إذا فشل R2، أرجع base64
+      /* إذا فشل R2، أرجع base64 */
       return res.status(200).json({
         success: true,
         image: 'data:image/png;base64,' + base64Image,
@@ -129,7 +129,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // إذا كانت الصورة URL مباشر
+    /* إذا كانت الصورة URL مباشر */
     return res.status(200).json({
       success: true,
       image: base64Image,
