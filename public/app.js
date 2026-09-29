@@ -2802,7 +2802,6 @@ async function renderSpeechSessions(app) {
    الجزء 5/6 — الجلسة الفردية + الألعاب + ولي الأمر + الخطة الأسبوعية + ملفات الإنجاز
    ═══════════════════════════════════════════════════════════ */
 
-
 /* ─── [SEC-42] عرض جلسة واحدة — Single Session ─── */
 async function renderSingleSession(app) {
   const sess = state.currentSession;
@@ -2925,6 +2924,7 @@ async function renderSingleSession(app) {
     };
   }
 
+  /* ===== 🤖 أدوات الذكاء الاصطناعي ===== */
   if (state.role === 'teacher' || state.role === 'admin') {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
@@ -2956,6 +2956,7 @@ async function renderSingleSession(app) {
     }
   }
 
+  /* ===== ربط الأحداث ===== */
   if (state.role === 'teacher' || state.role === 'admin') {
     let selectedEval = currentEval;
     let selectedRate = sess.successRate || 0;
@@ -3078,6 +3079,7 @@ async function renderSingleSession(app) {
     };
   }
 
+  /* ===== بطاقة التدريب ===== */
   const trainCard = document.createElement('div');
   trainCard.className = 'card';
   trainCard.style.borderRadius = '24px';
@@ -3136,7 +3138,9 @@ async function renderSingleSession(app) {
             <h4 style="color:var(--mint-deep);">${pos.label}</h4>
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
               ${pos.words.map(word => `
-                <span style="background:#EAF6F4;padding:8px 16px;border-radius:20px;font-size:18px;font-weight:bold;cursor:pointer;" onclick="speakText('${word}')">${word}</span>
+                <span class="word-chip" data-word="${word}" style="background:#EAF6F4;padding:8px 16px;border-radius:20px;font-size:18px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="speakText('${word}')">
+                  ${word}
+                </span>
               `).join('')}
             </div>
           </div>
@@ -3151,9 +3155,11 @@ async function renderSingleSession(app) {
         <h3 style="text-align:center;">✍️ الحرف في جمل</h3>
         <div style="margin:20px 0;">
           ${sentences.map(sentence => `
-            <div style="background:white;padding:15px;border-radius:12px;margin-bottom:10px;font-size:18px;line-height:1.8;cursor:pointer;" onclick="speakText('${sentence}')">
-              ${sentence}
-              <span style="float:left;">🔊</span>
+            <div style="background:white;padding:15px;border-radius:12px;margin-bottom:10px;font-size:18px;line-height:1.8;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="flex:1;cursor:pointer;" onclick="speakText('${sentence}')">${sentence}</span>
+              <span class="sentence-actions" data-sentence="${sentence}">
+                <button class="speak-btn" onclick="speakText('${sentence}')" style="background:var(--mint);color:white;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;">🔊</button>
+              </span>
             </div>
           `).join('')}
         </div>
@@ -3165,6 +3171,55 @@ async function renderSingleSession(app) {
   trainCard.innerHTML = content;
   app.appendChild(trainCard);
 
+  /* ===== 🆕 إضافة زر "توليد محتوى الحرف" (للمعلم فقط) ===== */
+  if (state.role === 'teacher' || state.role === 'admin') {
+    const generateLetterSection = document.createElement('div');
+    generateLetterSection.className = 'card';
+    generateLetterSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
+    generateLetterSection.innerHTML = `
+      <h3 style="color:#6D28D9;margin-bottom:8px;">📚 توليد محتوى هذا الحرف بالذكاء الاصطناعي</h3>
+      <p style="font-size:13px;color:#555;margin-bottom:12px;">
+        إذا لم تكن بيانات الحرف كافية، يمكنك توليدها بالذكاء الاصطناعي (حركات + كلمات + جمل).
+      </p>
+      <div id="generateLetterContainer" style="text-align:center;"></div>
+    `;
+    const genContainer = generateLetterSection.querySelector('#generateLetterContainer');
+    if (typeof window.createGenerateLetterButton === 'function') {
+      const genBtn = window.createGenerateLetterButton(letter, () => {
+        setTimeout(() => { renderSingleSession(app); }, 1000);
+      });
+      genContainer.appendChild(genBtn);
+    } else {
+      genContainer.innerHTML = '<p class="muted">⚠️ ميزة التوليد غير متوفرة</p>';
+    }
+    app.appendChild(generateLetterSection);
+  }
+
+  /* ===== 🆕 إضافة أزرار توليد الصور بجانب الكلمات (للمعلم) ===== */
+  if (state.role === 'teacher' || state.role === 'admin') {
+    if (typeof window.createImageButton === 'function') {
+      trainCard.querySelectorAll('.word-chip').forEach(chip => {
+        const word = chip.dataset.word;
+        if (word) {
+          const imgBtn = window.createImageButton(word);
+          chip.appendChild(imgBtn);
+        }
+      });
+
+      trainCard.querySelectorAll('.sentence-actions').forEach(container => {
+        const sentence = container.dataset.sentence;
+        if (sentence) {
+          const mainWord = sentence.split(' ')[0].replace(/[.,!؟]/g, '');
+          if (mainWord && mainWord.length > 2) {
+            const imgBtn = window.createImageButton(mainWord);
+            container.appendChild(imgBtn);
+          }
+        }
+      });
+    }
+  }
+
+  /* ===== ربط زر التسجيل ===== */
   const sessionRecordBtn = trainCard.querySelector('#sessionRecordBtn');
   if (sessionRecordBtn) {
     sessionRecordBtn.onclick = function() {
@@ -3188,6 +3243,7 @@ async function renderSingleSession(app) {
   }
 }
 /* ─── [END SEC-42] ─── */
+
 
 
 /* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion ─── */
