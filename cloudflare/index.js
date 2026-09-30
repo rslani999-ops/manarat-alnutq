@@ -1,68 +1,138 @@
 /* ========================================
-   منارة النطق - Cloudflare Worker
-   v5.0 — R2 Uploader + AI
+   Manarat Al-Nutq - Cloudflare Worker API
+   v5.2 — R2 + AI + Letter Generator
    ======================================== */
 
-var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
 
-var json = __name((d, s = 200) => new Response(JSON.stringify(d), {
-  status: s,
-  headers: {
-    "content-type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
-  }
-}), "json");
+    /* ============ CORS ============ */
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type"
+        }
+      });
+    }
 
-var corsPreflight = new Response(null, {
-  headers: {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
-  }
-});
-
-var index_default = {
-  async fetch(r, e) {
-    const u = new URL(r.url);
-    if (r.method === "OPTIONS") return corsPreflight;
+    const json = (data, status = 200) => new Response(JSON.stringify(data), {
+      status: status,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    });
 
     try {
       /* ============ /api/health ============ */
-      if (u.pathname === "/api/health") {
-        return json({ ok: true, app: "منارة النطق", version: "5.0", role: "R2 Uploader" });
+      if (url.pathname === "/api/health") {
+        return json({
+          ok: true,
+          app: "منارة النطق",
+          version: "5.2",
+          role: "R2 Uploader + AI",
+          model: "glm-4.7-flash",
+          bindings: {
+            IMAGES_BUCKET: !!env.IMAGES_BUCKET,
+            AI: !!env.AI
+          }
+        });
       }
 
-      /* ============ /api/ai (POST) — النصوص ============ */
-      if (u.pathname === "/api/ai" && r.method === "POST") {
-        if (!e.AI) return json({ error: "Workers AI غير مفعّل" }, 503);
-        const b = await r.json();
-        const role = b.role === "student" ? "طفل من 4 إلى 12 سنة" : "معلم تدريبات نطق";
-        const p = `أنت مساعد تعليمي للنطق العربي للأطفال 4-12 سنة. لا تقدم تشخيصاً طبياً.
+      /* ============ /api/ai (POST) ============ */
+      if (url.pathname === "/api/ai" && request.method === "POST") {
+        if (!env.AI) return json({ error: "Workers AI غير مفعّل" }, 503);
+        const body = await request.json();
+        const role = body.role === "student" ? "طفل من 4 إلى 12 سنة" : "معلم تدريبات نطق";
+
+        const prompt = `أنت مساعد تعليمي للنطق العربي للأطفال 4-12 سنة.
 الجمهور: ${role}
-الطالب: ${b.studentName || "الطالب"}
-الحرف: ${b.letter || ""}
-المرحلة: ${b.stage || ""}
-النتائج: ${JSON.stringify(b.results || {})}
+الطالب: ${body.studentName || "الطالب"}
+الحرف: ${body.letter || ""}
+المرحلة: ${body.stage || ""}
+النتائج: ${JSON.stringify(body.results || {})}
 أعط: ملاحظة أداء، تمريناً قصيراً، ونصيحة. بالعربية.`;
-        const x = await e.AI.run("@cf/meta/llama-3.1-8b-instruct", { prompt: p, max_tokens: 500 });
-        return json({ ok: true, recommendation: x?.response || x });
+
+        const result = await env.AI.run("@cf/zai-org/glm-4.7-flash", {
+          prompt: prompt,
+          max_tokens: 500
+        });
+
+        return json({ ok: true, recommendation: result?.response || result });
       }
 
-      /* ============ /api/r2-upload (POST) — رفع إلى R2 ============ */
-      if (u.pathname === "/api/r2-upload" && r.method === "POST") {
+      /* ============ /api/ai-letter (POST) ============ */
+      if (url.pathname === "/api/ai-letter" && request.method === "POST") {
+        if (!env.AI) return json({ success: false, message: "Workers AI غير مفعّل" }, 503);
+
+        const body = await request.json();
+        const letter = body.letter;
+        const letterTitle = body.letterTitle || "";
+
+        if (!letter) {
+          return json({ success: false, message: "الحرف مطلوب" }, 400);
+        }
+
+        const prompt = `أنت خبير في اللغة العربية وتعليم النطق للأطفال.
+ولّد بيانات حرف "${letter}" (مثال: ${letterTitle}).
+
+أعد الإجابة بصيغة JSON فقط، بدون أي شرح أو علامات:
+
+{
+  "place": "وصف مختصر لمخرج الحرف",
+  "vowels": {"fatha": "${letter}َ", "damma": "${letter}ُ", "kasra": "${letter}ِ", "sukoon": "${letter}ْ"},
+  "words": {"start": ["كلمة1", "كلمة2", "كلمة3"], "middle": ["كلمة1", "كلمة2", "كلمة3"], "end": ["كلمة1", "كلمة2", "كلمة3"]},
+  "sentences": ["جملة 1", "جملة 2", "جملة 3"]
+}
+
+الشروط:
+- الكلمات بسيطة ومألوفة للأطفال (4-12 سنة)
+- كل كلمة تحتوي على الحرف "${letter}" في الموضع الصحيح
+- الجمل بسيطة وتحتوي على الحرف "${letter}"
+- الإجابة JSON صحيح 100%`;
+
+        const result = await env.AI.run("@cf/zai-org/glm-4.7-flash", {
+          prompt: prompt,
+          max_tokens: 800
+        });
+
+        let text = result?.response || "";
+
+        text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          text = text.substring(firstBrace, lastBrace + 1);
+        }
+
         try {
-          const body = await r.json();
+          const data = JSON.parse(text);
+          return json({ success: true, data: data });
+        } catch (e) {
+          return json({
+            success: false,
+            message: "فشل تحليل JSON",
+            raw: text.substring(0, 500)
+          }, 500);
+        }
+      }
+
+      /* ============ /api/r2-upload (POST) ============ */
+      if (url.pathname === "/api/r2-upload" && request.method === "POST") {
+        try {
+          const body = await request.json();
           const fileName = body.fileName;
           const base64 = body.base64;
 
           if (!fileName || !base64) {
             return json({ success: false, message: "بيانات ناقصة" }, 400);
           }
-
-          if (!e.IMAGES_BUCKET) {
+          if (!env.IMAGES_BUCKET) {
             return json({ success: false, message: "R2 غير مربوط" }, 503);
           }
 
@@ -72,7 +142,7 @@ var index_default = {
             bytes[i] = binaryString.charCodeAt(i);
           }
 
-          await e.IMAGES_BUCKET.put(fileName, bytes, {
+          await env.IMAGES_BUCKET.put(fileName, bytes, {
             httpMetadata: { contentType: "image/png" }
           });
 
@@ -82,34 +152,32 @@ var index_default = {
         }
       }
 
-      /* ============ /api/students (GET) — طلاب قديم ============ */
-      if (u.pathname === "/api/students" && r.method === "GET") {
-        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/manarat-alnutq/databases/(default)/documents/students`;
-        const res = await fetch(firestoreUrl);
-        const data = await res.json();
-        const students = (data.documents || []).map((doc) => {
-          const fields = doc.fields || {};
-          const id = doc.name.split("/").pop();
-          return {
-            id,
-            name: fields.name?.stringValue || "",
-            createdAt: fields.createdAt?.stringValue || ""
-          };
-        });
-        return json({ success: true, students });
+      /* ============ /api/r2-check (GET) ============ */
+      if (url.pathname === "/api/r2-check" && request.method === "GET") {
+        const fileName = url.searchParams.get("fileName");
+        if (!fileName) return json({ success: false, message: "fileName مطلوب" }, 400);
+        if (!env.IMAGES_BUCKET) return json({ success: false, message: "R2 غير مربوط" }, 503);
+
+        try {
+          const object = await env.IMAGES_BUCKET.head(fileName);
+          if (object) {
+            return json({ success: true, exists: true, fileName: fileName, size: object.size });
+          }
+          return json({ success: true, exists: false, fileName: fileName });
+        } catch (error) {
+          return json({ success: false, message: error.message }, 500);
+        }
       }
 
-      /* ============ الملفات الثابتة ============ */
-      if (e.ASSETS) {
-        return await e.ASSETS.fetch(r);
-      }
-
-      return json({ status: "منارة النطق - R2 Uploader", version: "5.0" });
+      return json({
+        status: "منارة النطق - API Worker",
+        version: "5.2",
+        model: "glm-4.7-flash",
+        endpoints: ["/api/health", "/api/ai", "/api/ai-letter", "/api/r2-upload", "/api/r2-check"]
+      });
 
     } catch (error) {
       return json({ error: "خطأ عام", detail: String(error?.message || error) }, 500);
     }
   }
 };
-
-export { index_default as default };
