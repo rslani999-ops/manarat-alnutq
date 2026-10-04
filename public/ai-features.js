@@ -1,10 +1,10 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v11.0 — كامل مع كل الميزات
+   v11.1 — كامل مع كل الميزات + نماذج رسائل موحدة
    ======================================== */
 
-console.log('🚀 Starting ai-features.js v11.0...');
+console.log('🚀 Starting ai-features.js v11.1...');
 
 /* ========================================
    🔑 ثوابت
@@ -24,6 +24,93 @@ function safeToast(msg) {
 
 function safeRender() {
   if (typeof window.render === 'function') window.render();
+}
+
+function getTeacherInfo() {
+  const user = window.state?.user || {};
+  const role = window.state?.role || 'teacher';
+  const fullName = user.displayName || user.fullName || user.email || 'المعلم';
+  const schoolName = user.schoolName || '';
+  const roleLabel = role === 'admin' ? 'مدير المدرسة' : 'معلم تدريبات النطق';
+  return { fullName, schoolName, roleLabel };
+}
+
+function getStudentInfo() {
+  const st = window.state?.currentStudent || {};
+  return {
+    fullName: st.fullName || 'الطالب',
+    parentName: st.parentName || 'ولي الأمر',
+    parentEmail: st.parentEmail || '',
+    parentPhone: st.parentPhone || ''
+  };
+}
+
+function getSessionDetails(sessionData) {
+  const sessionTypes = window.SESSION_TYPES || [
+    { id: 1, name: 'الحرف مجرداً' },
+    { id: 2, name: 'الحرف مع الحركات' },
+    { id: 3, name: 'الحرف في كلمات' },
+    { id: 4, name: 'الحرف في جمل' }
+  ];
+  const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
+  const evalLabels = {
+    'passed': '✅ اجتاز',
+    'trained': '🔄 اجتاز بعد تدريب',
+    'need': '⚠️ يحتاج تدريب',
+    'unclear': '❌ غير واضح',
+    'none': '⏳ قيد التقييم'
+  };
+  const evalText = evalLabels[sessionData.evaluation] || '⏳ قيد التقييم';
+
+  return {
+    student: sessionData.studentName || 'الطالب',
+    letter: sessionData.letter || '',
+    typeName: typeInfo.name,
+    date: sessionData.date || new Date().toISOString().split('T')[0],
+    duration: sessionData.duration || '15 دقيقة',
+    goal: sessionData.goal || 'تدريب نطق الحرف',
+    evaluation: evalText,
+    successRate: sessionData.successRate || 0
+  };
+}
+
+/* ========================================
+   📄 بناء الرسالة الموحدة لولي الأمر
+   ======================================== */
+
+function buildParentMessage(sessionData, content, contentType) {
+  const student = getStudentInfo();
+  const teacher = getTeacherInfo();
+  const details = getSessionDetails(sessionData);
+
+  const header = `السلام عليكم ولي أمر ${student.fullName}
+
+📋 تقرير جلسة نطق
+━━━━━━━━━━━━━━━━━━━━
+👤 الطالب: ${details.student}
+🔤 الحرف المستهدف: (${details.letter})
+📚 نوع الجلسة: ${details.typeName}
+📅 التاريخ: ${details.date}
+⏱️ المدة: ${details.duration}
+
+🎯 الهدف:
+${details.goal}
+
+📊 التقييم: ${details.evaluation}
+📈 نسبة النجاح: ${details.successRate}%
+`;
+
+  const body = `\n${content}\n`;
+
+  const schoolLine = teacher.schoolName
+    ? ` - ${teacher.schoolName}`
+    : '';
+
+  const footer = `━━━━━━━━━━━━━━━━━━━━
+🌹 نرجو متابعة التدريب المنزلي بانتظام
+أ/ ${teacher.fullName} - ${teacher.roleLabel}${schoolLine}`;
+
+  return `${header}${body}${footer}`;
 }
 
 /* ========================================
@@ -247,34 +334,62 @@ async function generateSessionRecommendations(sessionData, studentData) {
   ];
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
 
-  const prompt = `الطالب: ${studentData.fullName || 'الطالب'}
-الحرف: ${sessionData.letter}
-نوع الجلسة: ${typeInfo.name}
-نسبة النجاح: ${sessionData.successRate || 0}%
-التقييم: ${sessionData.evaluation || 'غير مقيم'}
+  const prompt = `أنت مساعد تعليمي متخصص في تدريب النطق للأطفال (4-12 سنة).
+لا تقدم تشخيصاً طبياً، فقط توصيات تعليمية عملية.
 
-أعط: تحليل موجز (سطران)، توصيتان للجلسة القادمة، تمرين منزلي بسيط.`;
+📋 بيانات الجلسة:
+- الطالب: ${studentData.fullName || 'الطالب'}
+- الحرف المستهدف: ${sessionData.letter}
+- نوع الجلسة: ${typeInfo.name}
+- الهدف: ${sessionData.goal || 'غير محدد'}
+- نسبة النجاح: ${sessionData.successRate || 0}%
+- التقييم: ${sessionData.evaluation || 'غير مقيم'}
+
+المطلوب منك بالضبط (بالعربية الفصحى المبسطة، بأسلوب عملي ومشجع):
+
+📊 **تحليل موجز لأداء الطالب** (3 أسطر متصلة)
+
+🎯 **توصيتان لجلسات قادمة**
+- التوصية 1: [عنوان]
+  [شرح مختصر]
+- التوصية 2: [عنوان]
+  [شرح مختصر]
+
+🏠 **تمرين منزلي بسيط لولي الأمر**
+[خطوات محددة ومختصرة]
+
+⚠️ **تنبيه** (إذا لزم الأمر فقط)
+
+اكتب بأسلوب واضح ومباشر، عملي، مشجع.`;
 
   return await callAI(prompt, 'teacher');
 }
 
 function showAIRecommendationsModal(recommendations, sessionData) {
+  const student = getStudentInfo();
+  const parentName = student.parentName;
+  const parentEmail = student.parentEmail;
+  const parentPhone = student.parentPhone;
+  const fullMessage = buildParentMessage(sessionData, recommendations, 'recommendations');
+
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
   modal.innerHTML = `
     <div style="background:white;padding:25px;border-radius:20px;max-width:650px;width:100%;max-height:85vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h3 style="margin:0;color:var(--mint-deep);">🤖 توصيات الذكاء الاصطناعي</h3>
+        <h3 style="margin:0;color:#7C3AED;">🤖 توصيات الذكاء الاصطناعي</h3>
         <button id="closeAIModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
-      <div style="background:#F0FDFA;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid var(--mint-deep);">
+      <div style="background:#F3E8FF;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #7C3AED;">
         <div style="font-size:13px;color:#555;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
-        <div style="font-size:13px;color:#555;"><strong>📊 نسبة النجاح:</strong> ${sessionData.successRate || 0}%</div>
       </div>
-      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FAFDFC;padding:18px;border-radius:12px;">${recommendations}</div>
-      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
-        <button class="btn btn-primary" id="copyAIBtn" style="border-radius:50px;padding:10px 24px;">📋 نسخ</button>
-        <button class="btn btn-soft" id="closeAIModalBtn" style="border-radius:50px;padding:10px 24px;">إغلاق</button>
+      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FAF5FF;padding:18px;border-radius:12px;max-height:400px;overflow-y:auto;">${fullMessage}</div>
+
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
+        <button id="copyAIBtn" style="border-radius:50px;padding:10px 20px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
+        ${parentPhone ? `<button id="sendWhatsappAiBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
+        ${parentEmail ? `<button id="sendEmailAiBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
+        <button id="closeAIModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
@@ -283,9 +398,28 @@ function showAIRecommendationsModal(recommendations, sessionData) {
   modal.querySelector('#closeAIModal').onclick = closeModal;
   modal.querySelector('#closeAIModalBtn').onclick = closeModal;
   modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
   modal.querySelector('#copyAIBtn').onclick = () => {
-    navigator.clipboard.writeText(recommendations).then(() => safeToast('✅ تم نسخ التوصيات'));
+    navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ التوصيات'));
   };
+
+  const waBtn = modal.querySelector('#sendWhatsappAiBtn');
+  if (waBtn) {
+    waBtn.onclick = () => {
+      let phone = parentPhone.replace(/\D/g, '');
+      if (phone.startsWith('0')) phone = '966' + phone.substring(1);
+      if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
+    };
+  }
+
+  const emailBtn = modal.querySelector('#sendEmailAiBtn');
+  if (emailBtn) {
+    emailBtn.onclick = () => {
+      const subject = encodeURIComponent(`توصيات جلسة - ${student.fullName} - حرف ${sessionData.letter}`);
+      window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(fullMessage)}`;
+    };
+  }
 }
 
 function createAIButton(sessionData, studentData) {
@@ -308,6 +442,7 @@ function createAIButton(sessionData, studentData) {
   };
   return btn;
 }
+
 /* ========================================
    📝 التمارين المنزلية
    ======================================== */
@@ -321,19 +456,65 @@ async function generateHomeworkExercises(sessionData, studentData) {
   ];
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
 
-  const prompt = `الطالب: ${studentData.fullName || 'الطالب'}
-الحرف: ${sessionData.letter}
-نوع الجلسة: ${typeInfo.name}
-نسبة النجاح: ${sessionData.successRate || 0}%
+  const prompt = `أنت أخصائي نطق تعليمي متخصص في تمارين الأطفال (4-12 سنة).
+المطلوب: توليد تمارين منزلية بسيطة وممتعة لولي الأمر.
 
-اكتب 3 تمارين منزلية بسيطة لحرف (${sessionData.letter}).
-كل تمرين: الاسم، الهدف، الطريقة، المدة.
-ثم: لعبة ممتعة واحدة، ونصيحتان لولي الأمر.`;
+📋 معلومات:
+- الطالب: ${studentData.fullName || 'الطالب'}
+- الحرف المستهدف: ${sessionData.letter}
+- نوع الجلسة: ${typeInfo.name}
+- نسبة النجاح: ${sessionData.successRate || 0}%
+
+اكتب بالضبط بهذا التنسيق:
+
+أهلاً بك يا ولي أمر البطل *${studentData.fullName || 'الطالب'}*. بصفتي أخصائي النطق الخاص به، يسعدني أن أقدم لك هذه التمارين المنزلية البسيطة والمصممة خصيصاً لمساعدته في التدرب على نطق حرف (${sessionData.letter}).
+
+🎯 *تمارين منزلية لحرف (${sessionData.letter})*
+
+⏱️ *المدة اليومية*: 10-15 دقيقة
+📅 *التكرار*: 5 أيام في الأسبوع
+
+🔥 *التمرين 1: [اسم جذاب]*
+- الهدف: [هدف محدد]
+- الطريقة: [خطوات واضحة]
+- المدة: [عدد الدقائق]
+
+🔥 *التمرين 2: [اسم جذاب]*
+- الهدف: [هدف محدد]
+- الطريقة: [خطوات واضحة]
+- المدة: [عدد الدقائق]
+
+🔥 *التمرين 3: [اسم جذاب]*
+- الهدف: [هدف محدد]
+- الطريقة: [خطوات واضحة]
+- المدة: [عدد الدقائق]
+
+🎮 *نشاط ممتع:*
+[نشاط بسيط وممتع]
+
+⭐ *نصائح لولي الأمر:*
+- نصيحة 1
+- نصيحة 2
+- نصيحة 3
+
+⚠️ *تجنب:*
+- ما يجب تجنبه
+
+الشروط:
+- تمارين سهلة بدون أدوات خاصة
+- مناسبة لعمر 4-12 سنة
+- بالعربية الفصحى المبسطة`;
 
   return await callAI(prompt, 'teacher');
 }
 
 function showHomeworkModal(homeworkText, sessionData) {
+  const student = getStudentInfo();
+  const parentName = student.parentName;
+  const parentEmail = student.parentEmail;
+  const parentPhone = student.parentPhone;
+  const fullMessage = buildParentMessage(sessionData, homeworkText, 'homework');
+
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
   modal.innerHTML = `
@@ -345,10 +526,13 @@ function showHomeworkModal(homeworkText, sessionData) {
       <div style="background:#FFF7ED;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #EA580C;">
         <div style="font-size:13px;color:#555;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
       </div>
-      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FFFBF5;padding:18px;border-radius:12px;">${homeworkText}</div>
-      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
-        <button class="btn" id="copyHWBtn" style="border-radius:50px;padding:10px 24px;background:#EA580C;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-        <button class="btn btn-soft" id="closeHWModalBtn" style="border-radius:50px;padding:10px 24px;">إغلاق</button>
+      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FFFBF5;padding:18px;border-radius:12px;max-height:400px;overflow-y:auto;">${fullMessage}</div>
+
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
+        <button id="copyHWBtn" style="border-radius:50px;padding:10px 20px;background:#EA580C;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
+        ${parentPhone ? `<button id="sendWhatsappHwBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
+        ${parentEmail ? `<button id="sendEmailHwBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
+        <button id="closeHWModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
@@ -357,9 +541,28 @@ function showHomeworkModal(homeworkText, sessionData) {
   modal.querySelector('#closeHWModal').onclick = closeModal;
   modal.querySelector('#closeHWModalBtn').onclick = closeModal;
   modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
   modal.querySelector('#copyHWBtn').onclick = () => {
-    navigator.clipboard.writeText(homeworkText).then(() => safeToast('✅ تم نسخ التمارين'));
+    navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ التمارين'));
   };
+
+  const waBtn = modal.querySelector('#sendWhatsappHwBtn');
+  if (waBtn) {
+    waBtn.onclick = () => {
+      let phone = parentPhone.replace(/\D/g, '');
+      if (phone.startsWith('0')) phone = '966' + phone.substring(1);
+      if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
+    };
+  }
+
+  const emailBtn = modal.querySelector('#sendEmailHwBtn');
+  if (emailBtn) {
+    emailBtn.onclick = () => {
+      const subject = encodeURIComponent(`تمارين منزلية - ${student.fullName} - حرف ${sessionData.letter}`);
+      window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(fullMessage)}`;
+    };
+  }
 }
 
 function createHomeworkButton(sessionData, studentData) {
@@ -382,7 +585,6 @@ function createHomeworkButton(sessionData, studentData) {
   };
   return btn;
 }
-
 /* ========================================
    📖 القصة القصيرة
    ======================================== */
@@ -397,18 +599,52 @@ async function generateShortStory(sessionData, studentData) {
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
   const letterTitle = window.letterTitleMap?.[sessionData.letter] || '';
 
-  const prompt = `الحرف: ${sessionData.letter}
-كلمة الحرف: ${letterTitle}
-نوع الجلسة: ${typeInfo.name}
-الفئة العمرية: ${studentData.ageGroup || '4-12 سنة'}
+  const prompt = `أنت كاتب قصص أطفال تعليمية متخصص في تدريب النطق.
+المطلوب: قصة **جديدة ومبتكرة** تحتوي على تكرار الحرف المستهدف.
 
-اكتب قصة قصيرة (5-7 جمل) للأطفال تحتوي على الحرف (${sessionData.letter}) مكرراً.
-ثم: كلمات القصة التي تبدأ بالحرف، نشاط بعد القراءة، نصيحة لولي الأمر.`;
+⚠️ مهم جداً: اكتب **قصة فعلية** — وليس توصيات أو تمارين.
+
+📋 معلومات:
+- الطالب: ${studentData.fullName || 'الطالب'}
+- الفئة العمرية: ${studentData.ageGroup || '4-12 سنة'}
+- الحرف المستهدف: ${sessionData.letter}
+- كلمة الحرف: ${letterTitle}
+
+**اكتب بالضبط بهذا التنسيق:**
+
+📖 *قصة: [عنوان جذاب]*
+
+[القصة نفسها — 6-8 جمل قصيرة، تحتوي على الحرف (${sessionData.letter}) مكرراً 5-7 مرات]
+
+📝 *كلمات القصة التي تبدأ بالحرف (${sessionData.letter}):*
+- كلمة 1
+- كلمة 2
+- كلمة 3
+- كلمة 4
+
+🎯 *نشاط بعد القراءة:*
+- نشاط 1
+- نشاط 2
+
+⭐ *نصيحة لولي الأمر:*
+[اقتراح عملي للقراءة مع الطفل]
+
+الشروط:
+- مناسبة لعمر 4-12 سنة
+- كلمات بسيطة ومألوفة
+- قيمة تربوية
+- بالعربية الفصحى المبسطة`;
 
   return await callAI(prompt, 'teacher');
 }
 
 function showShortStoryModal(storyText, sessionData) {
+  const student = getStudentInfo();
+  const parentName = student.parentName;
+  const parentEmail = student.parentEmail;
+  const parentPhone = student.parentPhone;
+  const fullMessage = buildParentMessage(sessionData, storyText, 'story');
+
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
   modal.innerHTML = `
@@ -420,10 +656,13 @@ function showShortStoryModal(storyText, sessionData) {
       <div style="background:#FCE7F3;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #DB2777;">
         <div style="font-size:13px;color:#9D174D;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
       </div>
-      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FFF5F7;padding:18px;border-radius:12px;">${storyText}</div>
-      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
-        <button class="btn" id="copyStoryBtn" style="border-radius:50px;padding:10px 24px;background:#DB2777;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-        <button class="btn btn-soft" id="closeStoryModalBtn" style="border-radius:50px;padding:10px 24px;">إغلاق</button>
+      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FFF5F7;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${fullMessage}</div>
+
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
+        <button id="copyStoryBtn" style="border-radius:50px;padding:10px 20px;background:#DB2777;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
+        ${parentPhone ? `<button id="sendWhatsappStoryBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
+        ${parentEmail ? `<button id="sendEmailStoryBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
+        <button id="closeStoryModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
@@ -432,9 +671,28 @@ function showShortStoryModal(storyText, sessionData) {
   modal.querySelector('#closeStoryModal').onclick = closeModal;
   modal.querySelector('#closeStoryModalBtn').onclick = closeModal;
   modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
   modal.querySelector('#copyStoryBtn').onclick = () => {
-    navigator.clipboard.writeText(storyText).then(() => safeToast('✅ تم نسخ القصة'));
+    navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ القصة'));
   };
+
+  const waBtn = modal.querySelector('#sendWhatsappStoryBtn');
+  if (waBtn) {
+    waBtn.onclick = () => {
+      let phone = parentPhone.replace(/\D/g, '');
+      if (phone.startsWith('0')) phone = '966' + phone.substring(1);
+      if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
+    };
+  }
+
+  const emailBtn = modal.querySelector('#sendEmailStoryBtn');
+  if (emailBtn) {
+    emailBtn.onclick = () => {
+      const subject = encodeURIComponent(`قصة قصيرة - ${student.fullName} - حرف ${sessionData.letter}`);
+      window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(fullMessage)}`;
+    };
+  }
 }
 
 function createShortStoryButton(sessionData, studentData) {
@@ -473,13 +731,25 @@ async function generateProgressAnalysis(studentData, sessionsData) {
     ? Math.round(evaluated.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluated.length)
     : 0;
 
-  const prompt = `الطالب: ${studentData.fullName || 'الطالب'}
-إجمالي الجلسات: ${total}
-اجتاز: ${passed}
-يحتاج تدريب: ${need}
-متوسط النجاح: ${avg}%
+  const prompt = `أنت محلل تعليمي متخصص في تدريب النطق للأطفال.
 
-أعط: ملخص تنفيذي (3 أسطر)، 3 نقاط قوة، 3 نقاط تحسين، 3 توصيات.`;
+📊 بيانات الطالب:
+- الاسم: ${studentData.fullName || 'الطالب'}
+- إجمالي الجلسات: ${total}
+- اجتاز: ${passed}
+- يحتاج تدريب: ${need}
+- متوسط النجاح: ${avg}%
+
+المطلوب:
+
+🎯 الملخص التنفيذي (3-4 أسطر)
+📊 نقاط القوة (3 نقاط)
+⚠️ نقاط تحتاج تحسين (3 نقاط)
+📈 الاتجاه العام (تحسن / ثبات / تراجع)
+🎯 التوصيات الاستراتيجية (3-4 توصيات)
+⏱️ التوقع الزمني
+
+اكتب بأسلوب احترافي ومشجع، بالعربية الفصحى.`;
 
   return await callAI(prompt, 'teacher');
 }
@@ -497,10 +767,10 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
         <div style="font-size:14px;color:#155E75;font-weight:bold;">👤 ${studentData.fullName || 'الطالب'}</div>
         <div style="font-size:12px;color:#155E75;">📊 ${stats.totalSessions} جلسة | ✅ ${stats.passedCount} اجتاز | 📈 ${stats.avgSuccess}%</div>
       </div>
-      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#F0F9FF;padding:18px;border-radius:12px;">${analysisText}</div>
+      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#F0F9FF;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${analysisText}</div>
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
-        <button class="btn" id="copyProgBtn" style="border-radius:50px;padding:10px 24px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-        <button class="btn btn-soft" id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;">إغلاق</button>
+        <button id="copyProgBtn" style="border-radius:50px;padding:10px 24px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
+        <button id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
@@ -567,16 +837,30 @@ async function generateCustomPlan(studentData, sessionsData) {
   const diag = studentData.diagnostic || {};
   const needLetters = (window.ALL_LETTERS || []).filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
 
-  const prompt = `الطالب: ${studentData.fullName || 'الطالب'}
-الفئة العمرية: ${studentData.ageGroup || 'غير محددة'}
-الحروف التي تحتاج تدريب: ${needLetters.join('، ') || 'لا يوجد'}
-عدد الجلسات: ${sessionsData?.length || 0}
+  const prompt = `أنت أخصائي نطق تعليمي متخصص في تصميم خطط تدريب فردية للأطفال (4-12 سنة).
 
-اكتب خطة تدريب مخصصة لأربعة أسابيع تشمل:
-- الهدف الرئيسي
-- جدول أسبوعي (أيام + حروف + أنشطة)
-- تمارين منزلية
-- مؤشرات قياس التقدم`;
+👤 بيانات الطالب:
+- الاسم: ${studentData.fullName || 'الطالب'}
+- الفئة العمرية: ${studentData.ageGroup || 'غير محددة'}
+
+📋 التشخيص:
+- حروف تحتاج تدريب (${needLetters.length}): ${needLetters.join('، ') || 'لا يوجد'}
+
+📊 إحصائيات:
+- إجمالي الجلسات: ${sessionsData?.length || 0}
+
+المطلوب: خطة تدريب شاملة لأربعة أسابيع تتضمن:
+
+🎯 الهدف الرئيسي
+📅 خطة 4 أسابيع (كل أسبوع: أهداف + حروف + أنشطة)
+🎯 أولويات التدريب
+📝 أنشطة مخصصة لكل حرف
+🏠 التمارين المنزلية الأسبوعية
+📊 مؤشرات قياس التقدم
+⚠️ تحذيرات وتنبيهات
+🎉 المكافآت والتحفيز
+
+اكتب بأسلوب عملي ومبني على البيانات، بالعربية الفصحى.`;
 
   return await callAI(prompt, 'teacher');
 }
@@ -594,10 +878,10 @@ function showCustomPlanModal(planText, studentData) {
         <div style="font-size:14px;color:#6D28D9;font-weight:bold;">👤 ${studentData.fullName || 'الطالب'}</div>
         <div style="font-size:12px;color:#6D28D9;">📅 خطة 4 أسابيع</div>
       </div>
-      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FAF5FF;padding:18px;border-radius:12px;">${planText}</div>
+      <div style="font-size:15px;line-height:2;white-space:pre-wrap;background:#FAF5FF;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${planText}</div>
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
-        <button class="btn" id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-        <button class="btn btn-soft" id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;">إغلاق</button>
+        <button id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
+        <button id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
@@ -672,9 +956,11 @@ window.createProgressAnalysisButton = createProgressAnalysisButton;
 window.generateCustomPlan = generateCustomPlan;
 window.showCustomPlanModal = showCustomPlanModal;
 window.createCustomPlanButton = createCustomPlanButton;
+window.buildParentMessage = buildParentMessage;
 
-console.log('✅ AI Features loaded — v11.0');
+console.log('✅ AI Features loaded — v11.1');
 console.log('🔍 getLetterData:', typeof window.getLetterData);
 console.log('🔍 createAIButton:', typeof window.createAIButton);
 console.log('🔍 createHomeworkButton:', typeof window.createHomeworkButton);
 console.log('🔍 createShortStoryButton:', typeof window.createShortStoryButton);
+console.log('🔍 buildParentMessage:', typeof window.buildParentMessage);
