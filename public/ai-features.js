@@ -1,31 +1,32 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v12.0 — النسخة النهائية الكاملة
+   v13.0 — النسخة النهائية الكاملة الموحدة
    ========================================
    
-   📋 الميزات:
-   ✅ توليد الصور (Fanar + R2)
-   ✅ توليد محتوى الحرف (Worker v5.7)
-   ✅ التوصيات الذكية (برومبت v9.1)
-   ✅ التمارين المنزلية (برومبت v9.1)
-   ✅ القصة القصيرة (برومبت v9.1)
-   ✅ تحليل التقدم
-   ✅ الخطة المخصصة
-   ✅ ترويسة موحدة + أزرار واتساب/إيميل
+   📋 ما الجديد في v13.0:
+   ✅ دمج v12.0 (الأساس الأحدث) + ميزات v9.1 (المفقودة)
+   ✅ إعادة تخزين الصور المؤقت في Firebase (توفير رصيد AI)
+   ✅ برومبتات محسّنة:
+      - التوصيات: 4 توصيات + تمرينان منزليان (بدل 2 + 1)
+      - التمارين: 5 تمارين + لعبتان + 4 نصائح (بدل 3 + 1 + 3)
+      - القصة: 10-12 جملة + تكرار 8-10 مرات (بدل 5-7 + 4-6)
+   ✅ إصلاح: تصدير كامل لكل الدوال
+   ✅ إصلاح: خطأ showShortStoryModal
+   ✅ إصلاح: تصدير الدوال المفقودة
    ======================================== */
 
-console.log('🚀 Starting ai-features.js v12.0...');
+console.log('🚀 Starting ai-features.js v13.0 (final merged)...');
 
 /* ========================================
-   🔑 ثوابت
+   🔑 الثوابت
    ======================================== */
 const WORKER_BASE = 'https://manarat-api-v3.rslani999.workers.dev';
 const VERCEL_API_BASE = 'https://manarat-alnutq.vercel.app';
 const R2_PUBLIC_URL = 'https://pub-8f83fb6338db4c5aac3fd512bef2610f.r2.dev';
 
 /* ========================================
-   🛠️ دوال مساعدة
+   🛠️ الدوال المساعدة الآمنة
    ======================================== */
 
 function safeToast(msg) {
@@ -35,6 +36,7 @@ function safeToast(msg) {
 
 function safeRender() {
   if (typeof window.render === 'function') window.render();
+  else console.warn('⚠️ render() غير متوفرة في window');
 }
 
 function safeNotify(msg, type = 'info') {
@@ -61,6 +63,10 @@ function getLetterTitle(letter) {
   return window.letterTitleMap?.[letter] || '';
 }
 
+/* ========================================
+   👤 بيانات المعلم والطالب والجلسة
+   ======================================== */
+
 async function getTeacherInfo() {
   const role = window.state?.role || 'teacher';
   const roleLabel = role === 'admin' ? 'مدير المدرسة' : 'معلم تدريبات النطق';
@@ -68,6 +74,7 @@ async function getTeacherInfo() {
   const email = user.email || '';
 
   let fullName = 'المعلم';
+  let schoolName = '';
 
   try {
     const fbDb = window.db;
@@ -80,6 +87,7 @@ async function getTeacherInfo() {
       if (snap.exists()) {
         const data = snap.data();
         fullName = data.fullName || email || 'المعلم';
+        schoolName = data.schoolName || '';
       }
     }
   } catch (e) {
@@ -87,7 +95,7 @@ async function getTeacherInfo() {
     fullName = user.displayName || email || 'المعلم';
   }
 
-  return { fullName, roleLabel };
+  return { fullName, roleLabel, schoolName };
 }
 
 function getStudentInfo() {
@@ -152,53 +160,17 @@ ${details.goal}
 
   const body = `\n${content}\n`;
 
+  const schoolLine = teacher.schoolName ? ` - ${teacher.schoolName}` : '';
+
   const footer = `━━━━━━━━━━━━━━━━━━━━
 🌹 نرجو متابعة التدريب المنزلي بانتظام
-أ/ ${teacher.fullName} - ${teacher.roleLabel}`;
+أ/ ${teacher.fullName} - ${teacher.roleLabel}${schoolLine}`;
 
   return `${header}${body}${footer}`;
 }
 
 /* ========================================
-   🤖 الاتصال بـ Worker v5.7
-   ======================================== */
-
-async function callAI(prompt, type = 'general') {
-  try {
-    const response = await fetch(`${WORKER_BASE}/api/ai`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt, type: type, role: 'teacher' })
-    });
-
-    if (!response.ok) {
-      throw new Error(`فشل الاتصال: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (!data.ok || !data.recommendation) {
-      throw new Error('لم يتم استلام رد من الذكاء الاصطناعي');
-    }
-
-    const rec = data.recommendation;
-    if (typeof rec === 'string') return rec;
-    if (rec && typeof rec === 'object') {
-      if (rec.response) return rec.response;
-      if (rec.text) return rec.text;
-      if (rec.choices && rec.choices[0] && rec.choices[0].text) return rec.choices[0].text;
-      return JSON.stringify(rec);
-    }
-
-    return String(rec);
-  } catch (error) {
-    console.error('AI Error:', error);
-    throw error;
-  }
-}
-
-/* ========================================
-   📖 جلب بيانات الحرف من Firebase
+   📖 Firebase — بيانات الحروف
    ======================================== */
 
 async function getLetterData(letter) {
@@ -214,7 +186,10 @@ async function getLetterData(letter) {
     const ref = fbDoc(fbDb, "letters_data", letter);
     const snap = await fbGetDoc(ref);
 
-    if (snap.exists()) return snap.data();
+    if (snap.exists()) {
+      console.log(`✅ تم جلب بيانات حرف (${letter})`);
+      return snap.data();
+    }
     return window.LETTER_DATABASE?.[letter] || null;
   } catch (e) {
     console.warn('خطأ في جلب بيانات الحرف:', e);
@@ -231,6 +206,7 @@ async function saveLetterData(letter, data) {
     if (!fbDb || !fbDoc || !fbSetDoc) throw new Error('Firebase غير جاهز');
 
     await fbSetDoc(fbDoc(fbDb, "letters_data", letter), data);
+    console.log(`💾 تم حفظ بيانات حرف (${letter})`);
     return true;
   } catch (e) {
     console.error('خطأ في حفظ بيانات الحرف:', e);
@@ -239,7 +215,7 @@ async function saveLetterData(letter, data) {
 }
 
 /* ========================================
-   🖼️ توليد الصور (كما هو من v11.1)
+   🖼️ توليد الصور (مع Cache من v9.1)
    ======================================== */
 
 async function generateWordImage(word) {
@@ -262,9 +238,82 @@ async function generateWordImage(word) {
   }
 }
 
+/* ✅ جديد: البحث عن صورة في Firebase Cache (من v9.1) */
+async function getCachedImage(word) {
+  try {
+    const fbDb = window.db;
+    const fbDoc = window.doc;
+    const fbGetDoc = window.getDoc;
+
+    if (!fbDb || !fbDoc || !fbGetDoc) {
+      console.warn('⚠️ Firebase غير جاهز — تخطي التخزين المؤقت');
+      return null;
+    }
+
+    const cacheKey = encodeURIComponent(word);
+    const ref = fbDoc(fbDb, "images_cache", cacheKey);
+    const snap = await fbGetDoc(ref);
+
+    if (snap.exists()) {
+      const data = snap.data();
+      console.log(`✅ صورة موجودة في Cache: ${word}`);
+      return data.imageUrl || null;
+    }
+    return null;
+  } catch (e) {
+    console.warn('⚠️ خطأ في البحث عن صورة مخزنة:', e);
+    return null;
+  }
+}
+
+/* ✅ جديد: حفظ صورة في Firebase Cache (من v9.1) */
+async function saveImageToCache(word, imageData) {
+  try {
+    const fbDb = window.db;
+    const fbDoc = window.doc;
+    const fbSetDoc = window.setDoc;
+
+    if (!fbDb || !fbDoc || !fbSetDoc) {
+      console.warn('⚠️ Firebase غير جاهز — لا يمكن الحفظ');
+      return false;
+    }
+
+    const cacheKey = encodeURIComponent(word);
+    const ref = fbDoc(fbDb, "images_cache", cacheKey);
+
+    await fbSetDoc(ref, {
+      word: word,
+      imageUrl: imageData,
+      createdAt: new Date().toISOString()
+    });
+
+    console.log(`💾 تم حفظ صورة في Cache: ${word}`);
+    return true;
+  } catch (e) {
+    console.warn('⚠️ خطأ في حفظ الصورة:', e);
+    return false;
+  }
+}
+
+/* ✅ محدَّث: الدالة الموحدة (Cache ثم توليد) */
 async function getOrGenerateImage(word) {
-  const imageUrl = await generateWordImage(word);
-  return { image: imageUrl, fromCache: false };
+  if (!word) throw new Error('الكلمة مطلوبة');
+
+  // 1. البحث في Cache
+  const cachedImage = await getCachedImage(word);
+  if (cachedImage) {
+    return { image: cachedImage, fromCache: true };
+  }
+
+  // 2. التوليد من API
+  const newImage = await generateWordImage(word);
+
+  // 3. الحفظ في Cache (بدون انتظار)
+  saveImageToCache(word, newImage).catch(e =>
+    console.warn('⚠️ فشل حفظ الصورة في Cache:', e)
+  );
+
+  return { image: newImage, fromCache: false };
 }
 
 function showImageModal(imageUrl, word) {
@@ -295,6 +344,7 @@ function showImageModal(imageUrl, word) {
     link.href = imageUrl;
     link.download = `image_${word}.png`;
     link.click();
+    safeToast('✅ جاري تنزيل الصورة');
   };
 }
 
@@ -302,6 +352,8 @@ function createImageButton(word) {
   const btn = document.createElement('button');
   btn.style.cssText = 'background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:20px;padding:6px 14px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:12px;margin-right:6px;';
   btn.innerHTML = `🖼️ صورة`;
+  btn.title = `توليد صورة لكلمة "${word}"`;
+
   btn.onclick = async (e) => {
     e.stopPropagation();
     btn.disabled = true;
@@ -314,7 +366,12 @@ function createImageButton(word) {
       btn.style.opacity = '1';
       btn.innerHTML = orig;
       showImageModal(result.image, word);
-      safeToast(`✅ تم توليد صورة "${word}"`);
+      if (result.fromCache) {
+        safeToast(`✅ صورة "${word}" من الذاكرة`);
+      } else {
+        safeToast(`✅ تم توليد صورة "${word}"`);
+        safeNotify(`تم توليد صورة جديدة لكلمة "${word}"`, 'success');
+      }
     } catch (error) {
       btn.disabled = false;
       btn.style.opacity = '1';
@@ -326,7 +383,7 @@ function createImageButton(word) {
 }
 
 /* ========================================
-   📚 توليد محتوى الحرف (كما هو من v11.1)
+   📚 توليد محتوى الحرف
    ======================================== */
 
 async function generateLetterContent(letter, letterTitle) {
@@ -428,7 +485,43 @@ function createGenerateLetterButton(letter, onSuccess) {
 const createGenerateLetterButtonForSession = createGenerateLetterButton;
 
 /* ========================================
-   🤖 التوصيات الذكية — البرومبت من v9.1
+   🤖 الاتصال بـ Worker v5.7
+   ======================================== */
+
+async function callAI(prompt, type = 'general') {
+  try {
+    const response = await fetch(`${WORKER_BASE}/api/ai`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt, type: type, role: 'teacher' })
+    });
+
+    if (!response.ok) {
+      throw new Error(`فشل الاتصال: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.ok || !data.recommendation) {
+      throw new Error('لم يتم استلام رد من الذكاء الاصطناعي');
+    }
+
+    const rec = data.recommendation;
+    if (typeof rec === 'string') return rec;
+    if (rec && typeof rec === 'object') {
+      if (rec.response) return rec.response;
+      if (rec.text) return rec.text;
+      if (rec.choices && rec.choices[0] && rec.choices[0].text) return rec.choices[0].text;
+      return JSON.stringify(rec);
+    }
+    return String(rec);
+  } catch (error) {
+    console.error('AI Error:', error);
+    throw error;
+  }
+}
+/* ========================================
+   🤖 التوصيات الذكية (برومبت محسّن — 4 توصيات)
    ======================================== */
 
 async function generateSessionRecommendations(sessionData, studentData) {
@@ -443,16 +536,26 @@ async function generateSessionRecommendations(sessionData, studentData) {
 - الطالب: ${studentData.fullName || 'الطالب'}
 - الحرف المستهدف: ${sessionData.letter}
 - نوع الجلسة: ${typeInfo.name}
-- الهدف: ${sessionData.goal}
+- الهدف: ${sessionData.goal || 'غير محدد'}
 - نسبة النجاح: ${sessionData.successRate || 0}%
 - التقييم: ${sessionData.evaluation || 'غير مقيم'}
 - ملاحظات المعلم: ${sessionData.recommendations || 'لا توجد'}
 
-المطلوب منك:
-1. 📊 تحليل موجز لأداء الطالب (سطران)
-2. 🎯 توصيتان لجلسات قادمة
-3. 🏠 تمرين منزلي بسيط لولي الأمر
-4. ⚠️ تنبيه إذا لزم الأمر
+المطلوب منك بالضبط:
+
+1. 📊 **تحليل موجز لأداء الطالب** (3 أسطر متصلة، واضحة ومباشرة)
+
+2. 🎯 **أربع توصيات لجلسات قادمة**
+   - التوصية 1: [عنوان] — [شرح مختصر]
+   - التوصية 2: [عنوان] — [شرح مختصر]
+   - التوصية 3: [عنوان] — [شرح مختصر]
+   - التوصية 4: [عنوان] — [شرح مختصر]
+
+3. 🏠 **تمرينان منزليان بسيطان لولي الأمر**
+   - التمرين 1: [خطوات محددة ومختصرة]
+   - التمرين 2: [خطوات محددة ومختصرة]
+
+4. ⚠️ **تنبيه** (فقط إذا لزم الأمر — إن لم يكن ضرورياً اكتب: لا توجد تنبيهات)
 
 اكتب بأسلوب واضح ومباشر، عملي، مشجع، بالعربية الفصحى المبسطة.
 `;
@@ -541,7 +644,7 @@ function createAIButton(sessionData, studentData) {
 }
 
 /* ========================================
-   📝 التمارين المنزلية — البرومبت من v9.1
+   📝 التمارين المنزلية (برومبت محسّن — 5 تمارين + لعبتان)
    ======================================== */
 
 async function generateHomeworkExercises(sessionData, studentData) {
@@ -550,7 +653,7 @@ async function generateHomeworkExercises(sessionData, studentData) {
 
   const prompt = `
 أنت أخصائي نطق تعليمي متخصص في تمارين الأطفال (4-12 سنة).
-المطلوب: توليد تمارين منزلية بسيطة وممتعة لولي الأمر.
+المطلوب: توليد تمارين منزلية شاملة ومتنوعة لولي الأمر.
 
 📋 معلومات الجلسة:
 - الطالب: ${studentData.fullName || 'الطالب'}
@@ -560,40 +663,59 @@ async function generateHomeworkExercises(sessionData, studentData) {
 - التقييم: ${sessionData.evaluation || 'غير مقيم'}
 - ملاحظات: ${sessionData.recommendations || 'لا توجد'}
 
-اكتب التمارين بهذا التنسيق:
+اكتب التمارين بالضبط بهذا التنسيق:
 
-🏠 **تمارين منزلية لحرف (${sessionData.letter})**
+🏠 **تمارين منزلية شاملة لحرف (${sessionData.letter})**
 
-⏱️ **المدة اليومية**: 10-15 دقيقة
+⏱️ **المدة اليومية**: 15-20 دقيقة
 📅 **التكرار**: 5 أيام في الأسبوع
 
-**🔥 التمرين 1: [اسم]**
-- الهدف: ...
-- الطريقة: ...
-- المدة: ...
+**🔥 التمرين 1: [اسم جذاب ومحدد]**
+- الهدف: [هدف تعليمي دقيق]
+- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
+- المدة: [عدد الدقائق]
 
-**🔥 التمرين 2: [اسم]**
-- الهدف: ...
-- الطريقة: ...
-- المدة: ...
+**🔥 التمرين 2: [اسم جذاب ومحدد]**
+- الهدف: [هدف تعليمي دقيق]
+- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
+- المدة: [عدد الدقائق]
 
-**🔥 التمرين 3: [اسم]**
-- الهدف: ...
-- الطريقة: ...
-- المدة: ...
+**🔥 التمرين 3: [اسم جذاب ومحدد]**
+- الهدف: [هدف تعليمي دقيق]
+- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
+- المدة: [عدد الدقائق]
 
-**🎮 لعبة ممتعة:**
-[وصف]
+**🔥 التمرين 4: [اسم جذاب ومحدد]**
+- الهدف: [هدف تعليمي دقيق]
+- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
+- المدة: [عدد الدقائق]
+
+**🔥 التمرين 5: [اسم جذاب ومحدد]**
+- الهدف: [هدف تعليمي دقيق]
+- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
+- المدة: [عدد الدقائق]
+
+**🎮 لعبة ممتعة 1: [اسم اللعبة]**
+[وصف اللعبة بكامل تفاصيلها — القواعد، الهدف، المدة]
+
+**🎮 لعبة ممتعة 2: [اسم اللعبة]**
+[وصف اللعبة بكامل تفاصيلها — القواعد، الهدف، المدة]
 
 **⭐ نصائح لولي الأمر:**
-- نصيحة 1
-- نصيحة 2
-- نصيحة 3
+- نصيحة 1 (محددة وعملية)
+- نصيحة 2 (محددة وعملية)
+- نصيحة 3 (محددة وعملية)
+- نصيحة 4 (محددة وعملية)
 
 **⚠️ تجنب:**
-- ما يجب تجنبه
+- ما يجب تجنبه أثناء التدريب
+- أخطاء شائعة يجب الانتباه لها
 
-الشروط: تمارين سهلة، بدون أدوات خاصة، مناسبة للعمر، بالعربية الفصحى المبسطة.
+الشروط:
+- تمارين سهلة، بدون أدوات خاصة
+- مناسبة لعمر 4-12 سنة
+- متنوعة (سمعية، بصرية، حركية)
+- بالعربية الفصحى المبسطة
 `;
 
   return await callAI(prompt, 'homework');
@@ -617,7 +739,7 @@ function showHomeworkModal(homeworkText, sessionData) {
         <div style="background:#FFF7ED;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #EA580C;">
           <div style="font-size:13px;color:#555;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
         </div>
-        <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FFFBF5;padding:18px;border-radius:12px;max-height:400px;overflow-y:auto;">${fullMessage}</div>
+        <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FFFBF5;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${fullMessage}</div>
 
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
           <button id="copyHWBtn" style="border-radius:50px;padding:10px 20px;background:#EA580C;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
@@ -678,8 +800,9 @@ function createHomeworkButton(sessionData, studentData) {
   };
   return btn;
 }
+
 /* ========================================
-   📖 القصة القصيرة — البرومبت من v9.1
+   📖 القصة القصيرة (برومبت محسّن — 10-12 جملة)
    ======================================== */
 
 async function generateShortStory(sessionData, studentData) {
@@ -689,7 +812,7 @@ async function generateShortStory(sessionData, studentData) {
 
   const prompt = `
 أنت كاتب قصص أطفال تعليمية متخصص في تدريب النطق.
-المطلوب: قصة قصيرة ممتعة تحتوي على تكرار الحرف المستهدف.
+المطلوب: قصة قصيرة **ممتعة ومبتكرة** تحتوي على تكرار الحرف المستهدف بكثافة.
 
 📋 معلومات:
 - الطالب: ${studentData.fullName || 'الطالب'}
@@ -698,26 +821,36 @@ async function generateShortStory(sessionData, studentData) {
 - كلمة الحرف: ${letterTitle}
 - نوع الجلسة: ${typeInfo.name}
 
-اكتب القصة بالتنسيق التالي:
+⚠️ مهم جداً: اكتب قصة **فعلية كاملة** (بداية، وسط، نهاية) — وليس توصيات أو تمارين.
 
-📖 **قصة: [عنوان جذاب]**
+**اكتب القصة بالضبط بهذا التنسيق:**
 
-[القصة - 5-7 جمل قصيرة، تحتوي على الحرف المستهدف مكرراً 4-6 مرات]
+📖 **قصة: [عنوان جذاب ومشوّق]**
+
+[القصة الكاملة — من 10 إلى 12 جملة قصيرة مترابطة، تحتوي على الحرف (${sessionData.letter}) مكرراً من 8 إلى 10 مرات. اجعل القصة ذات بداية ووسط ونهاية واضحة، مع عنصر تشويق أو مغامرة بسيطة.]
 
 **📝 كلمات القصة التي تبدأ بالحرف (${sessionData.letter}):**
 - [كلمة 1]
 - [كلمة 2]
 - [كلمة 3]
 - [كلمة 4]
+- [كلمة 5]
+- [كلمة 6]
 
-**🎯 نشاط بعد القراءة:**
-- اطلب من الطفل نطق الكلمات
+**🎯 أنشطة بعد القراءة:**
+- اطلب من الطفل نطق الكلمات بصوت واضح
 - اسأل: أين نرى هذا الحرف في القصة؟
+- اطلب من الطفل رسم مشهد من القصة
+- شجّع الطفل على إعادة سرد القصة بكلماته
 
 **⭐ نصيحة لولي الأمر:**
-اقرأ القصة بصوت واضح، واطلب من الطفل تكرار الكلمات.
+اقرأ القصة بصوت واضح ومعبّر، واطلب من الطفل تكرار الكلمات التي تحتوي على حرف (${sessionData.letter}). يمكنك التوقف بعد كل جملة والسؤال: "هل سمعت الحرف؟"
 
-الشروط: مناسبة لعمر 4-12 سنة، كلمات بسيطة، قيمة تربوية، بالعربية الفصحى.
+الشروط:
+- مناسبة لعمر 4-12 سنة
+- كلمات بسيطة ومألوفة
+- قيمة تربوية واضحة
+- بالعربية الفصحى المبسطة
 `;
 
   return await callAI(prompt, 'short-story');
@@ -804,7 +937,7 @@ function createShortStoryButton(sessionData, studentData) {
 }
 
 /* ========================================
-   📊 تحليل التقدم — البرومبت من v9.1
+   📊 تحليل التقدم
    ======================================== */
 
 async function generateProgressAnalysis(studentData, sessionsData) {
@@ -833,7 +966,7 @@ async function generateProgressAnalysis(studentData, sessionsData) {
     letterStats[letter] = { total: ls.length, success: successL, avg: avgL };
   });
 
-  const lettersSummary = Object.entries(letterStats).map(([letter, stats]) => 
+  const lettersSummary = Object.entries(letterStats).map(([letter, stats]) =>
     `- حرف (${letter}): ${stats.total} جلسة، ${stats.success} ناجحة، متوسط ${stats.avg}%`
   ).join('\n');
 
@@ -879,7 +1012,7 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
         <h3 style="margin:0;color:#0891B2;">📊 تحليل تقدم الطالب</h3>
         <button id="closeProgModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
-      
+
       <div style="background:#ECFEFF;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #0891B2;">
         <div style="font-size:14px;color:#155E75;font-weight:bold;margin-bottom:6px;">👤 ${studentData.fullName || 'الطالب'}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
@@ -901,9 +1034,9 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
           </div>
         </div>
       </div>
-      
+
       <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#F0F9FF;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${analysisText}</div>
-      
+
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
         <button id="copyProgBtn" style="border-radius:50px;padding:10px 24px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
         <button id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
@@ -968,7 +1101,7 @@ function createProgressAnalysisButton(studentData) {
 }
 
 /* ========================================
-   🎯 الخطة المخصصة — البرومبت من v9.1
+   🎯 الخطة المخصصة
    ======================================== */
 
 async function generateCustomPlan(studentData, sessionsData) {
@@ -993,7 +1126,7 @@ async function generateCustomPlan(studentData, sessionsData) {
 
   const totalSessions = sessionsData?.length || 0;
   const evaluated = sessionsData?.filter(s => s.successRate) || [];
-  const avgSuccess = evaluated.length > 0 
+  const avgSuccess = evaluated.length > 0
     ? Math.round(evaluated.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluated.length)
     : 0;
 
@@ -1042,14 +1175,14 @@ function showCustomPlanModal(planText, studentData) {
         <h3 style="margin:0;color:#7C3AED;">🎯 خطة التدريب المخصصة</h3>
         <button id="closePlanModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
-      
+
       <div style="background:#F3E8FF;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #7C3AED;">
         <div style="font-size:14px;color:#6D28D9;font-weight:bold;">👤 ${studentData.fullName || 'الطالب'}</div>
         <div style="font-size:12px;color:#6D28D9;">📅 خطة 4 أسابيع</div>
       </div>
-      
+
       <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FAF5FF;padding:18px;border-radius:12px;max-height:500px;overflow-y:auto;">${planText}</div>
-      
+
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
         <button id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
         <button id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
@@ -1148,7 +1281,7 @@ async function saveStoryToSession(sessionId, storyText) {
 }
 
 /* ========================================
-   📤 دالة إرسال التقرير لولي الأمر
+   📤 إرسال التقرير لولي الأمر
    ======================================== */
 
 async function sendSessionToParent(sessionData, studentData) {
@@ -1167,7 +1300,7 @@ async function sendSessionToParent(sessionData, studentData) {
       return;
     }
 
-    showSendToParentOptionsModal(sessionData, studentData);
+    await showSendToParentOptionsModal(sessionData, studentData);
   } catch (e) {
     console.error('❌ خطأ في إرسال التقرير:', e);
     safeToast('❌ خطأ: ' + e.message);
@@ -1187,11 +1320,11 @@ async function showSendToParentOptionsModal(sessionData, studentData) {
   modal.innerHTML = `
     <div style="background:white;padding:25px;border-radius:20px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h3 style="margin:0;color:var(--mint-deep);">📤 إرسال التقرير لولي الأمر</h3>
+        <h3 style="margin:0;color:#0F766E;">📤 إرسال التقرير لولي الأمر</h3>
         <button id="closeSendModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
 
-      <div style="background:#F0FDFA;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid var(--mint-deep);">
+      <div style="background:#F0FDFA;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #0F766E;">
         <div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>👤 الطالب:</strong> ${studentName}</div>
         <div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>👨‍👩‍👧 ولي الأمر:</strong> ${parentName}</div>
         ${parentEmail ? `<div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>📧 البريد:</strong> ${parentEmail}</div>` : ''}
@@ -1204,9 +1337,9 @@ async function showSendToParentOptionsModal(sessionData, studentData) {
         <button id="copyReportBtn" style="background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:50px;padding:14px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">📋 نسخ نص التقرير</button>
       </div>
 
-      <div style="margin-top:20px;padding-top:20px;border-top:2px dashed var(--line);">
+      <div style="margin-top:20px;padding-top:20px;border-top:2px dashed #DDD;">
         <details>
-          <summary style="cursor:pointer;font-weight:bold;color:var(--mint-deep);font-size:14px;">👁️ معاينة نص التقرير</summary>
+          <summary style="cursor:pointer;font-weight:bold;color:#0F766E;font-size:14px;">👁️ معاينة نص التقرير</summary>
           <div style="margin-top:12px;background:#FAFDFC;padding:14px;border-radius:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${reportText}</div>
         </details>
       </div>
@@ -1253,36 +1386,96 @@ async function generateParentReportText(sessionData, studentData) {
 }
 
 /* ========================================
-   🌐 تصدير الدوال للنطاق العام
+   🌐 التصدير الكامل للنطاق العام
+   ✅ إصلاح: يشمل كل الدوال المفقودة في v12.0
+   ✅ إصلاح: showShortStoryModal كان خطأً في v12.0
    ======================================== */
 
+// ——— الاتصال والبيانات الأساسية ———
 window.callAI = callAI;
-window.callGeminiAI = callAI;
+window.callGeminiAI = callAI; // alias للتوافق
+
+// ——— بيانات الحروف ———
 window.getLetterData = getLetterData;
 window.saveLetterData = saveLetterData;
+
+// ——— الصور (مع Cache) ———
 window.generateWordImage = generateWordImage;
+window.getCachedImage = getCachedImage;
+window.saveImageToCache = saveImageToCache;
 window.getOrGenerateImage = getOrGenerateImage;
 window.showImageModal = showImageModal;
 window.createImageButton = createImageButton;
+
+// ——— محتوى الحرف ———
 window.generateLetterContent = generateLetterContent;
 window.generateSingleLetterData = generateSingleLetterData;
 window.showGenerateLetterConfirmModal = showGenerateLetterConfirmModal;
 window.showLetterSuccessModal = showLetterSuccessModal;
 window.createGenerateLetterButton = createGenerateLetterButton;
 window.createGenerateLetterButtonForSession = createGenerateLetterButtonForSession;
+
+// ——— التوصيات الذكية ———
 window.generateSessionRecommendations = generateSessionRecommendations;
 window.showAIRecommendationsModal = showAIRecommendationsModal;
 window.createAIButton = createAIButton;
+
+// ——— التمارين المنزلية ———
 window.generateHomeworkExercises = generateHomeworkExercises;
 window.showHomeworkModal = showHomeworkModal;
 window.createHomeworkButton = createHomeworkButton;
+
+// ——— القصة القصيرة ———
 window.generateShortStory = generateShortStory;
-window.showShortStoryModal = showShortStory
+window.showShortStoryModal = showShortStoryModal; // ✅ إصلاح: كان خطأً في v12.0
 window.createShortStoryButton = createShortStoryButton;
+
+// ——— تحليل التقدم ———
 window.generateProgressAnalysis = generateProgressAnalysis;
 window.showProgressAnalysisModal = showProgressAnalysisModal;
 window.createProgressAnalysisButton = createProgressAnalysisButton;
+
+// ——— الخطة المخصصة ———
 window.generateCustomPlan = generateCustomPlan;
 window.showCustomPlanModal = showCustomPlanModal;
 window.createCustomPlanButton = createCustomPlanButton;
+
+// ——— الترويسة الموحدة ———
 window.buildParentMessage = buildParentMessage;
+
+// ——— دوال الحفظ (كانت مفقودة في v12.0) ———
+window.saveAIToSession = saveAIToSession;
+window.saveHomeworkToSession = saveHomeworkToSession;
+window.saveStoryToSession = saveStoryToSession;
+
+// ——— إرسال التقرير لولي الأمر (كانت مفقودة في v12.0) ———
+window.sendSessionToParent = sendSessionToParent;
+window.showSendToParentOptionsModal = showSendToParentOptionsModal;
+window.generateParentReportText = generateParentReportText;
+
+// ——— دوال مساعدة (للوصول من خارج الملف) ———
+window.safeToast = safeToast;
+window.safeRender = safeRender;
+window.safeNotify = safeNotify;
+window.getSessionTypes = getSessionTypes;
+window.getAllLetters = getAllLetters;
+window.getLetterTitle = getLetterTitle;
+
+/* ========================================
+   📢 سجل التأكيد النهائي
+   ======================================== */
+console.log('✅ AI Features loaded — v13.0 (final merged)');
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+console.log('🖼️  createImageButton:', typeof window.createImageButton);
+console.log('📚 createGenerateLetterButton:', typeof window.createGenerateLetterButton);
+console.log('🤖 createAIButton:', typeof window.createAIButton);
+console.log('📝 createHomeworkButton:', typeof window.createHomeworkButton);
+console.log('📖 createShortStoryButton:', typeof window.createShortStoryButton);
+console.log('📊 createProgressAnalysisButton:', typeof window.createProgressAnalysisButton);
+console.log('🎯 createCustomPlanButton:', typeof window.createCustomPlanButton);
+console.log('📤 sendSessionToParent:', typeof window.sendSessionToParent);
+console.log('💾 saveAIToSession:', typeof window.saveAIToSession);
+console.log('💾 saveHomeworkToSession:', typeof window.saveHomeworkToSession);
+console.log('💾 saveStoryToSession:', typeof window.saveStoryToSession);
+console.log('📄 buildParentMessage:', typeof window.buildParentMessage);
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
