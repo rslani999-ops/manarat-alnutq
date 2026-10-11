@@ -2449,32 +2449,44 @@ function renderDiagnosticSession(app) {
         };
       });
 
+      /* ═══ [إصلاح] تسجيل الحرف — يستخدم MediaRecorder بدلاً من SpeechRecognition ═══ */
       const recordLetterBtn = card.querySelector(`#recordLetterBtn_${letter}`);
       if (recordLetterBtn) {
         recordLetterBtn.onclick = function() {
           const l = this.dataset.letter;
           const feedbackEl = document.getElementById(`feedback_${l}`);
-          startRecording(l, (transcript, analysis, audioUrl) => {
-            if (!transcript) {
-              if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
+          if (feedbackEl) feedbackEl.innerHTML = '⏳ جاري التسجيل...';
+
+          startLetterRecording(l, (transcript, analysis, audioUrl) => {
+            // 1) فشل التسجيل تماماً
+            if (!audioUrl) {
+              if (feedbackEl) feedbackEl.innerHTML = '❌ تعذر التسجيل. تأكد من صلاحية الميكروفون ثم حاول مجدداً.';
               return;
             }
-            if (analysis.isMatch) {
-              if (feedbackEl) feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح. (النص: "${transcript}")`;
+
+            // 2) نجهّز الرسالة الافتراضية (تشجيع دائماً)
+            let msg = '🎉 أحسنت! استمع لتسجيلك ثم اختر التقييم المناسب.';
+            let msgColor = '#0a7a0a';
+
+            // 3) لو نجح التعرف على النص (نادر مع الحرف المفرد) نضيف التفاصيل
+            if (transcript && analysis) {
               if (!state.diagEval[l]) state.diagEval[l] = {};
-              state.diagEval[l].status = 'passed';
-              state.diagEval[l].disorderType = 'طبيعي';
-              showToast('🎉 أحسنت! نطق صحيح');
-              renderDiagnosticSession(app);
-            } else {
-              const similarity = analysis.similarityPercent !== undefined ? ` | التشابه: ${analysis.similarityPercent}%` : '';
-              if (feedbackEl) feedbackEl.innerHTML = `❌ غير صحيح: ${getDisorderFeedback(analysis.disorderType)} (النص: "${transcript}")${similarity}`;
-              if (!state.diagEval[l]) state.diagEval[l] = {};
-              state.diagEval[l].status = 'need';
               state.diagEval[l].disorderType = analysis.disorderType;
-              showToast('💪 لا بأس، حاول مرة أخرى');
-              renderDiagnosticSession(app);
+              if (analysis.isMatch) {
+                msg = `✅ نطق (${l}) صحيح! (النص: "${transcript}")`;
+              } else {
+                msg = `📝 ${getDisorderFeedback(analysis.disorderType)} (النص: "${transcript}")`;
+                msgColor = '#7a5c0a';
+              }
             }
+
+            // 4) نعرض المشغّل + الرسالة (بدون إعادة رسم الصفحة حتى لا تختفي)
+            const html =
+              '<div style="margin-top:8px;padding:10px;background:#E8F5E9;border:2px solid #4CAF50;border-radius:10px;">' +
+              `<audio controls src="${audioUrl}" style="width:100%;margin-bottom:6px;"></audio>` +
+              `<div style="color:${msgColor};font-weight:bold;text-align:center;font-size:13px;">${msg}</div>` +
+              '</div>';
+            if (feedbackEl) feedbackEl.innerHTML = html;
           });
         };
       }
@@ -2562,7 +2574,6 @@ function renderDiagnosticSession(app) {
   });
 }
 /* ─── [END SEC-38] ─── */
-
 
 /* ─── [SEC-39] توليد الخطة الفردية — IEP Generator ─── */
 function generateIEP(passed, trained, need, unclear, student) {
