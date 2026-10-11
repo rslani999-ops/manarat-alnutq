@@ -3374,24 +3374,48 @@ async function renderSingleSession(app) {
     }
   }
 
-  /* ===== ربط زر التسجيل ===== */
+   /* ===== ربط زر التسجيل ===== */
   const sessionRecordBtn = trainCard.querySelector('#sessionRecordBtn');
   if (sessionRecordBtn) {
     sessionRecordBtn.onclick = function() {
       const l = this.dataset.letter;
       const feedbackEl = trainCard.querySelector('#sessionFeedback');
-      startRecording(l, (transcript, analysis, audioUrl) => {
-        if (transcript === null || analysis === null) {
-          if (feedbackEl) feedbackEl.innerHTML = '❌ لم يتم التعرف على الصوت.';
+      if (feedbackEl) feedbackEl.innerHTML = '⏳ جاري التسجيل...';
+
+      startLetterRecording(l, (transcript, analysis, audioUrl) => {
+        // 1) فشل التسجيل تماماً
+        if (!audioUrl) {
+          if (feedbackEl) feedbackEl.innerHTML = '❌ تعذر التسجيل. تأكد من صلاحية الميكروفون.';
           return;
         }
-        if (analysis.isMatch) {
-          if (feedbackEl) feedbackEl.innerHTML = `✅ صحيح!`;
-          showToast('✅ نطق صحيح!');
+
+        // 2) الرسالة الافتراضية: تشجيع + استماع
+        let msg = '🎉 أحسنت! استمع لتسجيلك وحاول مرة أخرى.';
+        let msgColor = 'var(--success)';
+
+        // 3) لو نجح التعرف على النص (نادر مع الحرف المفرد) نضيف التفاصيل
+        if (transcript && analysis) {
+          if (analysis.isMatch) {
+            msg = `✅ ممتاز! نطق (${l}) صحيح.`;
+            showToast('✅ نطق صحيح!');
+          } else {
+            const extraFeedback = typeof getDisorderFeedback === 'function' ? getDisorderFeedback(analysis.disorderType) : analysis.disorderType;
+            msg = `📝 ${extraFeedback}`;
+            msgColor = '#7a5c0a';
+            showToast('💪 حاول مرة أخرى');
+          }
         } else {
-          const extraFeedback = typeof getDisorderFeedback === 'function' ? getDisorderFeedback(analysis.disorderType) : analysis.disorderType;
-          if (feedbackEl) feedbackEl.innerHTML = `❌ ${extraFeedback}`;
-          showToast(`⚠️ نطق غير صحيح: ${analysis.disorderType}`);
+          showToast('🎧 استمع لتسجيلك وحاول مرة أخرى');
+        }
+
+        // 4) عرض المشغّل + الرسالة
+        if (feedbackEl) {
+          feedbackEl.style.color = msgColor;
+          feedbackEl.innerHTML =
+            `<div style="margin-top:10px;padding:10px;background:#E8F5E9;border:2px solid #4CAF50;border-radius:10px;">` +
+            `<audio controls src="${audioUrl}" style="width:100%;margin-bottom:6px;"></audio>` +
+            `<div style="color:${msgColor};text-align:center;font-size:14px;font-weight:bold;">${msg}</div>` +
+            `</div>`;
         }
       });
     };
