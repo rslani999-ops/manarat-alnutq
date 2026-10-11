@@ -1928,25 +1928,53 @@ async function showTrainingSession(area, letter) {
     </div>
   `;
 
+  /* ═══ [إصلاح] تسجيل نطق الحرف — MediaRecorder بدلاً من SpeechRecognition ═══ */
   const recordBtn = area.querySelector('#trainRecordBtn');
   if (recordBtn) {
     recordBtn.onclick = function() {
       const l = this.dataset.letter;
       const feedbackEl = area.querySelector('#trainFeedback');
-      feedbackEl.innerHTML = '🎤 جاري الاستماع...';
-      startRecording(l, (transcript, analysis) => {
-        if (!transcript) {
-          feedbackEl.innerHTML = '❌ لم يتم التقاط أي صوت. حاول مرة أخرى.';
-          feedbackEl.style.color = 'var(--fail)';
+      if (feedbackEl) {
+        feedbackEl.innerHTML = '⏳ جاري التسجيل...';
+        feedbackEl.style.color = 'var(--mint-deep)';
+      }
+
+      startLetterRecording(l, (transcript, analysis, audioUrl) => {
+        // 1) فشل التسجيل تماماً
+        if (!audioUrl) {
+          if (feedbackEl) {
+            feedbackEl.innerHTML = '❌ تعذر التسجيل. تأكد من صلاحية الميكروفون.';
+            feedbackEl.style.color = 'var(--fail)';
+          }
           return;
         }
-        if (analysis.isMatch) {
-          feedbackEl.innerHTML = `✅ ممتاز! نطق (${l}) صحيح.`;
-          feedbackEl.style.color = 'var(--success)';
-          showNotification('أحسنت! نطق صحيح 🎉', 'success');
+
+        // 2) الرسالة الافتراضية: تشجيع + استماع
+        let msg = '🎉 أحسنت! استمع لتسجيلك وحاول مرة أخرى.';
+        let msgColor = 'var(--success)';
+
+        // 3) لو نجح التعرف على النص (نادر مع الحرف المفرد) نضيف التفاصيل
+        if (transcript && analysis) {
+          if (analysis.isMatch) {
+            msg = `✅ ممتاز! نطق (${l}) صحيح.`;
+            showNotification('أحسنت! نطق صحيح 🎉', 'success');
+          } else {
+            msg = `📝 ${getDisorderFeedback(analysis.disorderType)}`;
+            msgColor = '#7a5c0a';
+          }
         } else {
-          feedbackEl.innerHTML = `❌ حاول مرة أخرى: ${getDisorderFeedback(analysis.disorderType)}`;
-          feedbackEl.style.color = 'var(--fail)';
+          // حتى بدون تعرف، نرسل إشعار تشجيع
+          showNotification('أحسنت! استمع لتسجيلك 🎧', 'success');
+        }
+
+        // 4) عرض المشغّل + الرسالة
+        if (feedbackEl) {
+          feedbackEl.style.color = msgColor;
+          feedbackEl.innerHTML =
+            `<div style="margin-top:10px;padding:10px;background:#E8F5E9;border:2px solid #4CAF50;border-radius:10px;">` +
+            `<audio controls src="${audioUrl}" style="width:100%;margin-bottom:6px;"></audio>` +
+            `<div style="color:${msgColor};text-align:center;font-size:14px;">${msg}</div>` +
+            `</div>`;
         }
       });
     };
@@ -1968,7 +1996,6 @@ async function showTrainingSession(area, letter) {
   area.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 /* ─── [END SEC-34] ─── */
-
 
 /* ─── [SEC-35] الصفحة الرئيسية — Home Page ─── */
 function renderHome(app) {
