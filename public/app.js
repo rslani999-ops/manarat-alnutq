@@ -511,8 +511,19 @@ async function startLetterRecording(letter, callback, maxSeconds = 3) {
   }, 1000);
 }
 window.startLetterRecording = startLetterRecording;
-/* ─── [END SEC-15] ─── */
 
+
+/* ─── [SEC-15-C] تحويل Blob إلى Base64 (لحفظ التسجيلات) ─── */
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+window.blobToBase64 = blobToBase64;
+/* ─── [END SEC-15-C] ─── */
 
 /* ─── [SEC-16] تحليل النطق — Levenshtein + Disorder Detection ─── */
 function levenshteinDistance(a, b) {
