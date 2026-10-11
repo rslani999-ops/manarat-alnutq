@@ -394,6 +394,123 @@ async function startRecording(targetText, callback, maxSeconds = 5) {
   }
 }
 window.startRecording = startRecording;
+
+
+/* ─── [SEC-15-B] تسجيل الحروف المنفردة — MediaRecorder ─── */
+/* السبب: SpeechRecognition لا يستطيع التعرف على حرف عربي مفرد */
+async function startLetterRecording(letter, callback, maxSeconds = 3) {
+
+  // 1) التحقق من دعم المتصفح
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('❌ المتصفح لا يدعم التسجيل الصوتي.');
+    if (callback) callback(null, null, null);
+    return;
+  }
+  if (typeof MediaRecorder === 'undefined') {
+    showToast('❌ MediaRecorder غير مدعوم في هذا المتصفح.');
+    if (callback) callback(null, null, null);
+    return;
+  }
+
+  let stream = null;
+  let mediaRecorder = null;
+  const chunks = [];
+  let finished = false;
+  let transcriptResult = null;
+  let analysisResult = null;
+
+  // 2) شاشة المؤقّت
+  let timerDisplay = document.getElementById('recordingTimer');
+  if (!timerDisplay) {
+    timerDisplay = document.createElement('div');
+    timerDisplay.id = 'recordingTimer';
+    timerDisplay.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E2A47;color:white;padding:10px 20px;border-radius:50px;font-size:18px;font-weight:bold;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 8px 20px rgba(0,0,0,0.3);';
+    document.body.appendChild(timerDisplay);
+  }
+
+  // 3) دالة الإنهاء (تُستدعى مرة واحدة فقط)
+  function finish(audioUrl) {
+    if (finished) return;
+    finished = true;
+    if (timerDisplay && timerDisplay.parentNode) timerDisplay.remove();
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (callback) callback(transcriptResult, analysisResult, audioUrl);
+  }
+
+  // 4) طلب الميكروفون
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    showToast('❌ تعذر الوصول للميكروفون: ' + err.message);
+    finish(null);
+    return;
+  }
+
+  // 5) إنشاء المسجّل
+  try {
+    mediaRecorder = new MediaRecorder(stream);
+  } catch (err) {
+    showToast('❌ تعذر إنشاء المسجل: ' + err.message);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    finish(null);
+    return;
+  }
+
+  // 6) جمع البيانات الصوتية
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+    const url = URL.createObjectURL(blob);
+    finish(url);
+  };
+
+  mediaRecorder.onerror = (e) => {
+    console.error('MediaRecorder error:', e);
+    finish(null);
+  };
+
+  // 7) محاولة التعرف على الكلام في الخلفية (اختياري — قد ينجح أو لا)
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+
+  if (SpeechRecognition) {
+    try {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'ar-SA';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.onresult = (event) => {
+        transcriptResult = event.results[0][0].transcript.trim();
+        analysisResult = analyzePronunciation(letter, transcriptResult);
+      };
+      recognition.onerror = () => { /* تجاهل — لا نعتمد عليه */ };
+      recognition.start();
+    } catch (e) {
+      recognition = null;
+    }
+  }
+
+  // 8) بدء التسجيل الفعلي
+  mediaRecorder.start();
+  showToast('🎤 جاري الاستماع... تحدث الآن');
+
+  // 9) المؤقّت + الإيقاف التلقائي
+  let secondsLeft = maxSeconds;
+  timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
+  const timerInterval = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft >= 0) timerDisplay.innerHTML = `⏱️ ${secondsLeft} ثواني`;
+    if (secondsLeft <= 0) {
+      clearInterval(timerInterval);
+      try { mediaRecorder.stop(); } catch (e) {}
+      if (recognition) { try { recognition.stop(); } catch (e) {} }
+    }
+  }, 1000);
+}
+window.startLetterRecording = startLetterRecording;
 /* ─── [END SEC-15] ─── */
 
 
