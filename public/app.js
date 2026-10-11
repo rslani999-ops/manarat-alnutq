@@ -3253,9 +3253,21 @@ async function renderSingleSession(app) {
   const st = sess.sessionType || 1;
 
   const recordSection = `
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;justify-content:center;">
-      <button class="btn-record" id="sessionRecordBtn" data-letter="${letter}">🎤 سجل نطقك للحرف</button>
-      <span id="sessionFeedback" style="font-size:14px;font-weight:bold;"></span>
+    <div style="margin:16px 0;">
+      <div id="beforeSection" style="background:#FFF3E0;border:2px solid #FF9800;border-radius:16px;padding:14px;margin-bottom:12px;">
+        <h4 style="margin:0 0 8px 0;color:#E65100;">🔴 تسجيل قبل التدريب</h4>
+        <div id="beforeContent" style="text-align:center;">
+          <button class="btn-record" id="recordBeforeBtn" data-letter="${letter}">🎤 سجل الآن</button>
+        </div>
+        <div id="beforePreview" style="margin-top:10px;"></div>
+      </div>
+      <div id="afterSection" style="background:#E8F5E9;border:2px solid #4CAF50;border-radius:16px;padding:14px;display:none;">
+        <h4 style="margin:0 0 8px 0;color:#1B5E20;">🟢 تسجيل بعد التدريب</h4>
+        <div id="afterContent" style="text-align:center;">
+          <button class="btn-record" id="recordAfterBtn" data-letter="${letter}">🎤 سجل الآن</button>
+        </div>
+        <div id="afterPreview" style="margin-top:10px;"></div>
+      </div>
     </div>
   `;
 
@@ -3385,56 +3397,131 @@ async function renderSingleSession(app) {
     }
   }
 
-   /* ===== ربط زر التسجيل ===== */
-  const sessionRecordBtn = trainCard.querySelector('#sessionRecordBtn');
-  if (sessionRecordBtn) {
-    sessionRecordBtn.onclick = function() {
-      const l = this.dataset.letter;
-      const feedbackEl = trainCard.querySelector('#sessionFeedback');
-      if (feedbackEl) feedbackEl.innerHTML = '⏳ جاري التسجيل...';
+     /* ═══ [SEC-42-B] منطق التسجيل (قبل/بعد) ═══ */
+  const beforeSection = trainCard.querySelector('#beforeSection');
+  const afterSection = trainCard.querySelector('#afterSection');
+  const beforeContent = trainCard.querySelector('#beforeContent');
+  const afterContent = trainCard.querySelector('#afterContent');
+  const beforePreview = trainCard.querySelector('#beforePreview');
+  const afterPreview = trainCard.querySelector('#afterPreview');
 
-      startLetterRecording(l, (transcript, analysis, audioUrl) => {
-        // 1) فشل التسجيل تماماً
+  // ─── دالة موحّدة لمعالجة التسجيل ───
+  function setupRecording(btnId, type, previewEl, contentEl, nextSection) {
+    const btn = trainCard.querySelector('#' + btnId);
+    if (!btn) return;
+    btn.onclick = function() {
+      const l = this.dataset.letter;
+      contentEl.innerHTML = '<div style="color:#0288D1;font-weight:bold;">⏳ جاري التسجيل... انطق الآن</div>';
+
+      startLetterRecording(l, async (transcript, analysis, audioUrl) => {
+        // 1) فشل التسجيل
         if (!audioUrl) {
-          if (feedbackEl) feedbackEl.innerHTML = '❌ تعذر التسجيل. تأكد من صلاحية الميكروفون.';
+          contentEl.innerHTML = `<button class="btn-record" id="${btnId}" data-letter="${l}">🎤 حاول مرة أخرى</button>`;
+          setupRecording(btnId, type, previewEl, contentEl, nextSection);
+          showToast('❌ تعذر التسجيل');
           return;
         }
 
-        // 2) الرسالة الافتراضية: تشجيع + استماع
-        let msg = '🎉 أحسنت! استمع لتسجيلك وحاول مرة أخرى.';
-        let msgColor = 'var(--success)';
+        // 2) عرض المشغّل + زر الحفظ
+        previewEl.innerHTML = `
+          <div style="padding:10px;background:white;border:2px dashed #0288D1;border-radius:12px;">
+            <audio controls src="${audioUrl}" style="width:100%;margin-bottom:8px;"></audio>
+            <div style="text-align:center;">
+              <button class="btn btn-success btn-sm" id="save-${type}-btn" style="border-radius:50px;padding:8px 24px;">💾 حفظ تسجيل "${type === 'before' ? 'قبل' : 'بعد'}"</button>
+            </div>
+          </div>
+        `;
 
-        // 3) لو نجح التعرف على النص (نادر مع الحرف المفرد) نضيف التفاصيل
-        if (transcript && analysis) {
-          if (analysis.isMatch) {
-            msg = `✅ ممتاز! نطق (${l}) صحيح.`;
-            showToast('✅ نطق صحيح!');
-          } else {
-            const extraFeedback = typeof getDisorderFeedback === 'function' ? getDisorderFeedback(analysis.disorderType) : analysis.disorderType;
-            msg = `📝 ${extraFeedback}`;
-            msgColor = '#7a5c0a';
-            showToast('💪 حاول مرة أخرى');
+        // 3) معالج زر الحفظ
+        const saveBtn = previewEl.querySelector('#save-' + type + '-btn');
+        saveBtn.onclick = async () => {
+          saveBtn.disabled = true;
+          saveBtn.textContent = '⏳ جاري الحفظ...';
+          try {
+            // جلب الـ Blob من URL
+            const response = await fetch(audioUrl);
+            const blob = await response.blob();
+            // تحويل إلى Base64
+            const base64 = await blobToBase64(blob);
+            // البيانات
+            const recordingKey = type === 'before' ? 'beforeRecording' : 'afterRecording';
+            const recordingData = {
+              base64: base64,
+              savedAt: new Date().toISOString(),
+              size: blob.size
+            };
+            // حفظ في Firestore
+            await updateDoc(doc(db, "sessions", sess.id), { [recordingKey]: recordingData });
+            // تحديث state
+            if (type === 'before') { sess.beforeRecording = recordingData; }
+            else { sess.afterRecording = recordingData; }
+
+            showToast('✅ تم حفظ تسجيل "' + (type === 'before' ? 'قبل' : 'بعد') + '"');
+
+            // عرض النسخة المحفوظة
+            previewEl.innerHTML = `
+              <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
+                <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تم الحفظ — ${new Date().toLocaleString('ar-SA')}</div>
+                <audio controls src="${base64}" style="width:100%;"></audio>
+              </div>
+            `;
+            contentEl.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">✅ تم تسجيل "' + (type === 'before' ? 'قبل التدريب' : 'بعد التدريب') + '"</div>';
+
+            // إظهار القسم التالي
+            if (nextSection && nextSection.style.display === 'none') {
+              nextSection.style.display = 'block';
+              setTimeout(() => nextSection.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+              if (type === 'before') {
+                setupRecording('recordAfterBtn', 'after', afterPreview, afterContent, null);
+              }
+            } else if (type === 'after') {
+              showToast('🎉 اكتمل التوثيق (قبل + بعد)!');
+            }
+          } catch (e) {
+            console.error('خطأ في الحفظ:', e);
+            showToast('❌ خطأ: ' + e.message);
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 إعادة المحاولة';
           }
-        } else {
-          showToast('🎧 استمع لتسجيلك وحاول مرة أخرى');
-        }
-
-        // 4) عرض المشغّل + الرسالة
-        if (feedbackEl) {
-          feedbackEl.style.color = msgColor;
-          feedbackEl.innerHTML =
-            `<div style="margin-top:10px;padding:10px;background:#E8F5E9;border:2px solid #4CAF50;border-radius:10px;">` +
-            `<audio controls src="${audioUrl}" style="width:100%;margin-bottom:6px;"></audio>` +
-            `<div style="color:${msgColor};text-align:center;font-size:14px;font-weight:bold;">${msg}</div>` +
-            `</div>`;
-        }
+        };
       });
     };
   }
+
+  // ─── التحقق من التسجيلات المحفوظة مسبقاً ───
+  const hasBefore = !!(sess.beforeRecording && sess.beforeRecording.base64);
+  const hasAfter = !!(sess.afterRecording && sess.afterRecording.base64);
+
+  if (hasBefore) {
+    beforePreview.innerHTML = `
+      <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
+        <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تسجيل "قبل" — ${new Date(sess.beforeRecording.savedAt).toLocaleString('ar-SA')}</div>
+        <audio controls src="${sess.beforeRecording.base64}" style="width:100%;"></audio>
+      </div>
+    `;
+    beforeContent.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">✅ تم تسجيل "قبل التدريب"</div>';
+    afterSection.style.display = 'block';
+  }
+
+  if (hasAfter) {
+    afterPreview.innerHTML = `
+      <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
+        <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تسجيل "بعد" — ${new Date(sess.afterRecording.savedAt).toLocaleString('ar-SA')}</div>
+        <audio controls src="${sess.afterRecording.base64}" style="width:100%;"></audio>
+      </div>
+    `;
+    afterContent.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">🎉 اكتمل التوثيق (قبل + بعد)</div>';
+  }
+
+  // ─── ربط الأزرار ───
+  if (!hasBefore) {
+    setupRecording('recordBeforeBtn', 'before', beforePreview, beforeContent, afterSection);
+  }
+  if (hasBefore && !hasAfter) {
+    setupRecording('recordAfterBtn', 'after', afterPreview, afterContent, null);
+  }
 }
 /* ─── [END SEC-42] ─── */
-
-
 
 /* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion ─── */
 async function checkAndSuggestMastery(studentId, letter) {
