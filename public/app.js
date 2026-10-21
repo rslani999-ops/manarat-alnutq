@@ -4610,17 +4610,41 @@ async function generateEvidenceReport(teacherName) {
       });
     }
 
-    // 3. ربط الشواهد التلقائية مع معايير الأداء الوظيفي
+    // رابط المنصة المباشر للتوثيق الرقمي
+    const platformUrl = window.location.origin;
+
+    // 3. ربط الشواهد التلقائية مع روابط قابلة للنقر
     const autoEvidences = {
-      1: [`سجل الدوام والخطط المعتمدة عبر المنصة`, `إجمالي الخطط الفردية المسجلة: ${totalStudents}`],
-      3: [`تقارير الجلسات المرسلة لأولياء الأمور`, `سجل التوجيهات الأسرية والمتابعة المنزلية`],
-      4: [`تنويع الاستراتيجيات: تدريب سمعي، مرآة، أنشطة حركية، محاكاة صوتية`],
-      5: [`سجلات نتائج قياس نطق الحروف القبلية والبعدية`, `متوسط إتقان الطلاب العام: ${averageSuccess}%`],
-      6: [`سجل جلسات التدريب المنفذة: ${totalSessions} جلسة مسجلة بالتاريخ والهدف`],
-      7: [`توظيف المنصة الرقمية (منارة النطق) والتحليل الصوتي التفاعلي للكلمات`],
-      9: [`سجل المتابعة اليومي وجداول تقييم النطق المباشر`],
-      10: [`تقارير تحليل نسب النجاح ومؤشرات معالجة تعثر مخارج الحروف`],
-      11: [`ملفات إنجاز الطلاب الرقمية والخطط الفردية (IEP)`]
+      1: [
+        { text: `سجل الدوام والخطط المعتمدة عبر المنصة`, url: `${platformUrl}/#attendance` },
+        { text: `إجمالي الخطط الفردية المسجلة: ${totalStudents}`, url: `${platformUrl}/#students` }
+      ],
+      3: [
+        { text: `تقارير الجلسات المرسلة لأولياء الأمور`, url: `${platformUrl}/#reports` },
+        { text: `سجل التوجيهات الأسرية والمتابعة المنزلية`, url: `${platformUrl}/#parent-guide` }
+      ],
+      4: [
+        { text: `تنويع الاستراتيجيات: تدريب سمعي، مرآة، أنشطة حركية، محاكاة صوتية`, url: `${platformUrl}/#strategies` }
+      ],
+      5: [
+        { text: `سجلات نتائج قياس نطق الحروف القبلية والبعدية`, url: `${platformUrl}/#diagnostic` },
+        { text: `متوسط إتقان الطلاب العام: ${averageSuccess}%`, url: `${platformUrl}/#diagnostic` }
+      ],
+      6: [
+        { text: `سجل جلسات التدريب المنفذة: ${totalSessions} جلسة مسجلة بالتاريخ والهدف`, url: `${platformUrl}/#sessions` }
+      ],
+      7: [
+        { text: `توظيف المنصة الرقمية (منارة النطق) والتحليل الصوتي التفاعلي للكلمات`, url: platformUrl }
+      ],
+      9: [
+        { text: `سجل المتابعة اليومي وجداول تقييم النطق المباشر`, url: `${platformUrl}/#daily-tracking` }
+      ],
+      10: [
+        { text: `تقارير تحليل نسب النجاح ومؤشرات معالجة تعثر مخارج الحروف`, url: `${platformUrl}/#analytics` }
+      ],
+      11: [
+        { text: `ملفات إنجاز الطلاب الرقمية والخطط الفردية (IEP)`, url: `${platformUrl}/#iep` }
+      ]
     };
 
     // 4. إعداد مساحة الطباعة
@@ -4657,13 +4681,38 @@ async function generateEvidenceReport(teacherName) {
           const autoList = autoEvidences[standard.id] || [];
           const filesList = uploadedFiles[standard.id] || [];
           return `
-            <div style="margin-bottom:14px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;background:#ffffff;">
+            <div style="margin-bottom:16px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;background:#ffffff;page-break-inside:avoid;">
               <div style="font-size:15px;font-weight:bold;color:#1E2A47;">${standard.id}.${standard.title}</div>
               <div style="font-size:12px;color:#64748B;margin:3px 0 8px 0;">📌 الشواهد المعتمدة: ${standard.evidences}</div>
               
               <div style="padding-right:10px;border-right:3px solid #357E74;margin-top:6px;">
-                ${autoList.map(a => `<div style="font-size:13px;color:#0F766E;margin-bottom:2px;">⚡ شاهد تلقائي: ${a}</div>`).join('')}
-                ${filesList.map(f => `<div style="font-size:13px;color:#2563EB;margin-bottom:2px;">📎 ملف مرفق: ${f.name}</div>`).join('')}
+                ${autoList.map(a => `
+                  <div style="margin-bottom:5px;font-size:13px;">
+                    <span style="color:#0F766E;">⚡ شاهد تلقائي: </span>
+                    <a href="${a.url}" target="_blank" style="color:#0F766E;text-decoration:underline;font-weight:600;">${a.text}</a>
+                  </div>
+                `).join('')}
+
+                ${filesList.map(f => {
+                  const fileUrl = f.url || f.fileUrl || '#';
+                  const isImage = (f.type && f.type.startsWith('image/')) || (fileUrl.match(/\\.(jpeg|jpg|gif|png|webp)/i));
+                  return `
+                    <div style="margin-top:6px;margin-bottom:6px;font-size:13px;">
+                      <span style="color:#2563EB;">📎 ملف مرفق: </span>
+                      <a href="${fileUrl}" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">
+                        ${f.name || 'فتح الوثيقة المرفقة'}
+                      </a>
+                      ${isImage && fileUrl !== '#' ? `
+                        <div style="margin-top:5px;">
+                          <a href="${fileUrl}" target="_blank">
+                            <img src="${fileUrl}" alt="${f.name || 'شاهد'}" style="max-width:200px;max-height:140px;border-radius:6px;border:1px solid #CBD5E1;display:block;margin-top:4px;object-fit:cover;" />
+                          </a>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+
                 ${autoList.length === 0 && filesList.length === 0 ? '<div style="font-size:12px;color:#94A3B8;">لا توجد شواهد مضافة حالياً</div>' : ''}
               </div>
             </div>
@@ -4738,12 +4787,30 @@ function printTeacherAchievement(teacherName, existingFiles) {
         ${TEACHER_STANDARDS.map(standard => {
           const files = existingFiles[standard.id] || [];
           return `
-            <div style="margin-bottom:12px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;">
+            <div style="margin-bottom:14px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;page-break-inside:avoid;">
               <strong style="color:#0F766E;font-size:14px;">${standard.id}.${standard.title}</strong>
               <div style="font-size:12px;color:#64748B;margin:3px 0 6px 0;">الشواهد المطلوبة: ${standard.evidences}</div>
               <div style="margin-top:5px;padding-right:8px;border-right:2px solid #CBD5E1;">
                 ${files.length > 0 
-                  ? files.map(file => `<div style="font-size:12px;color:#2563EB;margin-top:2px;">📄 ${file.name || 'وثيقة مرفقة'}</div>`).join('')
+                  ? files.map(file => {
+                      const fileUrl = file.url || file.fileUrl || '#';
+                      const isImage = (file.type && file.type.startsWith('image/')) || (fileUrl.match(/\\.(jpeg|jpg|gif|png|webp)/i));
+                      return `
+                        <div style="font-size:12px;margin-top:4px;">
+                          <span style="color:#2563EB;">📄 </span>
+                          <a href="${fileUrl}" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">
+                            ${file.name || 'عرض الوثيقة المرفقة'}
+                          </a>
+                          ${isImage && fileUrl !== '#' ? `
+                            <div style="margin-top:4px;">
+                              <a href="${fileUrl}" target="_blank">
+                                <img src="${fileUrl}" alt="${file.name || 'مرفق'}" style="max-width:180px;max-height:120px;border-radius:6px;border:1px solid #E2E8F0;display:block;object-fit:cover;" />
+                              </a>
+                            </div>
+                          ` : ''}
+                        </div>
+                      `;
+                    }).join('')
                   : '<div style="font-size:12px;color:#94A3B8;">لا توجد وثائق مرفقة يدوياً</div>'
                 }
               </div>
@@ -4762,6 +4829,7 @@ function printTeacherAchievement(teacherName, existingFiles) {
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
 /* ─── [END SEC-56] ─── */
+
          
 
 /* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
