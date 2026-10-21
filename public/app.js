@@ -1587,7 +1587,7 @@ window.removeStudent = async function(studentId) {
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-33] صفحة الملف الشخصي — Student Profile ─── */
+//* ─── [SEC-33] صفحة الملف الشخصي — Student Profile ─── */
 function renderStudentProfile(app) {
   if (!state.user) {
     showToast('يجب تسجيل الدخول');
@@ -1622,6 +1622,8 @@ async function loadProfileData(container) {
     const isTeacher = state.role === 'teacher' || state.role === 'admin';
     const fullName = userData.fullName || '';
     const email = userData.email || state.user.email || '';
+    const schoolName = userData.schoolName || '';
+    const principalName = userData.principalName || '';
     const roleLabel = state.role === 'teacher' ? 'معلم' : state.role === 'admin' ? 'مدير' : 'طالب';
 
     let sessionsCount = 0;
@@ -1654,6 +1656,7 @@ async function loadProfileData(container) {
       <h2 style="margin:8px 0; color:var(--mint-deep);">${fullName || email}</h2>
       <p style="font-size:14px; color:#555; margin:4px 0;">${email}</p>
       <span class="badge badge-assigned" style="font-size:14px; padding:6px 16px;">${roleLabel}</span>
+      ${isTeacher && schoolName ? `<div style="margin-top:6px;font-size:13px;color:#0F766E;">🏫 <strong>${schoolName}</strong></div>` : ''}
       ${!isTeacher && userData.ageGroup ? `<div style="margin-top:8px;"><span class="badge" style="background:#FFF8E1; color:#F57F17; font-size:13px; padding:4px 12px;">👶 ${userData.ageGroup} سنوات</span></div>` : ''}
     `;
     container.appendChild(identityCard);
@@ -1697,6 +1700,14 @@ async function loadProfileData(container) {
         <label style="font-weight:bold; display:block; margin-bottom:4px;">البريد الإلكتروني:</label>
         <input type="email" id="profileEmail" value="${email}" disabled style="background:#F0F0F0; cursor:not-allowed;">
         <p class="muted" style="font-size:12px; margin-top:-8px; margin-bottom:12px;">ℹ️ البريد الإلكتروني لا يمكن تعديله</p>
+
+        ${isTeacher ? `
+          <label style="font-weight:bold; display:block; margin-bottom:4px;">🏫 اسم المدرسة:</label>
+          <input type="text" id="profileSchoolName" value="${schoolName}" placeholder="مثال: مدرسة الإمام مالك الابتدائية" style="margin-bottom:12px;">
+
+          <label style="font-weight:bold; display:block; margin-bottom:4px;">👔 اسم مدير المدرسة:</label>
+          <input type="text" id="profilePrincipalName" value="${principalName}" placeholder="مثال: أ / فلان الفلاني" style="margin-bottom:16px;">
+        ` : ''}
 
         <button class="btn btn-primary" id="saveProfileBtn" style="border-radius:50px; padding:10px 30px;">💾 حفظ التعديلات</button>
       </div>
@@ -1752,10 +1763,15 @@ async function loadProfileData(container) {
         saveProfileBtn.disabled = true;
         saveProfileBtn.textContent = '⏳ جاري الحفظ...';
         try {
-          await updateDoc(doc(db, "users", state.user.uid), {
+          const updatePayload = {
             fullName: newName,
             updatedAt: new Date().toISOString()
-          });
+          };
+          if (isTeacher) {
+            updatePayload.schoolName = container.querySelector('#profileSchoolName').value.trim();
+            updatePayload.principalName = container.querySelector('#profilePrincipalName').value.trim();
+          }
+          await updateDoc(doc(db, "users", state.user.uid), updatePayload);
           showToast('✅ تم حفظ البيانات بنجاح');
           showNotification('تم تحديث ملفك الشخصي', 'success');
           renderStudentProfile(app);
@@ -1823,6 +1839,7 @@ async function loadProfileData(container) {
   }
 }
 /* ─── [END SEC-33] ─── */
+
 
 
 /* ─── [SEC-34] صفحة تدريب الحروف — Letter Training ─── */
