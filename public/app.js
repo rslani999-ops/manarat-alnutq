@@ -58,24 +58,30 @@ const storage = getStorage(app);
 /* ─── [SEC-03] رفع ملفات المعلم إلى Storage ─── */
 async function uploadTeacherFile(teacherId, standardId, file) {
   try {
-    const path = `teacher-files/${teacherId}/${standardId}/${Date.now()}_${file.name}`;
+    // تنظيف اسم الملف من الحروف الخاصة والمسافات لتجنب أخطاء Storage
+    const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `teacher-files/${teacherId}/${standardId}/${Date.now()}_${cleanFileName}`;
     const fileRef = storageRef(storage, path);
-    await uploadBytes(fileRef, file);
-    const downloadURL = await getDownloadURL(fileRef);
+    
+    // رفع الملف مع تمرير نوع المحتوى
+    const metadata = { contentType: file.type || 'application/octet-stream' };
+    const uploadResult = await uploadBytes(fileRef, file, metadata);
+    const downloadURL = await getDownloadURL(uploadResult.ref);
+    
     return {
       name: file.name,
       url: downloadURL,
-      type: file.type,
+      type: file.type || '',
       uploadedAt: new Date().toISOString()
     };
   } catch (e) {
-    console.error('خطأ في رفع الملف:', e);
+    console.error('تفاصيل خطأ رفع الملف إلى Firebase Storage:', e);
+    showToast(`❌ تعذر الرفع: ${e.code || e.message}`);
     return null;
   }
 }
 window.uploadTeacherFile = uploadTeacherFile;
 /* ─── [END SEC-03] ─── */
-
 
 /* ─── [SEC-04] البيانات الثابتة — مجموعات الحروف ─── */
 const LETTER_GROUPS = [
@@ -4480,7 +4486,7 @@ async function renderTeacherAchievement(app) {
     if (teacherDoc.exists()) teacherData = teacherDoc.data();
   } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
   const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
-  const schoolName = teacherData.schoolName || '';
+  const schoolName = teacherData.schoolName || 'مدرسة قتيبة بن مسلم الابتدائية';
   const principalName = teacherData.principalName || '';
 
   let existingFiles = {};
@@ -4565,29 +4571,42 @@ async function renderTeacherAchievement(app) {
       uploadBtn.onclick = () => fileInput.click();
       fileInput.onchange = async () => {
         if (!fileInput.files || fileInput.files.length === 0) return;
-        fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
-        const uploadPromises = Array.from(fileInput.files).map(file => uploadTeacherFile(teacherId, standard.id, file));
-        const results = await Promise.all(uploadPromises);
-        const success = results.filter(r => r !== null);
-        if (success.length > 0) {
-          for (const fileInfo of success) {
+        
+        const filesArray = Array.from(fileInput.files);
+        fileStatus.textContent = `⏳ جاري رفع ${filesArray.length} ملف...`;
+        uploadBtn.disabled = true;
+
+        let successCount = 0;
+        for (const file of filesArray) {
+          const fileInfo = await uploadTeacherFile(teacherId, standard.id, file);
+          if (fileInfo && fileInfo.url) {
             try {
               await addDoc(collection(db, "teacher_files"), {
-                teacherId,
+                teacherId: teacherId,
                 standardId: standard.id,
                 name: fileInfo.name,
                 url: fileInfo.url,
                 type: fileInfo.type,
                 uploadedAt: fileInfo.uploadedAt
               });
-            } catch (e) { console.error('خطأ في حفظ الملف:', e); }
+              successCount++;
+            } catch (err) {
+              console.error('خطأ في تسجيل الملف بـ Firestore:', err);
+              showToast('❌ تم رفع الملف لكن تعذر حفظه بالسجل: ' + err.message);
+            }
           }
-          showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
+        }
+
+        uploadBtn.disabled = false;
+        fileInput.value = '';
+        fileStatus.textContent = '';
+
+        if (successCount > 0) {
+          showToast(`✅ تم رفع وحفظ ${successCount} ملف بنجاح`);
           renderTeacherAchievement(app);
         } else {
-          showToast('❌ فشل رفع الملفات');
+          showToast('❌ لم يتم رفع أي ملف، تأكد من اتصالك وقواعد التخزين');
         }
-        fileInput.value = '';
       };
     }
   });
