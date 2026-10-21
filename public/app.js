@@ -4772,18 +4772,17 @@ function printTeacherAchievement(teacherName, existingFiles, extraData = {}) {
 
   const autoEvidences = savedData?.evidences || {};
   const summary = savedData?.summary || null;
-  const schoolName = extraData.schoolName || '';
+  const schoolName = extraData.schoolName || 'مدرسة قتيبة بن مسلم الابتدائية';
   const principalName = extraData.principalName || '';
 
   printArea.innerHTML = `
     <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:30px;background:white;color:#1E2A47;box-sizing:border-box;">
       
-      <!-- ترويسة رسمية عصرية -->
+      <!-- ترويسة رسمية باسم المدرسة -->
       <div style="border-bottom:2.5px solid #0D9488;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <h1 style="font-size:22px;color:#0F766E;margin:0 0 4px 0;font-weight:900;">منصة منارة النطق</h1>
+          <h1 style="font-size:22px;color:#0F766E;margin:0 0 4px 0;font-weight:900;">${schoolName}</h1>
           <div style="font-size:14px;color:#475569;font-weight:bold;">ملف إنجاز وشواهد الأداء الوظيفي والمهني</div>
-          ${schoolName ? `<div style="font-size:13px;color:#0D9488;margin-top:2px;">🏫 ${schoolName}</div>` : ''}
         </div>
         <div style="text-align:left;font-size:12px;color:#64748B;line-height:1.6;">
           <div><strong>المعلم:</strong> ${teacherName}</div>
@@ -4826,10 +4825,10 @@ function printTeacherAchievement(teacherName, existingFiles, extraData = {}) {
               </div>
               <div style="font-size:11px;color:#64748B;margin-bottom:8px;">📋 الشواهد المستهدفة: ${standard.evidences}</div>
               
-              <!-- الشواهد المستخرجة تلقائياً من المنصة -->
+              <!-- الشواهد المستخرجة تلقائياً -->
               ${autos.length > 0 ? `
                 <div style="background:#F8FAFC;border-right:3px solid #0D9488;padding:6px 10px;border-radius:4px;margin-bottom:8px;">
-                  <div style="font-size:12px;font-weight:bold;color:#134E4A;margin-bottom:4px;">⚡ الشواهد الرقمية المحققة عبر المنصة:</div>
+                  <div style="font-size:12px;font-weight:bold;color:#134E4A;margin-bottom:4px;">⚡ الشواهد الرقمية المحققة:</div>
                   ${autos.map(a => `
                     <div style="font-size:11.5px;color:#334155;margin-bottom:3px;">
                       • <strong>${a.title}:</strong>${a.detail}
@@ -4879,7 +4878,7 @@ function printTeacherAchievement(teacherName, existingFiles, extraData = {}) {
       </div>
 
       <div style="margin-top:20px;font-size:10px;color:#94A3B8;text-align:center;">
-        تم استخراج هذا التقرير آلياً عبر منصة منارة النطق التعليمية
+        تم استخراج هذا التقرير بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
       </div>
     </div>
   `;
@@ -4888,7 +4887,6 @@ function printTeacherAchievement(teacherName, existingFiles, extraData = {}) {
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
 /* ─── [END SEC-56] ─── */
-
 
          
 
