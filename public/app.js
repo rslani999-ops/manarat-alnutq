@@ -4545,8 +4545,8 @@ async function renderTeacherAchievement(app) {
       <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
 
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
-        <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
-        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملف يدوي</button>
+        <input type="url" id="driveLinkInput_${standard.id}" placeholder="ضع رابط ملف Google Drive هنا..." style="margin:0; flex-grow:1; min-width:220px; padding:6px 10px; border:1px solid #CBD5E1; border-radius:6px; font-size:12px;">
+        <button class="btn btn-soft btn-sm" id="saveDriveBtn_${standard.id}">🔗 إرفاق رابط جوجل درايف</button>
         <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
       </div>
       
@@ -4555,8 +4555,9 @@ async function renderTeacherAchievement(app) {
           const fileUrl = file.url || file.fileUrl || '';
           return `
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; background:#F8FAFC; padding:6px 12px; border-radius:8px;">
-              <span style="font-size:13px;">📄 ${file.name || 'ملف مرفق'}</span>
+              <span style="font-size:13px;">📄 ${file.name || 'ملف Google Drive'}</span>
               <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563EB;font-weight:bold;margin-right:auto;">معاينة 🔗</a>
+              <button class="btn btn-danger btn-sm delete-link-btn" data-id="${file.id}" style="padding:2px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;">حذف</button>
             </div>
           `;
         }).join('')}
@@ -4564,51 +4565,61 @@ async function renderTeacherAchievement(app) {
     `;
     app.appendChild(card);
 
-    const fileInput = card.querySelector(`#fileInput_${standard.id}`);
-    const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
+    const driveInput = card.querySelector(`#driveLinkInput_${standard.id}`);
+    const saveDriveBtn = card.querySelector(`#saveDriveBtn_${standard.id}`);
     const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
-    if (uploadBtn && fileInput) {
-      uploadBtn.onclick = () => fileInput.click();
-      fileInput.onchange = async () => {
-        if (!fileInput.files || fileInput.files.length === 0) return;
-        
-        const filesArray = Array.from(fileInput.files);
-        fileStatus.textContent = `⏳ جاري رفع ${filesArray.length} ملف...`;
-        uploadBtn.disabled = true;
 
-        let successCount = 0;
-        for (const file of filesArray) {
-          const fileInfo = await uploadTeacherFile(teacherId, standard.id, file);
-          if (fileInfo && fileInfo.url) {
-            try {
-              await addDoc(collection(db, "teacher_files"), {
-                teacherId: teacherId,
-                standardId: standard.id,
-                name: fileInfo.name,
-                url: fileInfo.url,
-                type: fileInfo.type,
-                uploadedAt: fileInfo.uploadedAt
-              });
-              successCount++;
-            } catch (err) {
-              console.error('خطأ في تسجيل الملف بـ Firestore:', err);
-              showToast('❌ تم رفع الملف لكن تعذر حفظه بالسجل: ' + err.message);
-            }
-          }
+    if (saveDriveBtn && driveInput) {
+      saveDriveBtn.onclick = async () => {
+        const linkUrl = driveInput.value.trim();
+        if (!linkUrl) {
+          showToast('❌ يرجى إدخال الرابط أولاً');
+          return;
+        }
+        if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) {
+          showToast('❌ يرجى إدخال رابط صحيح يبدأ بـ https://');
+          return;
         }
 
-        uploadBtn.disabled = false;
-        fileInput.value = '';
-        fileStatus.textContent = '';
+        fileStatus.textContent = '⏳ جاري الحفظ...';
+        saveDriveBtn.disabled = true;
 
-        if (successCount > 0) {
-          showToast(`✅ تم رفع وحفظ ${successCount} ملف بنجاح`);
+        try {
+          await addDoc(collection(db, "teacher_files"), {
+            teacherId: teacherId,
+            standardId: standard.id,
+            name: 'رابط ملف Google Drive',
+            url: linkUrl,
+            type: 'google_drive_link',
+            uploadedAt: new Date().toISOString()
+          });
+
+          showToast('✅ تم حفظ رابط Google Drive بنجاح');
           renderTeacherAchievement(app);
-        } else {
-          showToast('❌ لم يتم رفع أي ملف، تأكد من اتصالك وقواعد التخزين');
+        } catch (err) {
+          console.error('خطأ في حفظ الرابط بـ Firestore:', err);
+          showToast('❌ تعذر حفظ الرابط بالسجل: ' + err.message);
+          saveDriveBtn.disabled = false;
+          fileStatus.textContent = '';
         }
       };
     }
+
+    const deleteBtns = card.querySelectorAll('.delete-link-btn');
+    deleteBtns.forEach(btn => {
+      btn.onclick = async () => {
+        if (!confirm('⚠️ هل أنت متأكد من حذف هذا المرفق؟')) return;
+        const fileDocId = btn.dataset.id;
+        try {
+          await deleteDoc(doc(db, "teacher_files", fileDocId));
+          showToast('🗑️ تم حذف المرفق بنجاح');
+          renderTeacherAchievement(app);
+        } catch (err) {
+          console.error('خطأ في حذف الرابط:', err);
+          showToast('❌ تعذر الحذف: ' + err.message);
+        }
+      };
+    });
   });
 
   setTimeout(() => {
@@ -4695,7 +4706,7 @@ function restoreSavedEvidences(teacherId) {
   }
 }
 /* ─── [END SEC-54] ─── */
-
+           
              
 
 
