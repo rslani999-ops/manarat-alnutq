@@ -4480,6 +4480,8 @@ async function renderTeacherAchievement(app) {
     if (teacherDoc.exists()) teacherData = teacherDoc.data();
   } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
   const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
+  const schoolName = teacherData.schoolName || '';
+  const principalName = teacherData.principalName || '';
 
   let existingFiles = {};
   try {
@@ -4499,7 +4501,8 @@ async function renderTeacherAchievement(app) {
   headerCard.style.border = '2px solid var(--mint-deep)';
   headerCard.innerHTML = `
     <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
-    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
+    ${schoolName ? `<p style="margin:3px 0;text-align:center;font-weight:bold;color:#0F766E;">🏫 ${schoolName}</p>` : ''}
+    <p class="muted" style="text-align:center;margin-top:2px;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
       <button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">
         ⚡ تحديث وتوليد الشواهد
@@ -4516,7 +4519,7 @@ async function renderTeacherAchievement(app) {
   app.appendChild(autoSummaryContainer);
 
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
+  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, { schoolName, principalName });
 
   const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
   if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
@@ -4589,7 +4592,6 @@ async function renderTeacherAchievement(app) {
     }
   });
 
-  // استدعاء آمن بعد اكتمال رسم عناصر الـ DOM
   setTimeout(() => {
     restoreSavedEvidences(teacherId);
   }, 0);
@@ -4674,7 +4676,6 @@ function restoreSavedEvidences(teacherId) {
   }
 }
 /* ─── [END SEC-54] ─── */
-
 
 /* ─── [SEC-55] توليد وحفظ وتحديث الشواهد ─── */
 async function generateEvidenceReport(teacherName) {
