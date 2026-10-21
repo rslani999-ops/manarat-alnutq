@@ -4494,7 +4494,6 @@ async function renderTeacherAchievement(app) {
   `;
   app.appendChild(headerCard);
 
-  // حاوية مخصصة لملخص الشواهد العامة والإحصائيات الحية
   const autoSummaryContainer = document.createElement('div');
   autoSummaryContainer.id = 'autoEvidenceSummaryArea';
   app.appendChild(autoSummaryContainer);
@@ -4517,7 +4516,6 @@ async function renderTeacherAchievement(app) {
       </div>
       <p class="muted" style="margin:6px 0 10px 0;font-size:13px;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
       
-      <!-- قسم الشاهد الرقمي التلقائي الذي يظهر مباشرة في الصفحة -->
       <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
 
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
@@ -4577,9 +4575,9 @@ async function renderTeacherAchievement(app) {
 /* ─── [END SEC-54] ─── */
 
 
-/* ─── [SEC-55] توليد الشواهد وعرضها المباشر في الصفحة ─── */
+/* ─── [SEC-55] توليد الشواهد والتوجيه المباشر ─── */
 async function generateEvidenceReport(teacherName) {
-  showToast('⏳ جاري استخراج البيانات وبناء الشواهد...');
+  showToast('⏳ جاري جلب الشواهد وربط الأدلة...');
   try {
     const teacherId = state.user.uid;
 
@@ -4599,46 +4597,44 @@ async function generateEvidenceReport(teacherName) {
       : 0;
     const totalStudents = state.myStudents.length;
 
-    const baseUrl = window.location.href.split('#')[0];
-
-    // الشواهد المستخرجة مع روابط حية ومعلومات موثقة
+    // خريطة الشواهد التفاعلية مع وجهة العرض الحقيقية (viewName)
     const autoEvidences = {
       1: [
-        { title: 'سجل الحصص والخطط المعتمدة', detail: `إجمالي الخطط الفردية المسجلة: ${totalStudents} خطط معتمدة`, url: baseUrl },
-        { title: 'سجل التكليفات والمهام الوظيفية عبر النظام', detail: `تم إنجاز وتوثيق العمليات إلكترونياً`, url: baseUrl }
+        { title: 'سجل الحصص والخطط المعتمدة', detail: `إجمالي الخطط الفردية المسجلة: ${totalStudents} خطة معتمدة`, targetView: 'iep-session' },
+        { title: 'سجل تنفيذ الجلسات اليومية', detail: `توثيق شامل للجلسات المنفذة عبر النظام`, targetView: 'sessions-log' }
       ],
       3: [
-        { title: 'تقارير التواصل الفوري مع أولياء الأمور', detail: `جلسات مرسلة لولي الأمر موثقة بالتاريخ والتقييم والواجبات`, url: baseUrl },
-        { title: 'دليل التوجيه الأسري الرقمي', detail: `توجيهات منزلية معتمدة لكل طالب`, url: baseUrl }
+        { title: 'تقارير المتابعة والتواصل مع أولياء الأمور', detail: `جلسات مرسلة وموثقة بالتاريخ والتقييمات`, targetView: 'sessions-log' },
+        { title: 'دليل التوجيه الأسري الرقمي', detail: `خطة التوجيهات والإرشادات المنزلية للنطق`, targetView: 'parent-guide' }
       ],
       4: [
-        { title: 'تنويع استراتيجيات التدريب وعلاج عيوب النطق', detail: `تطبيق المرآة، التحليل الصوتي المباشر، الألعاب، والتكرار السمعي`, url: baseUrl }
+        { title: 'تنويع استراتيجيات التدريب وعلاج عيوب النطق', detail: `استخدام التحليل الصوتي المباشر والتدريب التفاعلي`, targetView: 'letter-training' }
       ],
       5: [
-        { title: 'مؤشرات قياس نتائج المتعلمين وتحسن النطق', detail: `متوسط إتقان الطلاب العام: ${averageSuccess}% في مختلف مخارج الحروف`, url: baseUrl }
+        { title: 'مؤشرات قياس نتائج المتعلمين وتحسن النطق', detail: `متوسط إتقان الطلاب العام: ${averageSuccess}% في مختلف مخارج الحروف`, targetView: 'student-achievement-list' }
       ],
       6: [
-        { title: 'سجل تنفيذ الجلسات والخطط التدريبية', detail: `تم تنفيذ وتوثيق ${totalSessions} جلسة كاملة بالأهداف والمخارج`, url: baseUrl }
+        { title: 'سجل الخطط الأسبوعية المنفذة', detail: `تم إنجاز وتوثيق ${totalSessions} جلسة كاملة بالأهداف والمخارج`, targetView: 'weekly-plan' }
       ],
       7: [
-        { title: 'توظيف منصة (منارة النطق) والتقنيات الرقمية', detail: `استخدام واجهة التعرف الصوتي التفاعلي ومعالجة الصوت`, url: baseUrl }
+        { title: 'توظيف تقنيات منصة (منارة النطق)', detail: `الألعاب التفاعلية والتعرف الصوتي المباشر`, targetView: 'games' }
       ],
       9: [
-        { title: 'إدارة وتوثيق الجلسات الفردية التخاطبية', detail: `تنظيم الوقت، كشوفات الجلسات المنفذة وحساب نسب الإنجاز`, url: baseUrl }
+        { title: 'إدارة وتوثيق الجلسات الفردية التخاطبية', detail: `تنظيم الوقت، كشوفات الجلسات المنفذة وحساب نسب الإنجاز`, targetView: 'sessions-log' }
       ],
       10: [
-        { title: 'تحليل نتائج قياس أداء المتعلمين والفاقد', detail: `تشخيص دقيق لمواضع الخلل ونسب نجاح تصحيح الأصوات`, url: baseUrl }
+        { title: 'تحليل نتائج قياس أداء المتعلمين والفاقد', detail: `ملفات الإنجاز الفردية ومتابعة تطور الحروف`, targetView: 'student-achievement-list' }
       ],
       11: [
-        { title: 'ملفات الإنجاز الرقمية للطلاب (IEP)', detail: `ربط كل طالب بملف إنجاز رقمي تراكمي وتقييمات مستمرة`, url: baseUrl }
+        { title: 'ملفات الإنجاز الرقمية للطلاب (IEP)', detail: `ربط كل طالب بملف إنجاز رقمي تراكمي وتقييمات مستمرة`, targetView: 'iep-session' }
       ]
     };
 
-    // 1. عرض بطاقة إحصائيات عامة في أعلى الصفحة
+    // بطاقة الإحصائيات العلوية
     const summaryArea = document.getElementById('autoEvidenceSummaryArea');
     if (summaryArea) {
       summaryArea.innerHTML = `
-        <div class="card" style="border:2px solid #0D9488;background:#F0FDFA;margin-bottom:15px;animation:fadeIn 0.4s;">
+        <div class="card" style="border:2px solid #0D9488;background:#F0FDFA;margin-bottom:15px;">
           <h3 style="color:#0F766E;margin:0 0 10px 0;">⚡ تقرير الشواهد الرقمية المستخرجة آلياً</h3>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center;">
             <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
@@ -4658,41 +4654,53 @@ async function generateEvidenceReport(teacherName) {
               <div style="font-size:12px;color:#64748B;">جلسات مقيمة</div>
             </div>
           </div>
-          <p style="margin:10px 0 0;font-size:12px;color:#0F766E;">تم توليد وربط جميع الشواهد الحية داخل بنود المعايير أدناه بنجاح 👇</p>
+          <p style="margin:10px 0 0;font-size:12px;color:#0F766E;">اضغط على أي زر "معاينة وتوثيق الشاهد" لفتح الشاهد مباشرة في واجهته المخصصة 👇</p>
         </div>
       `;
     }
 
-    // 2. تحديث وعرض كل شاهد داخل معيار المحدد على الصفحة مباشرة
+    // عرض الشواهد مع زر انتقال فعلي داخل المنصة
     TEACHER_STANDARDS.forEach(standard => {
       const box = document.getElementById(`autoEvidenceBox_${standard.id}`);
       const list = autoEvidences[standard.id];
       if (box) {
+        box.style.display = 'block';
         if (list && list.length > 0) {
-          box.style.display = 'block';
           box.innerHTML = `
-            <div style="font-weight:bold;color:#0F766E;font-size:13px;margin-bottom:6px;">⚡ الشواهد التلقائية المعتمدة من النظام:</div>
-            ${list.map(item => `
-              <div style="background:white;border:1px solid #99F6E4;padding:8px 10px;border-radius:6px;margin-bottom:6px;">
-                <div style="font-weight:bold;font-size:13px;color:#134E4A;">${item.title}</div>
-                <div style="font-size:12px;color:#475569;margin:2px 0 4px 0;">${item.detail}</div>
-                <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;color:#0D9488;font-size:12px;font-weight:bold;text-decoration:underline;">
-                  فتح وتوثيق الرابط المباشر 🔗
-                </a>
+            <div style="font-weight:bold;color:#0F766E;font-size:13px;margin-bottom:8px;">⚡ الشواهد التلقائية المعتمدة من النظام:</div>
+            ${list.map((item, idx) => `
+              <div style="background:white;border:1px solid #99F6E4;padding:10px 12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div>
+                  <div style="font-weight:bold;font-size:13px;color:#134E4A;">${item.title}</div>
+                  <div style="font-size:12px;color:#475569;margin-top:2px;">${item.detail}</div>
+                </div>
+                <button class="btn btn-sm view-evidence-btn" data-view="${item.targetView}" style="background:#0F766E;color:white;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:bold;border:none;cursor:pointer;">
+                  عرض وتوثيق الشاهد 👁️
+                </button>
               </div>
             `).join('')}
           `;
         } else {
-          box.style.display = 'block';
           box.innerHTML = `<span style="font-size:12px;color:#64748B;">يعتمد هذا المعيار على الوثائق والمرفقات اليدوية أدناه.</span>`;
         }
       }
     });
 
-    showToast('✅ تم توليد وتثبيت الشواهد في المعايير بنجاح!');
+    // تفعيل أزرار الانتقال المباشر لكل شاهد لفتح صفحته المخصصة فوراً
+    document.querySelectorAll('.view-evidence-btn').forEach(btn => {
+      btn.onclick = () => {
+        const targetView = btn.dataset.view;
+        if (targetView) {
+          state.view = targetView;
+          render();
+        }
+      };
+    });
+
+    showToast('✅ تم استخراج الشواهد وربط واجهاتها بنجاح!');
   } catch (e) {
-    console.error('خطأ في توليد الشواهد:', e);
-    showToast('❌ فشل توليد الشواهد: ' + e.message);
+    console.error('خطأ في استخراج الشواهد:', e);
+    showToast('❌ تعذر إكمال الشواهد: ' + e.message);
   }
 }
 /* ─── [END SEC-55] ─── */
