@@ -4468,39 +4468,48 @@ const TEACHER_STANDARDS = [
 /* ─── [END SEC-53] ─── */
 
 
-/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement (Google Drive Links) ─── */
+/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement (مع الشواهد التلقائية وروابط Drive) ─── */
 async function renderTeacherAchievement(app) {
   renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
     state.view = 'teacher-dashboard';
     render();
   });
+
   if (!state.user) {
     showToast('يجب تسجيل الدخول');
     state.view = 'auth';
     return render();
   }
+
   const teacherId = state.user.uid;
   let teacherData = {};
   try {
     const teacherDoc = await getDoc(doc(db, "users", teacherId));
     if (teacherDoc.exists()) teacherData = teacherDoc.data();
-  } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
+  } catch (e) { 
+    console.error('خطأ في جلب بيانات المعلم:', e); 
+  }
+
   const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
   const schoolName = teacherData.schoolName || 'مدرسة قتيبة بن مسلم الابتدائية';
   const principalName = teacherData.principalName || '';
 
-  let existingFiles = {};
+  // جلب روابط Google Drive المحفوظة مسبقاً
+  let existingDriveLinks = {};
   try {
     const linksQuery = query(collection(db, "teacher_drive_links"), where("teacherId", "==", teacherId));
     const linksSnap = await getDocs(linksQuery);
     linksSnap.forEach(d => {
       const data = d.data();
       const standardId = data.standardId;
-      if (!existingFiles[standardId]) existingFiles[standardId] = [];
-      existingFiles[standardId].push({ id: d.id, ...data });
+      if (!existingDriveLinks[standardId]) existingDriveLinks[standardId] = [];
+      existingDriveLinks[standardId].push({ id: d.id, ...data });
     });
-  } catch (e) { console.warn('تعذر جلب الروابط الحالية:', e); }
+  } catch (e) { 
+    console.warn('تعذر جلب روابط Drive:', e); 
+  }
 
+  // بطاقة ترويسة الملف وأزرار التوليد والطباعة
   const headerCard = document.createElement('div');
   headerCard.className = 'card';
   headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
@@ -4511,7 +4520,7 @@ async function renderTeacherAchievement(app) {
     <p class="muted" style="text-align:center;margin-top:2px;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
       <button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">
-        ⚡ تحديث وتوليد الشواهد
+        ⚡ تحديث وتوليد الشواهد تلقائياً
       </button>
       <button class="btn btn-soft btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:9px 24px;">
         🖨️ طباعة / تصدير PDF
@@ -4520,16 +4529,34 @@ async function renderTeacherAchievement(app) {
   `;
   app.appendChild(headerCard);
 
+  // حاوية ملخص الشواهد التلقائية المجمعة
   const autoSummaryContainer = document.createElement('div');
   autoSummaryContainer.id = 'autoEvidenceSummaryArea';
   app.appendChild(autoSummaryContainer);
 
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, { schoolName, principalName });
+  if (printBtn) {
+    printBtn.onclick = () => {
+      if (typeof printTeacherAchievement === 'function') {
+        printTeacherAchievement(teacherName, existingDriveLinks, { schoolName, principalName });
+      }
+    };
+  }
 
   const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
-  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
+  if (generateBtn) {
+    generateBtn.onclick = async () => {
+      generateBtn.disabled = true;
+      generateBtn.textContent = '⏳ جاري توليد وتحديث الشواهد...';
+      if (typeof generateEvidenceReport === 'function') {
+        await generateEvidenceReport(teacherName);
+      }
+      generateBtn.disabled = false;
+      generateBtn.textContent = '⚡ تحديث وتوليد الشواهد تلقائياً';
+    };
+  }
 
+  // بطاقات المعايير المهنية
   TEACHER_STANDARDS.forEach(standard => {
     const card = document.createElement('div');
     card.className = 'card';
@@ -4542,23 +4569,26 @@ async function renderTeacherAchievement(app) {
       </div>
       <p class="muted" style="margin:6px 0 10px 0;font-size:13px;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
       
+      <!-- الصندوق المخصص لعرض محتوى الشاهد المولد تلقائياً من المنصة -->
       <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
 
+      <!-- حقل إضافة وتوثيق رابط Google Drive -->
       <div style="margin-top:12px; background:#F8FAFC; padding:12px; border-radius:10px; border:1px solid #E2E8F0;">
-        <label style="font-weight:bold; display:block; margin-bottom:6px; font-size:13px;">🔗 رابط Google Drive المباشر للشاهد:</label>
+        <label style="font-weight:bold; display:block; margin-bottom:6px; font-size:13px; color:#334155;">🔗 إضافة رابط شاهد من Google Drive:</label>
         <div style="display:flex; gap:8px;">
-          <input type="url" id="driveLinkInput_${standard.id}" placeholder="https://drive.google.com/..." style="margin:0; flex-grow:1;">
-          <button class="btn btn-primary" id="saveDriveLinkBtn_${standard.id}" style="padding:0 15px;">حفظ الرابط</button>
+          <input type="url" id="driveLinkInput_${standard.id}" placeholder="https://drive.google.com/..." style="margin:0; flex-grow:1; border:1px solid #CBD5E1; border-radius:8px; padding:8px 12px; font-size:13px;">
+          <button class="btn btn-primary" id="saveDriveLinkBtn_${standard.id}" style="padding:0 16px; font-weight:bold; white-space:nowrap;">حفظ الرابط</button>
         </div>
       </div>
       
+      <!-- قائمة روابط Google Drive المحفوظة لهذا الشاهد مع روابط قابلة للنقر وزر حذف -->
       <div id="filesList_${standard.id}" style="margin-top:10px;">
-        ${(existingFiles[standard.id] || []).map(linkObj => {
+        ${(existingDriveLinks[standard.id] || []).map(linkObj => {
           return `
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; background:#E0F7FA; padding:8px 12px; border-radius:8px; border:1px solid #B2EBF2;">
-              <span style="font-size:13px; color:#00695C; font-weight:bold;">🔗 رابط محفوظ للشاهد:</span>
-              <a href="${linkObj.url}" target="_blank" rel="noopener noreferrer" style="font-size:13px; color:#00838F; font-weight:bold; text-decoration:underline;">فتح الملف</a>
-              <button class="btn btn-danger btn-sm delete-link-btn" data-id="${linkObj.id}" style="padding:2px 8px; font-size:11px; margin-right:auto;">حذف</button>
+              <span style="font-size:13px; color:#00695C; font-weight:bold;">🔗 رابط Google Drive:</span>
+              <a href="${linkObj.url}" target="_blank" rel="noopener noreferrer" style="font-size:13px; color:#00838F; font-weight:bold; text-decoration:underline; word-break:break-all;">عرض الملف في نافذة جديدة ↗</a>
+              <button class="btn btn-danger btn-sm delete-link-btn" data-id="${linkObj.id}" style="padding:3px 10px; font-size:11px; margin-right:auto; border-radius:6px;">حذف</button>
             </div>
           `;
         }).join('')}
@@ -4566,14 +4596,21 @@ async function renderTeacherAchievement(app) {
     `;
     app.appendChild(card);
 
+    // تفعيل زر حفظ الرابط
     const saveBtn = card.querySelector(`#saveDriveLinkBtn_${standard.id}`);
     const linkInput = card.querySelector(`#driveLinkInput_${standard.id}`);
 
     if (saveBtn && linkInput) {
       saveBtn.onclick = async () => {
         const url = linkInput.value.trim();
-        if (!url) { showToast('❌ يرجى إدخال الرابط أولاً'); return; }
-        if (!url.startsWith('https://')) { showToast('❌ الرابط يجب أن يبدأ بـ https://'); return; }
+        if (!url) { 
+          showToast('❌ يرجى إدخال الرابط أولاً'); 
+          return; 
+        }
+        if (!url.startsWith('https://')) { 
+          showToast('❌ الرابط يجب أن يبدأ بـ https://'); 
+          return; 
+        }
 
         saveBtn.disabled = true;
         saveBtn.textContent = '⏳ جاري الحفظ...';
@@ -4585,7 +4622,7 @@ async function renderTeacherAchievement(app) {
             url: url,
             createdAt: new Date().toISOString()
           });
-          showToast('✅ تم حفظ رابط Google Drive بنجاح');
+          showToast('✅ تم حفظ رابط الشاهد بنجاح');
           renderTeacherAchievement(app);
         } catch (err) {
           console.error('خطأ في حفظ الرابط:', err);
@@ -4596,14 +4633,15 @@ async function renderTeacherAchievement(app) {
       };
     }
 
+    // تفعيل أزرار الحذف للروابط
     const deleteBtns = card.querySelectorAll('.delete-link-btn');
     deleteBtns.forEach(btn => {
       btn.onclick = async () => {
-        if (!confirm('⚠️ هل أنت متأكد من حذف هذا الرابط؟')) return;
+        if (!confirm('⚠️ هل تريد بالتأكيد حذف هذا الرابط؟')) return;
         const linkId = btn.dataset.id;
         try {
           await deleteDoc(doc(db, "teacher_drive_links", linkId));
-          showToast('🗑️ تم حذف الرابط بنجاح');
+          showToast('🗑️ تم حذف الرابط');
           renderTeacherAchievement(app);
         } catch (err) {
           console.error('خطأ في حذف الرابط:', err);
@@ -4613,11 +4651,15 @@ async function renderTeacherAchievement(app) {
     });
   });
 
+  // استرجاع وعرض الشواهد المولدة تلقائياً داخل الصناديق فور تحميل الصفحة
   setTimeout(() => {
-    restoreSavedEvidences(teacherId);
-  }, 0);
+    if (typeof restoreSavedEvidences === 'function') {
+      restoreSavedEvidences(teacherId);
+    }
+  }, 50);
 }
 /* ─── [END SEC-54] ─── */
+             
 
 
 /* ─── [SEC-55] توليد وحفظ وتحديث الشواهد ─── */
