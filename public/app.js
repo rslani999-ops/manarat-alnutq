@@ -4755,7 +4755,7 @@ async function generateEvidenceReport(teacherName) {
    
 
 /* ─── [SEC-56] طباعة ملف إنجاز المعلم — Print Teacher Achievement ─── */
-function printTeacherAchievement(teacherName, existingFiles) {
+function printTeacherAchievement(teacherName, existingFiles, extraData = {}) {
   let printArea = document.getElementById('iep-print-area');
   if (!printArea) {
     printArea = document.createElement('div');
@@ -4763,59 +4763,123 @@ function printTeacherAchievement(teacherName, existingFiles) {
     document.body.appendChild(printArea);
   }
 
+  const teacherId = state.user?.uid;
+  let savedData = null;
+  try {
+    const raw = localStorage.getItem(`teacher_evidences_${teacherId}`);
+    if (raw) savedData = JSON.parse(raw);
+  } catch (e) { console.warn(e); }
+
+  const autoEvidences = savedData?.evidences || {};
+  const summary = savedData?.summary || null;
+  const schoolName = extraData.schoolName || '';
+  const principalName = extraData.principalName || '';
+
   printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:25px;background:white;color:#1E2A47;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:15px;color:#555;">ملف إنجاز المعلم والأدلة المرفقة</p>
-        <hr style="border:1px solid #ddd;margin:12px 0;">
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:30px;background:white;color:#1E2A47;box-sizing:border-box;">
+      
+      <!-- ترويسة رسمية عصرية -->
+      <div style="border-bottom:2.5px solid #0D9488;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h1 style="font-size:22px;color:#0F766E;margin:0 0 4px 0;font-weight:900;">منصة منارة النطق</h1>
+          <div style="font-size:14px;color:#475569;font-weight:bold;">ملف إنجاز وشواهد الأداء الوظيفي والمهني</div>
+          ${schoolName ? `<div style="font-size:13px;color:#0D9488;margin-top:2px;">🏫 ${schoolName}</div>` : ''}
+        </div>
+        <div style="text-align:left;font-size:12px;color:#64748B;line-height:1.6;">
+          <div><strong>المعلم:</strong> ${teacherName}</div>
+          <div><strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-SA')}</div>
+        </div>
       </div>
 
-      <div style="margin-bottom:15px;display:flex;justify-content:space-between;font-size:14px;background:#F9FDFC;padding:10px 15px;border-radius:8px;border:1px solid #E0F2FE;">
-        <span><strong>اسم المعلم:</strong> ${teacherName}</span>
-        <span><strong>تاريخ التصدير:</strong> ${new Date().toLocaleDateString('ar-SA')}</span>
-      </div>
+      <!-- إحصائيات عامة داخل تقرير الطباعة -->
+      ${summary ? `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;text-align:center;">
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.totalStudents || 0}</div>
+            <div style="font-size:11px;color:#64748B;">الطلاب المسجلين</div>
+          </div>
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.totalSessions || 0}</div>
+            <div style="font-size:11px;color:#64748B;">الجلسات المنفذة</div>
+          </div>
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.averageSuccess || 0}%</div>
+            <div style="font-size:11px;color:#64748B;">متوسط الإتقان</div>
+          </div>
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.evaluatedSessionsCount || 0}</div>
+            <div style="font-size:11px;color:#64748B;">جلسات مقيمة</div>
+          </div>
+        </div>
+      ` : ''}
 
-      <div style="margin-top:15px;">
+      <!-- قائمة المعايير والشواهد الرقمية واليدوية -->
+      <div style="margin-top:10px;">
         ${TEACHER_STANDARDS.map(standard => {
           const files = existingFiles[standard.id] || [];
+          const autos = autoEvidences[standard.id] || [];
           return `
-            <div style="margin-bottom:14px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;page-break-inside:avoid;">
-              <strong style="color:#0F766E;font-size:14px;">${standard.id}.${standard.title}</strong>
-              <div style="font-size:12px;color:#64748B;margin:3px 0 6px 0;">الشواهد المطلوبة: ${standard.evidences}</div>
-              <div style="margin-top:5px;padding-right:8px;border-right:2px solid #CBD5E1;">
-                ${files.length > 0 
-                  ? files.map(file => {
+            <div style="margin-bottom:14px;border:1px solid #E2E8F0;border-radius:8px;padding:12px;page-break-inside:avoid;background:#FFFFFF;">
+              <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F1F5F9;padding-bottom:6px;margin-bottom:8px;">
+                <strong style="color:#0F766E;font-size:14px;">${standard.id}.${standard.title}</strong>
+                <span style="font-size:11px;color:#64748B;">معيار مهني معتمد</span>
+              </div>
+              <div style="font-size:11px;color:#64748B;margin-bottom:8px;">📋 الشواهد المستهدفة: ${standard.evidences}</div>
+              
+              <!-- الشواهد المستخرجة تلقائياً من المنصة -->
+              ${autos.length > 0 ? `
+                <div style="background:#F8FAFC;border-right:3px solid #0D9488;padding:6px 10px;border-radius:4px;margin-bottom:8px;">
+                  <div style="font-size:12px;font-weight:bold;color:#134E4A;margin-bottom:4px;">⚡ الشواهد الرقمية المحققة عبر المنصة:</div>
+                  ${autos.map(a => `
+                    <div style="font-size:11.5px;color:#334155;margin-bottom:3px;">
+                      • <strong>${a.title}:</strong>${a.detail}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              <!-- المرفقات والوثائق والصور المرفوعة -->
+              ${files.length > 0 ? `
+                <div style="margin-top:6px;padding-top:6px;border-top:1px dashed #E2E8F0;">
+                  <div style="font-size:11.5px;font-weight:bold;color:#475569;margin-bottom:4px;">📎 الوثائق والمستندات المرفقة:</div>
+                  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+                    ${files.map(file => {
                       const fileUrl = file.url || file.fileUrl || '';
                       const isImage = (file.type && file.type.startsWith('image/')) || (fileUrl.match(/\.(jpeg|jpg|gif|png|webp)/i));
                       return `
-                        <div style="font-size:12px;margin-top:4px;">
-                          <span style="color:#2563EB;">📄 </span>
-                          ${fileUrl ? `
-                            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline;font-weight:bold;display:inline-block;">
-                              ${file.name || 'عرض الوثيقة المرفقة'} 🔗
-                            </a>
-                          ` : `<span>${file.name || 'وثيقة غير متوفرة'}</span>`}
+                        <div style="font-size:11px;color:#334155;background:#F1F5F9;padding:6px 10px;border-radius:6px;display:flex;flex-direction:column;gap:4px;">
+                          <span>📄 ${file.name || 'مستند مرفق'}</span>
                           ${isImage && fileUrl ? `
-                            <div style="margin-top:4px;">
-                              <a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
-                                <img src="${fileUrl}" alt="${file.name || 'مرفق'}" style="max-width:180px;max-height:120px;border-radius:6px;border:1px solid #E2E8F0;display:block;object-fit:cover;" />
-                              </a>
-                            </div>
+                            <img src="${fileUrl}" alt="مرفق" style="max-width:140px;max-height:90px;object-fit:cover;border-radius:4px;border:1px solid #CBD5E1;" />
                           ` : ''}
                         </div>
                       `;
-                    }).join('')
-                  : '<div style="font-size:12px;color:#94A3B8;">لا توجد وثائق مرفقة يدوياً</div>'
-                }
-              </div>
+                    }).join('')}
+                  </div>
+                </div>
+              ` : (autos.length === 0 ? '<div style="font-size:11px;color:#94A3B8;">لا توجد وثائق مرفقة يدوياً</div>' : '')}
             </div>
           `;
         }).join('')}
       </div>
 
-      <div style="margin-top:25px;font-size:11px;color:#94A3B8;text-align:center;">
-        تم إنشاء هذا التقرير بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
+      <!-- قسم التوقيع والاعتماد في أسفل الصفحة -->
+      <div style="margin-top:35px;padding-top:20px;border-top:2px solid #E2E8F0;display:flex;justify-content:space-between;page-break-inside:avoid;">
+        <div style="text-align:right;width:220px;">
+          <div style="font-size:13px;font-weight:bold;color:#1E2A47;">معلم تدريبات النطق:</div>
+          <div style="font-size:13px;color:#0F766E;margin:4px 0 25px 0;">أ / ${teacherName}</div>
+          <div style="font-size:12px;color:#64748B;">التوقيع: ...................................</div>
+        </div>
+
+        <div style="text-align:left;width:220px;">
+          <div style="font-size:13px;font-weight:bold;color:#1E2A47;">مدير المدرسة:</div>
+          <div style="font-size:13px;color:#0F766E;margin:4px 0 25px 0;">${principalName ? 'أ / ' + principalName : '...................................'}</div>
+          <div style="font-size:12px;color:#64748B;">التوقيع والختم: ...................................</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;font-size:10px;color:#94A3B8;text-align:center;">
+        تم استخراج هذا التقرير آلياً عبر منصة منارة النطق التعليمية
       </div>
     </div>
   `;
