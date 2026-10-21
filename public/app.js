@@ -4610,40 +4610,40 @@ async function generateEvidenceReport(teacherName) {
       });
     }
 
-    // رابط المنصة المباشر للتوثيق الرقمي
-    const platformUrl = window.location.origin;
+    // رابط المنصة الكامل والصريح لضمان عمله في ملفات الـ PDF
+    const baseUrl = window.location.href.split('#')[0];
 
-    // 3. ربط الشواهد التلقائية مع روابط قابلة للنقر
+    // 3. ربط الشواهد التلقائية مع روابط قابلة للنقر تدعم تصدير الـ PDF
     const autoEvidences = {
       1: [
-        { text: `سجل الدوام والخطط المعتمدة عبر المنصة`, url: `${platformUrl}/#attendance` },
-        { text: `إجمالي الخطط الفردية المسجلة: ${totalStudents}`, url: `${platformUrl}/#students` }
+        { text: `سجل الدوام والخطط المعتمدة عبر المنصة`, url: baseUrl },
+        { text: `إجمالي الخطط الفردية المسجلة: ${totalStudents}`, url: baseUrl }
       ],
       3: [
-        { text: `تقارير الجلسات المرسلة لأولياء الأمور`, url: `${platformUrl}/#reports` },
-        { text: `سجل التوجيهات الأسرية والمتابعة المنزلية`, url: `${platformUrl}/#parent-guide` }
+        { text: `تقارير الجلسات المرسلة لأولياء الأمور`, url: baseUrl },
+        { text: `سجل التوجيهات الأسرية والمتابعة المنزلية`, url: baseUrl }
       ],
       4: [
-        { text: `تنويع الاستراتيجيات: تدريب سمعي، مرآة، أنشطة حركية، محاكاة صوتية`, url: `${platformUrl}/#strategies` }
+        { text: `تنويع الاستراتيجيات: تدريب سمعي، مرآة، أنشطة حركية، محاكاة صوتية`, url: baseUrl }
       ],
       5: [
-        { text: `سجلات نتائج قياس نطق الحروف القبلية والبعدية`, url: `${platformUrl}/#diagnostic` },
-        { text: `متوسط إتقان الطلاب العام: ${averageSuccess}%`, url: `${platformUrl}/#diagnostic` }
+        { text: `سجلات نتائج قياس نطق الحروف القبلية والبعدية`, url: baseUrl },
+        { text: `متوسط إتقان الطلاب العام: ${averageSuccess}%`, url: baseUrl }
       ],
       6: [
-        { text: `سجل جلسات التدريب المنفذة: ${totalSessions} جلسة مسجلة بالتاريخ والهدف`, url: `${platformUrl}/#sessions` }
+        { text: `سجل جلسات التدريب المنفذة: ${totalSessions} جلسة مسجلة بالتاريخ والهدف`, url: baseUrl }
       ],
       7: [
-        { text: `توظيف المنصة الرقمية (منارة النطق) والتحليل الصوتي التفاعلي للكلمات`, url: platformUrl }
+        { text: `توظيف المنصة الرقمية (منارة النطق) والتحليل الصوتي التفاعلي للكلمات`, url: baseUrl }
       ],
       9: [
-        { text: `سجل المتابعة اليومي وجداول تقييم النطق المباشر`, url: `${platformUrl}/#daily-tracking` }
+        { text: `سجل المتابعة اليومي وجداول تقييم النطق المباشر`, url: baseUrl }
       ],
       10: [
-        { text: `تقارير تحليل نسب النجاح ومؤشرات معالجة تعثر مخارج الحروف`, url: `${platformUrl}/#analytics` }
+        { text: `تقارير تحليل نسب النجاح ومؤشرات معالجة تعثر مخارج الحروف`, url: baseUrl }
       ],
       11: [
-        { text: `ملفات إنجاز الطلاب الرقمية والخطط الفردية (IEP)`, url: `${platformUrl}/#iep` }
+        { text: `ملفات إنجاز الطلاب الرقمية والخطط الفردية (IEP)`, url: baseUrl }
       ]
     };
 
@@ -4687,24 +4687,26 @@ async function generateEvidenceReport(teacherName) {
               
               <div style="padding-right:10px;border-right:3px solid #357E74;margin-top:6px;">
                 ${autoList.map(a => `
-                  <div style="margin-bottom:5px;font-size:13px;">
+                  <div style="margin-bottom:6px;font-size:13px;">
                     <span style="color:#0F766E;">⚡ شاهد تلقائي: </span>
-                    <a href="${a.url}" target="_blank" style="color:#0F766E;text-decoration:underline;font-weight:600;">${a.text}</a>
+                    <a href="${a.url}" target="_blank" rel="noopener noreferrer" style="color:#0F766E;text-decoration:underline;font-weight:bold;display:inline-block;">${a.text} 🔗</a>
                   </div>
                 `).join('')}
 
                 ${filesList.map(f => {
-                  const fileUrl = f.url || f.fileUrl || '#';
-                  const isImage = (f.type && f.type.startsWith('image/')) || (fileUrl.match(/\\.(jpeg|jpg|gif|png|webp)/i));
+                  const fileUrl = f.url || f.fileUrl || '';
+                  const isImage = (f.type && f.type.startsWith('image/')) || (fileUrl.match(/\.(jpeg|jpg|gif|png|webp)/i));
                   return `
                     <div style="margin-top:6px;margin-bottom:6px;font-size:13px;">
                       <span style="color:#2563EB;">📎 ملف مرفق: </span>
-                      <a href="${fileUrl}" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">
-                        ${f.name || 'فتح الوثيقة المرفقة'}
-                      </a>
-                      ${isImage && fileUrl !== '#' ? `
+                      ${fileUrl ? `
+                        <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline;font-weight:bold;display:inline-block;">
+                          ${f.name || 'فتح الوثيقة المرفقة'} 🔗
+                        </a>
+                      ` : `<span>${f.name || 'ملف غير متوفر'}</span>`}
+                      ${isImage && fileUrl ? `
                         <div style="margin-top:5px;">
-                          <a href="${fileUrl}" target="_blank">
+                          <a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
                             <img src="${fileUrl}" alt="${f.name || 'شاهد'}" style="max-width:200px;max-height:140px;border-radius:6px;border:1px solid #CBD5E1;display:block;margin-top:4px;object-fit:cover;" />
                           </a>
                         </div>
@@ -4793,17 +4795,19 @@ function printTeacherAchievement(teacherName, existingFiles) {
               <div style="margin-top:5px;padding-right:8px;border-right:2px solid #CBD5E1;">
                 ${files.length > 0 
                   ? files.map(file => {
-                      const fileUrl = file.url || file.fileUrl || '#';
-                      const isImage = (file.type && file.type.startsWith('image/')) || (fileUrl.match(/\\.(jpeg|jpg|gif|png|webp)/i));
+                      const fileUrl = file.url || file.fileUrl || '';
+                      const isImage = (file.type && file.type.startsWith('image/')) || (fileUrl.match(/\.(jpeg|jpg|gif|png|webp)/i));
                       return `
                         <div style="font-size:12px;margin-top:4px;">
                           <span style="color:#2563EB;">📄 </span>
-                          <a href="${fileUrl}" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">
-                            ${file.name || 'عرض الوثيقة المرفقة'}
-                          </a>
-                          ${isImage && fileUrl !== '#' ? `
+                          ${fileUrl ? `
+                            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline;font-weight:bold;display:inline-block;">
+                              ${file.name || 'عرض الوثيقة المرفقة'} 🔗
+                            </a>
+                          ` : `<span>${file.name || 'وثيقة غير متوفرة'}</span>`}
+                          ${isImage && fileUrl ? `
                             <div style="margin-top:4px;">
-                              <a href="${fileUrl}" target="_blank">
+                              <a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
                                 <img src="${fileUrl}" alt="${file.name || 'مرفق'}" style="max-width:180px;max-height:120px;border-radius:6px;border:1px solid #E2E8F0;display:block;object-fit:cover;" />
                               </a>
                             </div>
@@ -4829,6 +4833,7 @@ function printTeacherAchievement(teacherName, existingFiles) {
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
 /* ─── [END SEC-56] ─── */
+
 
          
 
