@@ -4482,38 +4482,60 @@ async function renderTeacherAchievement(app) {
   headerCard.style.border = '2px solid var(--mint-deep)';
   headerCard.innerHTML = `
     <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
-    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وفق المعايير المهنية</p>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
-      <button class="btn btn-primary btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:8px 20px;">🖨️ طباعة / حفظ PDF</button>
-      <button class="btn btn-soft btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:8px 20px;">📄 توليد الشواهد تلقائياً</button>
+    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
+      <button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">
+        ⚡ توليد وعرض الشواهد على الصفحة
+      </button>
+      <button class="btn btn-soft btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:9px 24px;">
+        🖨️ طباعة / تصدير PDF
+      </button>
     </div>
   `;
   app.appendChild(headerCard);
 
+  // حاوية مخصصة لملخص الشواهد العامة والإحصائيات الحية
+  const autoSummaryContainer = document.createElement('div');
+  autoSummaryContainer.id = 'autoEvidenceSummaryArea';
+  app.appendChild(autoSummaryContainer);
+
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
   if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
+
   const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
   if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
 
   TEACHER_STANDARDS.forEach(standard => {
     const card = document.createElement('div');
     card.className = 'card';
-    card.style.marginBottom = '12px';
+    card.id = `standardCard_${standard.id}`;
+    card.style.marginBottom = '14px';
     card.innerHTML = `
-      <h4 style="margin:0;color:var(--mint-deep);">${standard.id}. ${standard.title}</h4>
-      <p class="muted" style="margin:6px 0;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+        <h4 style="margin:0;color:var(--mint-deep);font-size:16px;">${standard.id}. ${standard.title}</h4>
+        <span class="badge" style="background:#F1F5F9;color:#475569;font-size:11px;">معيار مهني</span>
+      </div>
+      <p class="muted" style="margin:6px 0 10px 0;font-size:13px;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
+      
+      <!-- قسم الشاهد الرقمي التلقائي الذي يظهر مباشرة في الصفحة -->
+      <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
+
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
         <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
-        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملفات</button>
+        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملف يدوي</button>
         <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
       </div>
-      <div id="filesList_${standard.id}" style="margin-top:8px;">
-        ${(existingFiles[standard.id] || []).map(file => `
-          <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
-            <span style="font-size:13px;">📄 ${file.name || 'ملف'}</span>
-            <a href="${file.url}" target="_blank" style="font-size:12px;color:var(--mint-deep);">عرض</a>
-          </div>
-        `).join('')}
+      
+      <div id="filesList_${standard.id}" style="margin-top:10px;">
+        ${(existingFiles[standard.id] || []).map(file => {
+          const fileUrl = file.url || file.fileUrl || '';
+          return `
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; background:#F8FAFC; padding:6px 12px; border-radius:8px;">
+              <span style="font-size:13px;">📄 ${file.name || 'ملف مرفق'}</span>
+              <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563EB;font-weight:bold;margin-right:auto;">معاينة 🔗</a>
+            </div>
+          `;
+        }).join('')}
       </div>
     `;
     app.appendChild(card);
@@ -4555,13 +4577,12 @@ async function renderTeacherAchievement(app) {
 /* ─── [END SEC-54] ─── */
 
 
-/* ─── [SEC-55] توليد الشواهد تلقائياً — Evidence Report ─── */
+/* ─── [SEC-55] توليد الشواهد وعرضها المباشر في الصفحة ─── */
 async function generateEvidenceReport(teacherName) {
-  showToast('⏳ جاري جلب البيانات وتوليد الشواهد تلقائياً...');
+  showToast('⏳ جاري استخراج البيانات وبناء الشواهد...');
   try {
     const teacherId = state.user.uid;
 
-    // 1. جلب الجلسات والملفات المرفوعة الخاصة بالمعلم من Firestore
     const [allSessionsSnap, teacherFilesSnap] = await Promise.all([
       getDocs(collection(db, "sessions")),
       getDocs(query(collection(db, "teacher_files"), where("teacherId", "==", teacherId)))
@@ -4571,15 +4592,6 @@ async function generateEvidenceReport(teacherName) {
     allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
     const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
 
-    const uploadedFiles = {};
-    teacherFilesSnap.forEach(d => {
-      const data = d.data();
-      const stdId = data.standardId;
-      if (!uploadedFiles[stdId]) uploadedFiles[stdId] = [];
-      uploadedFiles[stdId].push(data);
-    });
-
-    // 2. معالجة إحصائيات المعلم والطلاب
     const totalSessions = teacherSessions.length;
     const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
     const averageSuccess = evaluatedSessions.length > 0
@@ -4587,174 +4599,97 @@ async function generateEvidenceReport(teacherName) {
       : 0;
     const totalStudents = state.myStudents.length;
 
-    const studentSummaries = [];
-    for (const student of state.myStudents) {
-      const studentDoc = await getDoc(doc(db, "users", student.id));
-      const studentData = studentDoc.exists() ? studentDoc.data() : {};
-      const diag = studentData.diagnostic || {};
-      const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-      const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-      const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
-      const studentSessions = allSessions.filter(s => s.studentId === student.id && s.evaluation && s.evaluation !== 'none');
-      const studentAvg = studentSessions.length > 0
-        ? Math.round(studentSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / studentSessions.length)
-        : 0;
-
-      studentSummaries.push({
-        name: student.fullName || student.email,
-        passed: passedLetters.length,
-        need: needLetters.length,
-        trained: trainedLetters.length,
-        sessions: studentSessions.length,
-        avg: studentAvg
-      });
-    }
-
-    // رابط المنصة الكامل والصريح لضمان عمله في ملفات الـ PDF
     const baseUrl = window.location.href.split('#')[0];
 
-    // 3. ربط الشواهد التلقائية مع روابط قابلة للنقر تدعم تصدير الـ PDF
+    // الشواهد المستخرجة مع روابط حية ومعلومات موثقة
     const autoEvidences = {
       1: [
-        { text: `سجل الدوام والخطط المعتمدة عبر المنصة`, url: baseUrl },
-        { text: `إجمالي الخطط الفردية المسجلة: ${totalStudents}`, url: baseUrl }
+        { title: 'سجل الحصص والخطط المعتمدة', detail: `إجمالي الخطط الفردية المسجلة: ${totalStudents} خطط معتمدة`, url: baseUrl },
+        { title: 'سجل التكليفات والمهام الوظيفية عبر النظام', detail: `تم إنجاز وتوثيق العمليات إلكترونياً`, url: baseUrl }
       ],
       3: [
-        { text: `تقارير الجلسات المرسلة لأولياء الأمور`, url: baseUrl },
-        { text: `سجل التوجيهات الأسرية والمتابعة المنزلية`, url: baseUrl }
+        { title: 'تقارير التواصل الفوري مع أولياء الأمور', detail: `جلسات مرسلة لولي الأمر موثقة بالتاريخ والتقييم والواجبات`, url: baseUrl },
+        { title: 'دليل التوجيه الأسري الرقمي', detail: `توجيهات منزلية معتمدة لكل طالب`, url: baseUrl }
       ],
       4: [
-        { text: `تنويع الاستراتيجيات: تدريب سمعي، مرآة، أنشطة حركية، محاكاة صوتية`, url: baseUrl }
+        { title: 'تنويع استراتيجيات التدريب وعلاج عيوب النطق', detail: `تطبيق المرآة، التحليل الصوتي المباشر، الألعاب، والتكرار السمعي`, url: baseUrl }
       ],
       5: [
-        { text: `سجلات نتائج قياس نطق الحروف القبلية والبعدية`, url: baseUrl },
-        { text: `متوسط إتقان الطلاب العام: ${averageSuccess}%`, url: baseUrl }
+        { title: 'مؤشرات قياس نتائج المتعلمين وتحسن النطق', detail: `متوسط إتقان الطلاب العام: ${averageSuccess}% في مختلف مخارج الحروف`, url: baseUrl }
       ],
       6: [
-        { text: `سجل جلسات التدريب المنفذة: ${totalSessions} جلسة مسجلة بالتاريخ والهدف`, url: baseUrl }
+        { title: 'سجل تنفيذ الجلسات والخطط التدريبية', detail: `تم تنفيذ وتوثيق ${totalSessions} جلسة كاملة بالأهداف والمخارج`, url: baseUrl }
       ],
       7: [
-        { text: `توظيف المنصة الرقمية (منارة النطق) والتحليل الصوتي التفاعلي للكلمات`, url: baseUrl }
+        { title: 'توظيف منصة (منارة النطق) والتقنيات الرقمية', detail: `استخدام واجهة التعرف الصوتي التفاعلي ومعالجة الصوت`, url: baseUrl }
       ],
       9: [
-        { text: `سجل المتابعة اليومي وجداول تقييم النطق المباشر`, url: baseUrl }
+        { title: 'إدارة وتوثيق الجلسات الفردية التخاطبية', detail: `تنظيم الوقت، كشوفات الجلسات المنفذة وحساب نسب الإنجاز`, url: baseUrl }
       ],
       10: [
-        { text: `تقارير تحليل نسب النجاح ومؤشرات معالجة تعثر مخارج الحروف`, url: baseUrl }
+        { title: 'تحليل نتائج قياس أداء المتعلمين والفاقد', detail: `تشخيص دقيق لمواضع الخلل ونسب نجاح تصحيح الأصوات`, url: baseUrl }
       ],
       11: [
-        { text: `ملفات إنجاز الطلاب الرقمية والخطط الفردية (IEP)`, url: baseUrl }
+        { title: 'ملفات الإنجاز الرقمية للطلاب (IEP)', detail: `ربط كل طالب بملف إنجاز رقمي تراكمي وتقييمات مستمرة`, url: baseUrl }
       ]
     };
 
-    // 4. إعداد مساحة الطباعة
-    let printArea = document.getElementById('iep-print-area');
-    if (!printArea) {
-      printArea = document.createElement('div');
-      printArea.id = 'iep-print-area';
-      document.body.appendChild(printArea);
+    // 1. عرض بطاقة إحصائيات عامة في أعلى الصفحة
+    const summaryArea = document.getElementById('autoEvidenceSummaryArea');
+    if (summaryArea) {
+      summaryArea.innerHTML = `
+        <div class="card" style="border:2px solid #0D9488;background:#F0FDFA;margin-bottom:15px;animation:fadeIn 0.4s;">
+          <h3 style="color:#0F766E;margin:0 0 10px 0;">⚡ تقرير الشواهد الرقمية المستخرجة آلياً</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center;">
+            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+              <strong style="color:#0F766E;font-size:20px;">${totalStudents}</strong>
+              <div style="font-size:12px;color:#64748B;">الطلاب المسجلين</div>
+            </div>
+            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+              <strong style="color:#0F766E;font-size:20px;">${totalSessions}</strong>
+              <div style="font-size:12px;color:#64748B;">الجلسات المنفذة</div>
+            </div>
+            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+              <strong style="color:#0F766E;font-size:20px;">${averageSuccess}%</strong>
+              <div style="font-size:12px;color:#64748B;">متوسط الإتقان</div>
+            </div>
+            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+              <strong style="color:#0F766E;font-size:20px;">${evaluatedSessions.length}</strong>
+              <div style="font-size:12px;color:#64748B;">جلسات مقيمة</div>
+            </div>
+          </div>
+          <p style="margin:10px 0 0;font-size:12px;color:#0F766E;">تم توليد وربط جميع الشواهد الحية داخل بنود المعايير أدناه بنجاح 👇</p>
+        </div>
+      `;
     }
 
-    printArea.innerHTML = `
-      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:25px;background:white;color:#1E2A47;">
-        <div style="text-align:center;margin-bottom:20px;">
-          <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-          <p style="margin:5px 0 0;font-size:15px;color:#555;">ملف شواهد الأداء الوظيفي للمعلم (تقرير شامل تلقائي)</p>
-          <hr style="border:1px solid #ddd;margin:12px 0;">
-        </div>
-
-        <div style="margin-bottom:15px;display:flex;justify-content:space-between;font-size:14px;background:#F9FDFC;padding:10px 15px;border-radius:8px;border:1px solid #E0F2FE;">
-          <span><strong>اسم المعلم:</strong> ${teacherName}</span>
-          <span><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-SA')}</span>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;background:#F8FAFC;padding:12px;border-radius:10px;text-align:center;">
-          <div style="border-left:1px solid #ddd;"><strong>عدد الطلاب:</strong> ${totalStudents}</div>
-          <div style="border-left:1px solid #ddd;"><strong>الجلسات المنفذة:</strong> ${totalSessions}</div>
-          <div style="border-left:1px solid #ddd;"><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
-          <div><strong>الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
-        </div>
-
-        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin:20px 0 10px 0;">📋 شواهد المعايير المهنية (تلقائية + مرفقات):</h3>
-        
-        ${TEACHER_STANDARDS.map(standard => {
-          const autoList = autoEvidences[standard.id] || [];
-          const filesList = uploadedFiles[standard.id] || [];
-          return `
-            <div style="margin-bottom:16px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;background:#ffffff;page-break-inside:avoid;">
-              <div style="font-size:15px;font-weight:bold;color:#1E2A47;">${standard.id}.${standard.title}</div>
-              <div style="font-size:12px;color:#64748B;margin:3px 0 8px 0;">📌 الشواهد المعتمدة: ${standard.evidences}</div>
-              
-              <div style="padding-right:10px;border-right:3px solid #357E74;margin-top:6px;">
-                ${autoList.map(a => `
-                  <div style="margin-bottom:6px;font-size:13px;">
-                    <span style="color:#0F766E;">⚡ شاهد تلقائي: </span>
-                    <a href="${a.url}" target="_blank" rel="noopener noreferrer" style="color:#0F766E;text-decoration:underline;font-weight:bold;display:inline-block;">${a.text} 🔗</a>
-                  </div>
-                `).join('')}
-
-                ${filesList.map(f => {
-                  const fileUrl = f.url || f.fileUrl || '';
-                  const isImage = (f.type && f.type.startsWith('image/')) || (fileUrl.match(/\.(jpeg|jpg|gif|png|webp)/i));
-                  return `
-                    <div style="margin-top:6px;margin-bottom:6px;font-size:13px;">
-                      <span style="color:#2563EB;">📎 ملف مرفق: </span>
-                      ${fileUrl ? `
-                        <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline;font-weight:bold;display:inline-block;">
-                          ${f.name || 'فتح الوثيقة المرفقة'} 🔗
-                        </a>
-                      ` : `<span>${f.name || 'ملف غير متوفر'}</span>`}
-                      ${isImage && fileUrl ? `
-                        <div style="margin-top:5px;">
-                          <a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
-                            <img src="${fileUrl}" alt="${f.name || 'شاهد'}" style="max-width:200px;max-height:140px;border-radius:6px;border:1px solid #CBD5E1;display:block;margin-top:4px;object-fit:cover;" />
-                          </a>
-                        </div>
-                      ` : ''}
-                    </div>
-                  `;
-                }).join('')}
-
-                ${autoList.length === 0 && filesList.length === 0 ? '<div style="font-size:12px;color:#94A3B8;">لا توجد شواهد مضافة حالياً</div>' : ''}
+    // 2. تحديث وعرض كل شاهد داخل معيار المحدد على الصفحة مباشرة
+    TEACHER_STANDARDS.forEach(standard => {
+      const box = document.getElementById(`autoEvidenceBox_${standard.id}`);
+      const list = autoEvidences[standard.id];
+      if (box) {
+        if (list && list.length > 0) {
+          box.style.display = 'block';
+          box.innerHTML = `
+            <div style="font-weight:bold;color:#0F766E;font-size:13px;margin-bottom:6px;">⚡ الشواهد التلقائية المعتمدة من النظام:</div>
+            ${list.map(item => `
+              <div style="background:white;border:1px solid #99F6E4;padding:8px 10px;border-radius:6px;margin-bottom:6px;">
+                <div style="font-weight:bold;font-size:13px;color:#134E4A;">${item.title}</div>
+                <div style="font-size:12px;color:#475569;margin:2px 0 4px 0;">${item.detail}</div>
+                <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;color:#0D9488;font-size:12px;font-weight:bold;text-decoration:underline;">
+                  فتح وتوثيق الرابط المباشر 🔗
+                </a>
               </div>
-            </div>
+            `).join('')}
           `;
-        }).join('')}
+        } else {
+          box.style.display = 'block';
+          box.innerHTML = `<span style="font-size:12px;color:#64748B;">يعتمد هذا المعيار على الوثائق والمرفقات اليدوية أدناه.</span>`;
+        }
+      }
+    });
 
-        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin:25px 0 10px 0;">📊 ملخص أداء الطلاب التراكمي:</h3>
-        ${studentSummaries.length > 0 ? `
-          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px;">
-            <thead>
-              <tr style="background:#F1F5F9;color:#1E2A47;">
-                <th style="border:1px solid #CBD5E1;padding:8px;">الطالب</th>
-                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">حروف متقنة</th>
-                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">تحتاج تدريب</th>
-                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">جلسات منفذة</th>
-                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">متوسط الإتقان</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${studentSummaries.map(s => `
-                <tr>
-                  <td style="border:1px solid #CBD5E1;padding:8px;font-weight:bold;">${s.name}</td>
-                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;color:#16A34A;">${s.passed}</td>
-                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;color:#EA580C;">${s.need}</td>
-                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;">${s.sessions}</td>
-                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;font-weight:bold;">${s.avg}%</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        ` : '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض بياناتهم.</p>'}
-
-        <div style="margin-top:25px;font-size:11px;color:#94A3B8;text-align:center;">
-          تم استخراج وطباعة هذا التقرير آلياً عبر منصة منارة النطق
-        </div>
-      </div>
-    `;
-
-    window.print();
-    setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+    showToast('✅ تم توليد وتثبيت الشواهد في المعايير بنجاح!');
   } catch (e) {
     console.error('خطأ في توليد الشواهد:', e);
     showToast('❌ فشل توليد الشواهد: ' + e.message);
