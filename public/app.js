@@ -4485,209 +4485,6 @@ async function renderTeacherAchievement(app) {
     <p class="muted" style="text-align:center;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
       <button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">
-        ⚡ توليد وعرض الشواهد على الصفحة
-      </button>
-      <button class="btn btn-soft btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:9px 24px;">
-        🖨️ طباعة / تصدير PDF
-      </button>
-    </div>
-  `;
-  app.appendChild(headerCard);
-
-  const autoSummaryContainer = document.createElement('div');
-  autoSummaryContainer.id = 'autoEvidenceSummaryArea';
-  app.appendChild(autoSummaryContainer);
-
-  const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles);
-
-  const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
-  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
-
-  TEACHER_STANDARDS.forEach(standard => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.id = `standardCard_${standard.id}`;
-    card.style.marginBottom = '14px';
-    card.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-        <h4 style="margin:0;color:var(--mint-deep);font-size:16px;">${standard.id}. ${standard.title}</h4>
-        <span class="badge" style="background:#F1F5F9;color:#475569;font-size:11px;">معيار مهني</span>
-      </div>
-      <p class="muted" style="margin:6px 0 10px 0;font-size:13px;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
-      
-      <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
-
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
-        <input type="file" id="fileInput_${standard.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple style="display:none;">
-        <button class="btn btn-soft btn-sm" id="uploadBtn_${standard.id}">📎 إرفاق ملف يدوي</button>
-        <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
-      </div>
-      
-      <div id="filesList_${standard.id}" style="margin-top:10px;">
-        ${(existingFiles[standard.id] || []).map(file => {
-          const fileUrl = file.url || file.fileUrl || '';
-          return `
-            <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; background:#F8FAFC; padding:6px 12px; border-radius:8px;">
-              <span style="font-size:13px;">📄 ${file.name || 'ملف مرفق'}</span>
-              <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563EB;font-weight:bold;margin-right:auto;">معاينة 🔗</a>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-    app.appendChild(card);
-
-    const fileInput = card.querySelector(`#fileInput_${standard.id}`);
-    const uploadBtn = card.querySelector(`#uploadBtn_${standard.id}`);
-    const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
-    if (uploadBtn && fileInput) {
-      uploadBtn.onclick = () => fileInput.click();
-      fileInput.onchange = async () => {
-        if (!fileInput.files || fileInput.files.length === 0) return;
-        fileStatus.textContent = `⏳ جاري رفع ${fileInput.files.length} ملف...`;
-        const uploadPromises = Array.from(fileInput.files).map(file => uploadTeacherFile(teacherId, standard.id, file));
-        const results = await Promise.all(uploadPromises);
-        const success = results.filter(r => r !== null);
-        if (success.length > 0) {
-          for (const fileInfo of success) {
-            try {
-              await addDoc(collection(db, "teacher_files"), {
-                teacherId,
-                standardId: standard.id,
-                name: fileInfo.name,
-                url: fileInfo.url,
-                type: fileInfo.type,
-                uploadedAt: fileInfo.uploadedAt
-              });
-            } catch (e) { console.error('خطأ في حفظ الملف:', e); }
-          }
-          showToast(`✅ تم رفع ${success.length} ملف بنجاح`);
-          renderTeacherAchievement(app);
-        } else {
-          showToast('❌ فشل رفع الملفات');
-        }
-        fileInput.value = '';
-      };
-    }
-  });
-}
-/* ─── [END SEC-54] ─── */
-
-
-/* ─── [SEC-55] توليد الشواهد والتوجيه المباشر ─── */
-async function generateEvidenceReport(teacherName) {
-  showToast('⏳ جاري جلب الشواهد وربط الأدلة...');
-  try {
-    const teacherId = state.user.uid;
-
-    const [allSessionsSnap, teacherFilesSnap] = await Promise.all([
-      getDocs(collection(db, "sessions")),
-      getDocs(query(collection(db, "teacher_files"), where("teacherId", "==", teacherId)))
-    ]);
-
-    const allSessions = [];
-    allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
-    const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
-
-    const totalSessions = teacherSessions.length;
-    const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
-    const averageSuccess = evaluatedSessions.length > 0
-      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
-      : 0;
-    const totalStudents = state.myStudents.length;
-
-    // خريطة الشواهد التفاعلية مع وجهة العرض الحقيقية (viewName)
-    const autoEvidences = {
-      1: [
-        { title: 'سجل الحصص والخطط المعتمدة', detail: `إجمالي الخطط الفردية المسجلة: ${totalStudents} خطة معتمدة`, targetView: 'iep-session' },
-        { title: 'سجل تنفيذ الجلسات اليومية', detail: `توثيق شامل للجلسات المنفذة عبر النظام`, targetView: 'sessions-log' }
-      ],
-      3: [
-        { title: 'تقارير المتابعة والتواصل مع أولياء الأمور', detail: `جلسات مرسلة وموثقة بالتاريخ والتقييمات`, targetView: 'sessions-log' },
-        { title: 'دليل التوجيه الأسري الرقمي', detail: `خطة التوجيهات والإرشادات المنزلية للنطق`, targetView: 'parent-guide' }
-      ],
-      4: [
-        { title: 'تنويع استراتيجيات التدريب وعلاج عيوب النطق', detail: `استخدام التحليل الصوتي المباشر والتدريب التفاعلي`, targetView: 'letter-training' }
-      ],
-      5: [
-        { title: 'مؤشرات قياس نتائج المتعلمين وتحسن النطق', detail: `متوسط إتقان الطلاب العام: ${averageSuccess}% في مختلف مخارج الحروف`, targetView: 'student-achievement-list' }
-      ],
-      6: [
-        { title: 'سجل الخطط الأسبوعية المنفذة', detail: `تم إنجاز وتوثيق ${totalSessions} جلسة كاملة بالأهداف والمخارج`, targetView: 'weekly-plan' }
-      ],
-      7: [
-        { title: 'توظيف تقنيات منصة (منارة النطق)', detail: `الألعاب التفاعلية والتعرف الصوتي المباشر`, targetView: 'games' }
-      ],
-      9: [
-        { title: 'إدارة وتوثيق الجلسات الفردية التخاطبية', detail: `تنظيم الوقت، كشوفات الجلسات المنفذة وحساب نسب الإنجاز`, targetView: 'sessions-log' }
-      ],
-      10: [
-        { title: 'تحليل نتائج قياس أداء المتعلمين والفاقد', detail: `ملفات الإنجاز الفردية ومتابعة تطور الحروف`, targetView: 'student-achievement-list' }
-      ],
-      11: [
-        { title: 'ملفات الإنجاز الرقمية للطلاب (IEP)', detail: `ربط كل طالب بملف إنجاز رقمي تراكمي وتقييمات مستمرة`, targetView: 'iep-session' }
-      ]
-    };
-
-    // بطاقة الإحصائيات العلوية
-    const summaryArea = document.getElementById('autoEvidenceSummaryArea');
-    if (summaryArea) {
-      summaryArea.innerHTML = `
-        <div class="card" style="border:2px solid #0D9488;background:#F0FDFA;margin-bottom:15px;">
-          <h3 style="color:#0F766E;margin:0 0 10px 0;">⚡ تقرير الشواهد الرقمية المستخرجة آلياً</h3>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center;">
-            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${totalStudents}</strong>
-              <div style="font-size:12px;color:#64748B;">الطلاب المسجلين</div>
-            </div>
-            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${totalSessions}</strong>
-              <div style="font-size:12px;color:#64748B;">الجلسات المنفذة</div>
-            </div>
-            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${averageSuccess}%</strong>
-              <div style="font-size:12px;color:#64748B;">متوسط الإتقان</div>
-/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement ─── */
-async function renderTeacherAchievement(app) {
-  renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
-    state.view = 'teacher-dashboard';
-    render();
-  });
-  if (!state.user) {
-    showToast('يجب تسجيل الدخول');
-    state.view = 'auth';
-    return render();
-  }
-  const teacherId = state.user.uid;
-  let teacherData = {};
-  try {
-    const teacherDoc = await getDoc(doc(db, "users", teacherId));
-    if (teacherDoc.exists()) teacherData = teacherDoc.data();
-  } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
-  const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
-
-  let existingFiles = {};
-  try {
-    const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
-    const filesSnap = await getDocs(filesQuery);
-    filesSnap.forEach(d => {
-      const data = d.data();
-      const standardId = data.standardId;
-      if (!existingFiles[standardId]) existingFiles[standardId] = [];
-      existingFiles[standardId].push({ id: d.id, ...data });
-    });
-  } catch (e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
-
-  const headerCard = document.createElement('div');
-  headerCard.className = 'card';
-  headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-  headerCard.style.border = '2px solid var(--mint-deep)';
-  headerCard.innerHTML = `
-    <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
-    <p class="muted" style="text-align:center;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
-      <button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">
         ⚡ تحديث وتوليد الشواهد
       </button>
       <button class="btn btn-soft btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:9px 24px;">
@@ -4775,11 +4572,12 @@ async function renderTeacherAchievement(app) {
     }
   });
 
-  // استرجاع وعرض الشواهد المحفوظة تلقائياً بمجرد فتح الصفحة
-  restoreSavedEvidences(teacherId);
+  // استدعاء آمن بعد اكتمال رسم عناصر الـ DOM
+  setTimeout(() => {
+    restoreSavedEvidences(teacherId);
+  }, 0);
 }
 
-// دالة مساعدة لاسترجاع الشواهد المخزنة
 function restoreSavedEvidences(teacherId) {
   try {
     const saved = localStorage.getItem(`teacher_evidences_${teacherId}`);
@@ -4787,7 +4585,7 @@ function restoreSavedEvidences(teacherId) {
     const data = JSON.parse(saved);
 
     const summaryArea = document.getElementById('autoEvidenceSummaryArea');
-    if (summaryArea && data.summary) {
+    if (summaryArea && data && data.summary) {
       summaryArea.innerHTML = `
         <div class="card" style="border:2px solid #0D9488;background:#F0FDFA;margin-bottom:15px;">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
@@ -4796,19 +4594,19 @@ function restoreSavedEvidences(teacherId) {
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center;">
             <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.totalStudents}</strong>
+              <strong style="color:#0F766E;font-size:20px;">${data.summary.totalStudents || 0}</strong>
               <div style="font-size:12px;color:#64748B;">الطلاب المسجلين</div>
             </div>
             <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.totalSessions}</strong>
+              <strong style="color:#0F766E;font-size:20px;">${data.summary.totalSessions || 0}</strong>
               <div style="font-size:12px;color:#64748B;">الجلسات المنفذة</div>
             </div>
             <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.averageSuccess}%</strong>
+              <strong style="color:#0F766E;font-size:20px;">${data.summary.averageSuccess || 0}%</strong>
               <div style="font-size:12px;color:#64748B;">متوسط الإتقان</div>
             </div>
             <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.evaluatedSessionsCount}</strong>
+              <strong style="color:#0F766E;font-size:20px;">${data.summary.evaluatedSessionsCount || 0}</strong>
               <div style="font-size:12px;color:#64748B;">جلسات مقيمة</div>
             </div>
           </div>
@@ -4817,7 +4615,7 @@ function restoreSavedEvidences(teacherId) {
       `;
     }
 
-    if (data.evidences) {
+    if (data && data.evidences) {
       TEACHER_STANDARDS.forEach(standard => {
         const box = document.getElementById(`autoEvidenceBox_${standard.id}`);
         const list = data.evidences[standard.id];
@@ -4915,7 +4713,6 @@ async function generateEvidenceReport(teacherName) {
       ]
     };
 
-    // حفظ البيانات محلياً لضمان عدم اختفائها عند التنقل بين الصفحات
     const storagePayload = {
       savedAt: new Date().toLocaleDateString('ar-SA') + ' ' + new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
       summary: {
@@ -4928,7 +4725,6 @@ async function generateEvidenceReport(teacherName) {
     };
     localStorage.setItem(`teacher_evidences_${teacherId}`, JSON.stringify(storagePayload));
 
-    // رسم وتحديث البيانات فوراً
     restoreSavedEvidences(teacherId);
 
     showToast('✅ تم استخراج الشواهد وحفظها في الصفحة بنجاح!');
@@ -4938,7 +4734,7 @@ async function generateEvidenceReport(teacherName) {
   }
 }
 /* ─── [END SEC-55] ─── */
-
+   
 
 /* ─── [SEC-56] طباعة ملف إنجاز المعلم — Print Teacher Achievement ─── */
 function printTeacherAchievement(teacherName, existingFiles) {
