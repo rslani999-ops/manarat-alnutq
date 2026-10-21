@@ -4557,19 +4557,36 @@ async function renderTeacherAchievement(app) {
 
 /* ─── [SEC-55] توليد الشواهد تلقائياً — Evidence Report ─── */
 async function generateEvidenceReport(teacherName) {
-  showToast('⏳ جاري توليد الشواهد تلقائياً...');
+  showToast('⏳ جاري جلب البيانات وتوليد الشواهد تلقائياً...');
   try {
     const teacherId = state.user.uid;
-    const allSessionsSnap = await getDocs(collection(db, "sessions"));
+
+    // 1. جلب الجلسات والملفات المرفوعة الخاصة بالمعلم من Firestore
+    const [allSessionsSnap, teacherFilesSnap] = await Promise.all([
+      getDocs(collection(db, "sessions")),
+      getDocs(query(collection(db, "teacher_files"), where("teacherId", "==", teacherId)))
+    ]);
+
     const allSessions = [];
     allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
     const teacherSessions = allSessions.filter(s => s.teacherId === teacherId);
+
+    const uploadedFiles = {};
+    teacherFilesSnap.forEach(d => {
+      const data = d.data();
+      const stdId = data.standardId;
+      if (!uploadedFiles[stdId]) uploadedFiles[stdId] = [];
+      uploadedFiles[stdId].push(data);
+    });
+
+    // 2. معالجة إحصائيات المعلم والطلاب
     const totalSessions = teacherSessions.length;
     const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
     const averageSuccess = evaluatedSessions.length > 0
       ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
       : 0;
     const totalStudents = state.myStudents.length;
+
     const studentSummaries = [];
     for (const student of state.myStudents) {
       const studentDoc = await getDoc(doc(db, "users", student.id));
@@ -4582,6 +4599,7 @@ async function generateEvidenceReport(teacherName) {
       const studentAvg = studentSessions.length > 0
         ? Math.round(studentSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / studentSessions.length)
         : 0;
+
       studentSummaries.push({
         name: student.fullName || student.email,
         passed: passedLetters.length,
@@ -4591,71 +4609,104 @@ async function generateEvidenceReport(teacherName) {
         avg: studentAvg
       });
     }
+
+    // 3. ربط الشواهد التلقائية مع معايير الأداء الوظيفي
+    const autoEvidences = {
+      1: [`سجل الدوام والخطط المعتمدة عبر المنصة`, `إجمالي الخطط الفردية المسجلة: ${totalStudents}`],
+      3: [`تقارير الجلسات المرسلة لأولياء الأمور`, `سجل التوجيهات الأسرية والمتابعة المنزلية`],
+      4: [`تنويع الاستراتيجيات: تدريب سمعي، مرآة، أنشطة حركية، محاكاة صوتية`],
+      5: [`سجلات نتائج قياس نطق الحروف القبلية والبعدية`, `متوسط إتقان الطلاب العام: ${averageSuccess}%`],
+      6: [`سجل جلسات التدريب المنفذة: ${totalSessions} جلسة مسجلة بالتاريخ والهدف`],
+      7: [`توظيف المنصة الرقمية (منارة النطق) والتحليل الصوتي التفاعلي للكلمات`],
+      9: [`سجل المتابعة اليومي وجداول تقييم النطق المباشر`],
+      10: [`تقارير تحليل نسب النجاح ومؤشرات معالجة تعثر مخارج الحروف`],
+      11: [`ملفات إنجاز الطلاب الرقمية والخطط الفردية (IEP)`]
+    };
+
+    // 4. إعداد مساحة الطباعة
     let printArea = document.getElementById('iep-print-area');
     if (!printArea) {
       printArea = document.createElement('div');
       printArea.id = 'iep-print-area';
       document.body.appendChild(printArea);
     }
+
     printArea.innerHTML = `
-      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:25px;background:white;color:#1E2A47;">
         <div style="text-align:center;margin-bottom:20px;">
           <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-          <p style="margin:5px 0 0;font-size:14px;color:#555;">شواهد إنجاز المعلم - تقرير تلقائي</p>
-          <hr style="border:1px solid #ddd;margin:10px 0;">
+          <p style="margin:5px 0 0;font-size:15px;color:#555;">ملف شواهد الأداء الوظيفي للمعلم (تقرير شامل تلقائي)</p>
+          <hr style="border:1px solid #ddd;margin:12px 0;">
         </div>
-        <div style="margin-bottom:15px;text-align:center;">
-          <strong>اسم المعلم:</strong> ${teacherName}<br>
-          <strong>تاريخ التوليد:</strong> ${new Date().toLocaleDateString('ar-SA')}
+
+        <div style="margin-bottom:15px;display:flex;justify-content:space-between;font-size:14px;background:#F9FDFC;padding:10px 15px;border-radius:8px;border:1px solid #E0F2FE;">
+          <span><strong>اسم المعلم:</strong> ${teacherName}</span>
+          <span><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-SA')}</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;background:#f5f5f5;padding:15px;border-radius:8px;">
-          <div><strong>عدد الطلاب:</strong> ${totalStudents}</div>
-          <div><strong>عدد الجلسات المنفذة:</strong> ${totalSessions}</div>
-          <div><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
-          <div><strong>عدد الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;background:#F8FAFC;padding:12px;border-radius:10px;text-align:center;">
+          <div style="border-left:1px solid #ddd;"><strong>عدد الطلاب:</strong> ${totalStudents}</div>
+          <div style="border-left:1px solid #ddd;"><strong>الجلسات المنفذة:</strong> ${totalSessions}</div>
+          <div style="border-left:1px solid #ddd;"><strong>متوسط النجاح:</strong> ${averageSuccess}%</div>
+          <div><strong>الجلسات المقيمة:</strong> ${evaluatedSessions.length}</div>
         </div>
-        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">ملخص أداء الطلاب</h3>
+
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin:20px 0 10px 0;">📋 شواهد المعايير المهنية (تلقائية + مرفقات):</h3>
+        
+        ${TEACHER_STANDARDS.map(standard => {
+          const autoList = autoEvidences[standard.id] || [];
+          const filesList = uploadedFiles[standard.id] || [];
+          return `
+            <div style="margin-bottom:14px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;background:#ffffff;">
+              <div style="font-size:15px;font-weight:bold;color:#1E2A47;">${standard.id}.${standard.title}</div>
+              <div style="font-size:12px;color:#64748B;margin:3px 0 8px 0;">📌 الشواهد المعتمدة: ${standard.evidences}</div>
+              
+              <div style="padding-right:10px;border-right:3px solid #357E74;margin-top:6px;">
+                ${autoList.map(a => `<div style="font-size:13px;color:#0F766E;margin-bottom:2px;">⚡ شاهد تلقائي: ${a}</div>`).join('')}
+                ${filesList.map(f => `<div style="font-size:13px;color:#2563EB;margin-bottom:2px;">📎 ملف مرفق: ${f.name}</div>`).join('')}
+                ${autoList.length === 0 && filesList.length === 0 ? '<div style="font-size:12px;color:#94A3B8;">لا توجد شواهد مضافة حالياً</div>' : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+
+        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin:25px 0 10px 0;">📊 ملخص أداء الطلاب التراكمي:</h3>
         ${studentSummaries.length > 0 ? `
-          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-            <thead><tr style="background:#f0f0f0;">
-              <th style="border:1px solid #ddd;padding:8px;">الطالب</th>
-              <th style="border:1px solid #ddd;padding:8px;">حروف متقنة</th>
-              <th style="border:1px solid #ddd;padding:8px;">تحتاج تدريب</th>
-              <th style="border:1px solid #ddd;padding:8px;">جلسات</th>
-              <th style="border:1px solid #ddd;padding:8px;">متوسط النجاح</th>
-            </tr></thead>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px;">
+            <thead>
+              <tr style="background:#F1F5F9;color:#1E2A47;">
+                <th style="border:1px solid #CBD5E1;padding:8px;">الطالب</th>
+                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">حروف متقنة</th>
+                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">تحتاج تدريب</th>
+                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">جلسات منفذة</th>
+                <th style="border:1px solid #CBD5E1;padding:8px;text-align:center;">متوسط الإتقان</th>
+              </tr>
+            </thead>
             <tbody>
               ${studentSummaries.map(s => `
                 <tr>
-                  <td style="border:1px solid #ddd;padding:8px;">${s.name}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.passed}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.need}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.sessions}</td>
-                  <td style="border:1px solid #ddd;padding:8px;text-align:center;">${s.avg}%</td>
+                  <td style="border:1px solid #CBD5E1;padding:8px;font-weight:bold;">${s.name}</td>
+                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;color:#16A34A;">${s.passed}</td>
+                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;color:#EA580C;">${s.need}</td>
+                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;">${s.sessions}</td>
+                  <td style="border:1px solid #CBD5E1;padding:8px;text-align:center;font-weight:bold;">${s.avg}%</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         ` : '<p style="text-align:center;color:#888;">لا يوجد طلاب لعرض بياناتهم.</p>'}
-        <h3 style="color:#357E74;border-bottom:2px solid #357E74;padding-bottom:5px;margin-bottom:15px;">الشواهد المتاحة من المنصة</h3>
-        <div style="margin-bottom:10px;font-size:14px;">
-          <p>✅ سجل الجلسات السحابي (${totalSessions} جلسة)</p>
-          <p>✅ التقارير الفردية للطلاب</p>
-          <p>✅ التشخيص الشامل للحروف</p>
-          <p>✅ التسجيل الصوتي والتغذية الراجعة</p>
-          <p>✅ ملفات إنجاز الطلاب</p>
-          <p>✅ الخطط الفردية (IEP)</p>
-          <p>✅ قوائم المفردات التفاعلية</p>
-          <p>✅ أدوات التقييم المتنوعة (أتقن/تدريب/غير واضح)</p>
+
+        <div style="margin-top:25px;font-size:11px;color:#94A3B8;text-align:center;">
+          تم استخراج وطباعة هذا التقرير آلياً عبر منصة منارة النطق
         </div>
-        <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم توليد هذا التقرير تلقائياً من منصة منارة النطق</div>
       </div>
     `;
+
     window.print();
     setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
   } catch (e) {
     console.error('خطأ في توليد الشواهد:', e);
-    showToast('❌ فشل توليد الشواهد');
+    showToast('❌ فشل توليد الشواهد: ' + e.message);
   }
 }
 /* ─── [END SEC-55] ─── */
@@ -4669,29 +4720,49 @@ function printTeacherAchievement(teacherName, existingFiles) {
     printArea.id = 'iep-print-area';
     document.body.appendChild(printArea);
   }
+
   printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:25px;background:white;color:#1E2A47;">
       <div style="text-align:center;margin-bottom:20px;">
         <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:14px;color:#555;">ملف إنجاز المعلم</p>
-        <hr style="border:1px solid #ddd;margin:10px 0;">
+        <p style="margin:5px 0 0;font-size:15px;color:#555;">ملف إنجاز المعلم والأدلة المرفقة</p>
+        <hr style="border:1px solid #ddd;margin:12px 0;">
       </div>
-      <div style="margin-bottom:15px;text-align:center;"><strong>اسم المعلم:</strong> ${teacherName}</div>
-      ${TEACHER_STANDARDS.map(standard => `
-        <div style="margin-bottom:15px;border:1px solid #ddd;padding:10px;border-radius:8px;">
-          <strong>${standard.id}. ${standard.title}</strong>
-          <div style="font-size:13px;color:#555;margin-top:4px;">${standard.evidences}</div>
-          ${(existingFiles[standard.id] || []).map(file => `<div style="font-size:12px;color:#357E74;margin-top:4px;">📄 ${file.name || 'ملف مرفق'}</div>`).join('')}
-        </div>
-      `).join('')}
-      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الملف بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</div>
+
+      <div style="margin-bottom:15px;display:flex;justify-content:space-between;font-size:14px;background:#F9FDFC;padding:10px 15px;border-radius:8px;border:1px solid #E0F2FE;">
+        <span><strong>اسم المعلم:</strong> ${teacherName}</span>
+        <span><strong>تاريخ التصدير:</strong> ${new Date().toLocaleDateString('ar-SA')}</span>
+      </div>
+
+      <div style="margin-top:15px;">
+        ${TEACHER_STANDARDS.map(standard => {
+          const files = existingFiles[standard.id] || [];
+          return `
+            <div style="margin-bottom:12px;border:1px solid #E2E8F0;padding:12px;border-radius:8px;">
+              <strong style="color:#0F766E;font-size:14px;">${standard.id}.${standard.title}</strong>
+              <div style="font-size:12px;color:#64748B;margin:3px 0 6px 0;">الشواهد المطلوبة: ${standard.evidences}</div>
+              <div style="margin-top:5px;padding-right:8px;border-right:2px solid #CBD5E1;">
+                ${files.length > 0 
+                  ? files.map(file => `<div style="font-size:12px;color:#2563EB;margin-top:2px;">📄 ${file.name || 'وثيقة مرفقة'}</div>`).join('')
+                  : '<div style="font-size:12px;color:#94A3B8;">لا توجد وثائق مرفقة يدوياً</div>'
+                }
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <div style="margin-top:25px;font-size:11px;color:#94A3B8;text-align:center;">
+        تم إنشاء هذا التقرير بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
+      </div>
     </div>
   `;
+
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
 /* ─── [END SEC-56] ─── */
-
+         
 
 /* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
 async function renderAchievement(app) {
