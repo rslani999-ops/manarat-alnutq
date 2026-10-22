@@ -4957,100 +4957,6 @@ async function renderAchievement(app) {
     return render();
   }
   
-  // تحديد مسار زر الرجوع بناءً على نوع المستخدم
-  const backTarget = state.isGuest ? 'home' : (state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu');
-  
-  renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
-    state.view = backTarget;
-    render();
-  });
-  
-  try {
-    const studentRef = doc(db, "users", state.currentStudent.id);
-    const studentDoc = await getDoc(studentRef);
-    const studentData = studentDoc.exists() ? studentDoc.data() : {};
-    const diag = studentData.diagnostic || {};
-    const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
-    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-    const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
-    
-    const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
-    const sessionsSnap = await getDocs(sessionsQuery);
-    const sessions = [];
-    sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
-    sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
-    
-    const totalSessions = sessions.length;
-    const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
-    const averageSuccess = evaluatedSessions.length > 0
-      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
-      : 0;
-      
-    const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
-    const points = calculateStudentPoints(studentData);
-    
-    let achievementLevel = '';
-    let achievementIcon = '';
-    if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
-    else if (masteryPercentage >= 50) { achievementLevel = 'جيد جداً'; achievementIcon = '⭐'; }
-    else if (masteryPercentage >= 30) { achievementLevel = 'جيد'; achievementIcon = '👍'; }
-    else { achievementLevel = 'يحتاج متابعة'; achievementIcon = '💪'; }
-
-    const weeklyStats = getWeeklyStats(sessions);
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
-    card.style.border = '2px solid var(--mint-deep)';
-    card.innerHTML = `
-      <div style="text-align:center; margin-bottom:20px;">
-        <div style="font-size:60px;">${achievementIcon}</div>
-        <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
-        <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
-        ${state.isGuest ? `<div style="margin-top:10px;"><span class="badge" style="background:#FFF8E1;color:#F57F17;padding:6px 16px;">👁️ وضع العرض لولي الأمر (للقراءة والطباعة فقط)</span></div>` : ''}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${passedLetters.length}</div>
-          <div style="font-size:13px;color:#6B7A99;">حروف متقنة</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:#F57F17;">${needLetters.length}</div>
-          <div style="font-size:13px;color:#6B7A99;">تحتاج تدريب</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${totalSessions}</div>
-          <div style="font-size:13px;color:#6B7A99;">جلسة منفذة</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${averageSuccess}%</div>
-          <div style="font-size:13px;color:#6B7A99;">متوسط النجاح</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${masteryPercentage}%</div>
-          <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
-        </div>
-        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
-          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
-          <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
-        </div>
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>نسبة الإتقان:</strong>
-        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${masteryPercentage}%;">${masteryPercentage}%</div></div>
-      </div>
-      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
-        <strong>📅 ملخص هذا الأسبوع:</strong><br>
-        الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
-        متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
-/* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
-async function renderAchievement(app) {
-  if (!state.currentStudent) {
-    showToast('⚠️ اختر طالباً أولاً أو تأكد من صحة الرابط');
-    state.view = state.isGuest ? 'home' : 'teacher-dashboard';
-    return render();
-  }
-  
   const backTarget = state.isGuest ? 'home' : (state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu');
   
   renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
@@ -5210,7 +5116,7 @@ function printAchievement(student, data) {
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
 /* ─── [END SEC-57] ─── */
-
+     
 
 /* ─── [SEC-58] التهيئة النهائية — Final Init ─── */
 function initApp() {
