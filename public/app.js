@@ -4544,20 +4544,32 @@ const TEACHER_STANDARDS = [
 /* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement ─── */
 async function renderTeacherAchievement(app) {
   renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
-    state.view = 'teacher-dashboard';
+    state.view = state.isGuest ? 'home' : 'teacher-dashboard';
     render();
   });
-  if (!state.user) {
+  
+  // السماح بالدخول إذا كان المستخدم مسجلاً أو إذا كان في وضع الزائر
+  if (!state.user && !state.isGuest) {
     showToast('يجب تسجيل الدخول');
     state.view = 'auth';
     return render();
   }
-  const teacherId = state.user.uid;
+  
+  // تحديد هوية المعلم المراد عرض ملفه (إما هو نفسه أو المعلم المستهدف من الرابط)
+  const teacherId = state.isGuest ? state.targetTeacherId : state.user.uid;
+  
+  if (!teacherId) {
+    showToast('⚠️ رابط غير صالح أو ينقصه معرف المعلم');
+    state.view = 'home';
+    return render();
+  }
+
   let teacherData = {};
   try {
     const teacherDoc = await getDoc(doc(db, "users", teacherId));
     if (teacherDoc.exists()) teacherData = teacherDoc.data();
   } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
+  
   const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
   const schoolName = teacherData.schoolName || 'مدرسة قتيبة بن مسلم الابتدائية';
   const principalName = teacherData.principalName || '';
@@ -4578,17 +4590,21 @@ async function renderTeacherAchievement(app) {
   headerCard.className = 'card';
   headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
   headerCard.style.border = '2px solid var(--mint-deep)';
+  
+  // إخفاء زر توليد الشواهد إذا كان زائر
+  const generateBtnHtml = !state.isGuest ? 
+    `<button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">⚡ تحديث وتوليد الشواهد</button>` : '';
+
   headerCard.innerHTML = `
     <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
     ${schoolName ? `<p style="margin:3px 0;text-align:center;font-weight:bold;color:#0F766E;">🏫 ${schoolName}</p>` : ''}
     <p class="muted" style="text-align:center;margin-top:2px;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
+    
+    ${state.isGuest ? `<div style="text-align:center; margin-top:10px;"><span class="badge" style="background:#FFF8E1;color:#F57F17;padding:6px 16px;">👁️ وضع العرض للزائر (للقراءة والطباعة فقط)</span></div>` : ''}
+    
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
-      <button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">
-        ⚡ تحديث وتوليد الشواهد
-      </button>
-      <button class="btn btn-soft btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:9px 24px;">
-        🖨️ طباعة / تصدير PDF
-      </button>
+      ${generateBtnHtml}
+      <button class="btn btn-soft btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:9px 24px;">🖨️ طباعة / تصدير PDF</button>
     </div>
   `;
   app.appendChild(headerCard);
@@ -4600,8 +4616,10 @@ async function renderTeacherAchievement(app) {
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
   if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, { schoolName, principalName });
 
-  const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
-  if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
+  if (!state.isGuest) {
+    const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
+    if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
+  }
 
   TEACHER_STANDARDS.forEach(standard => {
     const card = document.createElement('div');
@@ -4617,11 +4635,13 @@ async function renderTeacherAchievement(app) {
       
       <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
 
+      ${!state.isGuest ? `
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
         <input type="url" id="driveLinkInput_${standard.id}" placeholder="ضع رابط ملف Google Drive هنا..." style="margin:0; flex-grow:1; min-width:220px; padding:6px 10px; border:1px solid #CBD5E1; border-radius:6px; font-size:12px;">
         <button class="btn btn-soft btn-sm" id="saveDriveBtn_${standard.id}">🔗 إرفاق رابط جوجل درايف</button>
         <span id="fileStatus_${standard.id}" style="font-size:12px;color:#6B7A99;"></span>
       </div>
+      ` : ''}
       
       <div id="filesList_${standard.id}" style="margin-top:10px;">
         ${(existingFiles[standard.id] || []).map(file => {
@@ -4630,7 +4650,7 @@ async function renderTeacherAchievement(app) {
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; background:#F8FAFC; padding:6px 12px; border-radius:8px;">
               <span style="font-size:13px;">📄 ${file.name || 'ملف Google Drive'}</span>
               <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563EB;font-weight:bold;margin-right:auto;">معاينة 🔗</a>
-              <button class="btn btn-danger btn-sm delete-link-btn" data-id="${file.id}" style="padding:2px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;">حذف</button>
+              ${!state.isGuest ? `<button class="btn btn-danger btn-sm delete-link-btn" data-id="${file.id}" style="padding:2px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;">حذف</button>` : ''}
             </div>
           `;
         }).join('')}
@@ -4638,61 +4658,63 @@ async function renderTeacherAchievement(app) {
     `;
     app.appendChild(card);
 
-    const driveInput = card.querySelector(`#driveLinkInput_${standard.id}`);
-    const saveDriveBtn = card.querySelector(`#saveDriveBtn_${standard.id}`);
-    const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
+    if (!state.isGuest) {
+      const driveInput = card.querySelector(`#driveLinkInput_${standard.id}`);
+      const saveDriveBtn = card.querySelector(`#saveDriveBtn_${standard.id}`);
+      const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
 
-    if (saveDriveBtn && driveInput) {
-      saveDriveBtn.onclick = async () => {
-        const linkUrl = driveInput.value.trim();
-        if (!linkUrl) {
-          showToast('❌ يرجى إدخال الرابط أولاً');
-          return;
-        }
-        if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) {
-          showToast('❌ يرجى إدخال رابط صحيح يبدأ بـ https://');
-          return;
-        }
+      if (saveDriveBtn && driveInput) {
+        saveDriveBtn.onclick = async () => {
+          const linkUrl = driveInput.value.trim();
+          if (!linkUrl) {
+            showToast('❌ يرجى إدخال الرابط أولاً');
+            return;
+          }
+          if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) {
+            showToast('❌ يرجى إدخال رابط صحيح يبدأ بـ https://');
+            return;
+          }
 
-        fileStatus.textContent = '⏳ جاري الحفظ...';
-        saveDriveBtn.disabled = true;
+          fileStatus.textContent = '⏳ جاري الحفظ...';
+          saveDriveBtn.disabled = true;
 
-        try {
-          await addDoc(collection(db, "teacher_files"), {
-            teacherId: teacherId,
-            standardId: standard.id,
-            name: 'رابط ملف Google Drive',
-            url: linkUrl,
-            type: 'google_drive_link',
-            uploadedAt: new Date().toISOString()
-          });
+          try {
+            await addDoc(collection(db, "teacher_files"), {
+              teacherId: teacherId,
+              standardId: standard.id,
+              name: 'رابط ملف Google Drive',
+              url: linkUrl,
+              type: 'google_drive_link',
+              uploadedAt: new Date().toISOString()
+            });
 
-          showToast('✅ تم حفظ رابط Google Drive بنجاح');
-          renderTeacherAchievement(app);
-        } catch (err) {
-          console.error('خطأ في حفظ الرابط بـ Firestore:', err);
-          showToast('❌ تعذر حفظ الرابط بالسجل: ' + err.message);
-          saveDriveBtn.disabled = false;
-          fileStatus.textContent = '';
-        }
-      };
+            showToast('✅ تم حفظ رابط Google Drive بنجاح');
+            renderTeacherAchievement(app);
+          } catch (err) {
+            console.error('خطأ في حفظ الرابط بـ Firestore:', err);
+            showToast('❌ تعذر حفظ الرابط بالسجل: ' + err.message);
+            saveDriveBtn.disabled = false;
+            fileStatus.textContent = '';
+          }
+        };
+      }
+
+      const deleteBtns = card.querySelectorAll('.delete-link-btn');
+      deleteBtns.forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm('⚠️ هل أنت متأكد من حذف هذا المرفق؟')) return;
+          const fileDocId = btn.dataset.id;
+          try {
+            await deleteDoc(doc(db, "teacher_files", fileDocId));
+            showToast('🗑️ تم حذف المرفق بنجاح');
+            renderTeacherAchievement(app);
+          } catch (err) {
+            console.error('خطأ في حذف الرابط:', err);
+            showToast('❌ تعذر الحذف: ' + err.message);
+          }
+        };
+      });
     }
-
-    const deleteBtns = card.querySelectorAll('.delete-link-btn');
-    deleteBtns.forEach(btn => {
-      btn.onclick = async () => {
-        if (!confirm('⚠️ هل أنت متأكد من حذف هذا المرفق؟')) return;
-        const fileDocId = btn.dataset.id;
-        try {
-          await deleteDoc(doc(db, "teacher_files", fileDocId));
-          showToast('🗑️ تم حذف المرفق بنجاح');
-          renderTeacherAchievement(app);
-        } catch (err) {
-          console.error('خطأ في حذف الرابط:', err);
-          showToast('❌ تعذر الحذف: ' + err.message);
-        }
-      };
-    });
   });
 
   setTimeout(() => {
@@ -4732,7 +4754,7 @@ function restoreSavedEvidences(teacherId) {
               <div style="font-size:12px;color:#64748B;">جلسات مقيمة</div>
             </div>
           </div>
-          <p style="margin:10px 0 0;font-size:12px;color:#0F766E;">اضغط على أي زر "عرض وتوثيق الشاهد" للانتقال المباشر للواجهة 👇</p>
+          ${!state.isGuest ? `<p style="margin:10px 0 0;font-size:12px;color:#0F766E;">اضغط على أي زر "عرض وتوثيق الشاهد" للانتقال المباشر للواجهة 👇</p>` : ''}
         </div>
       `;
     }
@@ -4752,9 +4774,11 @@ function restoreSavedEvidences(teacherId) {
                     <div style="font-weight:bold;font-size:13px;color:#134E4A;">${item.title}</div>
                     <div style="font-size:12px;color:#475569;margin-top:2px;">${item.detail}</div>
                   </div>
+                  ${!state.isGuest ? `
                   <button class="btn btn-sm view-evidence-btn" data-view="${item.targetView}" style="background:#0F766E;color:white;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:bold;border:none;cursor:pointer;">
                     عرض وتوثيق الشاهد 👁️
                   </button>
+                  ` : ''}
                 </div>
               `).join('')}
             `;
@@ -4764,15 +4788,17 @@ function restoreSavedEvidences(teacherId) {
         }
       });
 
-      document.querySelectorAll('.view-evidence-btn').forEach(btn => {
-        btn.onclick = () => {
-          const targetView = btn.dataset.view;
-          if (targetView) {
-            state.view = targetView;
-            render();
-          }
-        };
-      });
+      if (!state.isGuest) {
+        document.querySelectorAll('.view-evidence-btn').forEach(btn => {
+          btn.onclick = () => {
+            const targetView = btn.dataset.view;
+            if (targetView) {
+              state.view = targetView;
+              render();
+            }
+          };
+        });
+      }
     }
   } catch (e) {
     console.warn('تعذر استرجاع الشواهد المحفوظة:', e);
