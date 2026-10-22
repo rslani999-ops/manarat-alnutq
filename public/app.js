@@ -916,66 +916,70 @@ function showPrivacyPolicy() {
 /* ─── [SEC-25] التصيير الرئيسي — Main Renderer ─── */
 function render() {
   const app = document.getElementById('app');
+  if (!app) return;
   app.innerHTML = '';
 
-  // --- تحديث الرابط ليدعم المشاركة المباشرة (Deep Linking) ---
-  const currentUrl = new URL(window.location);
-  let urlChanged = false;
+  // --- تحديث الرابط محمي لتفادي الانهيار في المتصفحات المخفية وواتساب ---
+  try {
+    const currentUrl = new URL(window.location);
+    let urlChanged = false;
 
-  // 1. تحديث اسم الصفحة (view)
-  if (currentUrl.searchParams.get('view') !== state.view) {
-    currentUrl.searchParams.set('view', state.view);
-    urlChanged = true;
-  }
+    if (currentUrl.searchParams.get('view') !== state.view) {
+      currentUrl.searchParams.set('view', state.view);
+      urlChanged = true;
+    }
 
-  // 2. تحديث معرف الطالب (studentId) في الصفحات التي تحتاجه
-  const needsStudent = ['diagnostic-session', 'speech-sessions', 'single-session', 'iep-single-student', 'achievement'];
-  if (needsStudent.includes(state.view) && state.currentStudent?.id) {
-    if (currentUrl.searchParams.get('studentId') !== state.currentStudent.id) {
-      currentUrl.searchParams.set('studentId', state.currentStudent.id);
-      urlChanged = true;
+    const needsStudent = ['diagnostic-session', 'speech-sessions', 'single-session', 'iep-single-student', 'achievement'];
+    const currentStudentId = state.currentStudent ? state.currentStudent.id : null;
+    
+    if (needsStudent.includes(state.view) && currentStudentId) {
+      if (currentUrl.searchParams.get('studentId') !== currentStudentId) {
+        currentUrl.searchParams.set('studentId', currentStudentId);
+        urlChanged = true;
+      }
+    } else {
+      if (currentUrl.searchParams.has('studentId')) {
+        currentUrl.searchParams.delete('studentId');
+        urlChanged = true;
+      }
     }
-  } else {
-    if (currentUrl.searchParams.has('studentId')) {
-      currentUrl.searchParams.delete('studentId');
-      urlChanged = true;
-    }
-  }
 
-  // 3. تحديث معرف الجلسة (sessionId)
-  if (state.view === 'single-session' && state.currentSession?.id) {
-    if (currentUrl.searchParams.get('sessionId') !== state.currentSession.id) {
-      currentUrl.searchParams.set('sessionId', state.currentSession.id);
-      urlChanged = true;
+    const currentSessionId = state.currentSession ? state.currentSession.id : null;
+    if (state.view === 'single-session' && currentSessionId) {
+      if (currentUrl.searchParams.get('sessionId') !== currentSessionId) {
+        currentUrl.searchParams.set('sessionId', currentSessionId);
+        urlChanged = true;
+      }
+    } else {
+      if (currentUrl.searchParams.has('sessionId')) {
+        currentUrl.searchParams.delete('sessionId');
+        urlChanged = true;
+      }
     }
-  } else {
-    if (currentUrl.searchParams.has('sessionId')) {
-      currentUrl.searchParams.delete('sessionId');
-      urlChanged = true;
-    }
-  }
 
-  // 4. تحديث معرف المعلم (teacherId) لملف إنجاز المعلم
-  if (state.view === 'teacher-achievement' && state.user?.uid && !state.isGuest) {
-    if (currentUrl.searchParams.get('teacherId') !== state.user.uid) {
-      currentUrl.searchParams.set('teacherId', state.user.uid);
-      urlChanged = true;
+    const currentUserId = state.user ? state.user.uid : null;
+    if (state.view === 'teacher-achievement' && currentUserId && !state.isGuest) {
+      if (currentUrl.searchParams.get('teacherId') !== currentUserId) {
+        currentUrl.searchParams.set('teacherId', currentUserId);
+        urlChanged = true;
+      }
+    } else if (state.view !== 'teacher-achievement') {
+      if (currentUrl.searchParams.has('teacherId')) {
+        currentUrl.searchParams.delete('teacherId');
+        urlChanged = true;
+      }
     }
-  } else if (state.view !== 'teacher-achievement') {
-    if (currentUrl.searchParams.has('teacherId')) {
-      currentUrl.searchParams.delete('teacherId');
-      urlChanged = true;
-    }
-  }
 
-  // تحديث شريط المتصفح بدون إعادة تحميل
-  if (urlChanged) {
-    window.history.pushState({ 
-      view: state.view, 
-      studentId: state.currentStudent?.id,
-      sessionId: state.currentSession?.id,
-      teacherId: state.user?.uid
-    }, '', currentUrl.toString());
+    if (urlChanged) {
+      window.history.pushState({ 
+        view: state.view, 
+        studentId: currentStudentId,
+        sessionId: currentSessionId,
+        teacherId: currentUserId
+      }, '', currentUrl.toString());
+    }
+  } catch (e) {
+    console.warn("تم تجاهل تحديث الرابط بسبب قيود المتصفح");
   }
   // ------------------------------------------------------------
 
@@ -1003,7 +1007,6 @@ function render() {
   if (state.view === 'letter-training') return renderLetterTraining(app);
 }
 
-// تفعيل زر الرجوع للخلف في المتصفح أو الجوال
 window.addEventListener('popstate', (event) => {
   if (event.state && event.state.view) {
     state.view = event.state.view;
@@ -3074,7 +3077,8 @@ async function renderSingleSession(app) {
 
   const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
   const letter = sess.letter;
-  const teacherName = state.user?.displayName || state.user?.email || sess.teacherName || 'المعلم';
+  const userName = state.user ? (state.user.displayName || state.user.email) : null;
+  const teacherName = userName || sess.teacherName || 'المعلم';
   const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const dayName = days[new Date(sess.date + 'T00:00:00').getDay()] || '';
 
@@ -3183,9 +3187,10 @@ async function renderSingleSession(app) {
     if (sendToParentBtn) {
       sendToParentBtn.onclick = () => {
         const studentData = state.currentStudent || {};
+        const recInput = document.getElementById('recommendationsInput');
         const sessionData = {
           ...sess,
-          recommendations: document.getElementById('recommendationsInput')?.value || sess.recommendations || '',
+          recommendations: (recInput ? recInput.value : '') || sess.recommendations || '',
           evaluation: sess.evaluation || 'none',
           successRate: sess.successRate || 0
         };
@@ -3198,7 +3203,6 @@ async function renderSingleSession(app) {
     }
   }
 
-  /* ===== 🤖 أدوات الذكاء الاصطناعي (للمعلم فقط) ===== */
   if (!state.isGuest && (state.role === 'teacher' || state.role === 'admin')) {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
@@ -3206,31 +3210,21 @@ async function renderSingleSession(app) {
       aiSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
       aiSection.innerHTML = `
         <h3 style="color:#6D28D9;margin-bottom:8px;">🤖 أدوات الذكاء الاصطناعي</h3>
-        <p style="font-size:13px;color:#555;margin-bottom:12px;">
-          احصل على تحليل ذكي، توصيات، تمارين منزلية، وقصة تعليمية
-        </p>
+        <p style="font-size:13px;color:#555;margin-bottom:12px;">احصل على تحليل ذكي، توصيات، تمارين منزلية، وقصة تعليمية</p>
         <div id="aiButtonsContainer" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;"></div>
       `;
       const buttonsContainer = aiSection.querySelector('#aiButtonsContainer');
-
       const aiBtn = window.createAIButton(sess, state.currentStudent || {});
       buttonsContainer.appendChild(aiBtn);
-
       if (typeof window.createHomeworkButton === 'function') {
-        const hwBtn = window.createHomeworkButton(sess, state.currentStudent || {});
-        buttonsContainer.appendChild(hwBtn);
+        buttonsContainer.appendChild(window.createHomeworkButton(sess, state.currentStudent || {}));
       }
-
       if (typeof window.createShortStoryButton === 'function') {
-        const storyBtn = window.createShortStoryButton(sess, state.currentStudent || {});
-        buttonsContainer.appendChild(storyBtn);
+        buttonsContainer.appendChild(window.createShortStoryButton(sess, state.currentStudent || {}));
       }
       app.appendChild(aiSection);
     }
-  }
 
-  /* ===== ربط أحداث أزرار التقييم (للمعلم فقط) ===== */
-  if (!state.isGuest && (state.role === 'teacher' || state.role === 'admin')) {
     let selectedEval = currentEval;
     let selectedRate = sess.successRate || 0;
     let selectedDisorder = currentDisorderType;
@@ -3267,13 +3261,14 @@ async function renderSingleSession(app) {
       try {
         await updateDoc(doc(db, "sessions", sess.id), { successRate: selectedRate });
         showToast('تم حفظ نسبة النجاح');
-      } catch (e) { showToast('خطأ في حفظ النسبة: ' + e.message); }
+      } catch (e) { showToast('خطأ: ' + e.message); }
     };
 
     const saveEvalBtn = infoCard.querySelector('#saveEvalBtn');
     if (saveEvalBtn) saveEvalBtn.onclick = async () => {
       try {
-        const recText = infoCard.querySelector('#recommendationsInput').value;
+        const recInput = infoCard.querySelector('#recommendationsInput');
+        const recText = recInput ? recInput.value : '';
         await updateDoc(doc(db, "sessions", sess.id), {
           evaluation: selectedEval,
           successRate: selectedRate,
@@ -3284,22 +3279,19 @@ async function renderSingleSession(app) {
         state.currentSession = { ...sess, evaluation: selectedEval, successRate: selectedRate, recommendations: recText, disorderType: selectedDisorder };
         renderSingleSession(app);
         checkAndSuggestMastery(sess.studentId, sess.letter);
-      } catch (e) { showToast('خطأ في الحفظ: ' + e.message); }
+      } catch (e) { showToast('خطأ: ' + e.message); }
     };
 
     const resetEvalBtn = infoCard.querySelector('#resetEvalBtn');
     if (resetEvalBtn) resetEvalBtn.onclick = async () => {
       try {
         await updateDoc(doc(db, "sessions", sess.id), {
-          evaluation: 'none',
-          successRate: 0,
-          recommendations: '',
-          disorderType: 'طبيعي'
+          evaluation: 'none', successRate: 0, recommendations: '', disorderType: 'طبيعي'
         });
         showToast('تم إعادة ضبط التقييم');
         state.currentSession = { ...sess, evaluation: 'none', successRate: 0, recommendations: '', disorderType: 'طبيعي' };
         renderSingleSession(app);
-      } catch (e) { showToast('خطأ في إعادة الضبط: ' + e.message); }
+      } catch (e) { showToast('خطأ: ' + e.message); }
     };
 
     const goNextBtn = infoCard.querySelector('#goNextBtn');
@@ -3309,7 +3301,6 @@ async function renderSingleSession(app) {
         try {
           const qCount = query(collection(db, "sessions"), where("studentId", "==", sess.studentId));
           const snapCount = await getDocs(qCount);
-          const sessionNumber = snapCount.size + 1;
           await addDoc(collection(db, "sessions"), {
             studentId: sess.studentId,
             teacherId: state.user.uid,
@@ -3317,26 +3308,19 @@ async function renderSingleSession(app) {
             studentEmail: sess.studentEmail || '',
             letter: sess.letter,
             sessionType: nextType,
-            sessionNumber,
+            sessionNumber: snapCount.size + 1,
             date: new Date().toISOString().split('T')[0],
             duration: sess.duration || '30 دقيقة',
             goal: getDefaultGoal(sess.letter, nextType),
-            tools: sess.tools,
-            place: sess.place,
-            method: sess.method,
-            evaluation: 'none',
-            successRate: 0,
-            notes: '',
-            recommendations: '',
+            tools: sess.tools, place: sess.place, method: sess.method,
+            evaluation: 'none', successRate: 0, notes: '', recommendations: '',
             createdAt: new Date().toISOString()
           });
           showToast('تم إنشاء الجلسة التالية');
           state.view = 'speech-sessions';
           render();
-        } catch (e) { showToast('خطأ في إنشاء الجلسة التالية: ' + e.message); }
-      } else {
-        showToast('هذه آخر جلسة في التسلسل');
-      }
+        } catch (e) { showToast('خطأ: ' + e.message); }
+      } else { showToast('هذه آخر جلسة'); }
     };
 
     const deleteBtn = infoCard.querySelector('#deleteSessBtn');
@@ -3344,22 +3328,20 @@ async function renderSingleSession(app) {
       if (confirm('هل أنت متأكد من حذف هذه الجلسة؟')) {
         try {
           await deleteDoc(doc(db, "sessions", sess.id));
-          showToast('تم حذف الجلسة');
+          showToast('تم الحذف');
           state.view = 'speech-sessions';
           render();
-        } catch (e) { showToast('خطأ في الحذف: ' + e.message); }
+        } catch (e) { showToast('خطأ: ' + e.message); }
       }
     };
   }
 
-  /* ===== بطاقة التدريب الصوتي ===== */
   const trainCard = document.createElement('div');
   trainCard.className = 'card';
   trainCard.style.borderRadius = '24px';
   let content = '';
   const st = sess.sessionType || 1;
 
-  // إخفاء منطقة التسجيل في وضع الزائر إذا لم يكن هناك تسجيل محفوظ
   const showBefore = sess.beforeRecording || !state.isGuest;
   const showAfter = sess.afterRecording || (!state.isGuest && sess.beforeRecording);
 
@@ -3386,12 +3368,9 @@ async function renderSingleSession(app) {
     content = `
       <div style="text-align:center;padding:20px;">
         <div style="font-size:80px;font-weight:bold;color:var(--mint-deep);cursor:pointer;padding:20px;background:white;border-radius:30px;display:inline-block;" onclick="speakText('${letter}')">${letter}</div>
-        <p style="font-size:18px;font-weight:bold;margin-top:15px;">🔊 اضغط على الحرف للاستماع</p>
+        <p style="font-size:18px;font-weight:bold;margin-top:15px;">🔊 اضغط للاستماع</p>
         ${recordSection}
-        <div style="margin-top:20px;background:#f9f9f9;padding:15px;border-radius:12px;text-align:right;">
-          <p style="font-weight:bold;">📍 مخرج الحرف:</p>
-          <p>${letterData.place || 'غير محدد'}</p>
-        </div>
+        <div style="margin-top:20px;background:#f9f9f9;padding:15px;border-radius:12px;text-align:right;"><p style="font-weight:bold;">📍 مخرج الحرف:</p><p>${letterData.place || 'غير محدد'}</p></div>
       </div>
     `;
   } else if (st === 2) {
@@ -3427,9 +3406,7 @@ async function renderSingleSession(app) {
             <h4 style="color:var(--mint-deep);">${pos.label}</h4>
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
               ${pos.words.map(word => `
-                <span class="word-chip" data-word="${word}" style="background:#EAF6F4;padding:8px 16px;border-radius:20px;font-size:18px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="speakText('${word}')">
-                  ${word}
-                </span>
+                <span class="word-chip" data-word="${word}" style="background:#EAF6F4;padding:8px 16px;border-radius:20px;font-size:18px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="speakText('${word}')">${word}</span>
               `).join('')}
             </div>
           </div>
@@ -3446,12 +3423,129 @@ async function renderSingleSession(app) {
           ${sentences.map(sentence => `
             <div style="background:white;padding:15px;border-radius:12px;margin-bottom:10px;font-size:18px;line-height:1.8;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
               <span style="flex:1;cursor:pointer;" onclick="speakText('${sentence}')">${sentence}</span>
-              <span class="sentence-actions" data-sentence="${sentence}">
-                <button class="speak-btn" onclick="speakText('${sentence}')" style="background:var(--mint);color:white;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;">🔊</button>
-              </span>
+              <span class="sentence-actions" data-sentence="${sentence}"><button class="speak-btn" onclick="speakText('${sentence}')" style="background:var(--mint);color:white;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;">🔊</button></span>
             </div>
-          `).join(
+          `).join('')}
+        </div>
+        ${recordSection}
+      </div>
+    `;
+  }
 
+  trainCard.innerHTML = content;
+  app.appendChild(trainCard);
+
+  if (!state.isGuest && (state.role === 'teacher' || state.role === 'admin')) {
+    const generateLetterSection = document.createElement('div');
+    generateLetterSection.className = 'card';
+    generateLetterSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
+    generateLetterSection.innerHTML = `
+      <h3 style="color:#6D28D9;margin-bottom:8px;">📚 توليد محتوى هذا الحرف بالذكاء الاصطناعي</h3>
+      <div id="generateLetterContainer" style="text-align:center;"></div>
+    `;
+    const genContainer = generateLetterSection.querySelector('#generateLetterContainer');
+    if (typeof window.createGenerateLetterButton === 'function') {
+      genContainer.appendChild(window.createGenerateLetterButton(letter, () => { setTimeout(() => { renderSingleSession(app); }, 1000); }));
+    }
+    app.appendChild(generateLetterSection);
+
+    if (typeof window.createImageButton === 'function') {
+      trainCard.querySelectorAll('.word-chip').forEach(chip => {
+        const word = chip.dataset.word;
+        if (word) chip.appendChild(window.createImageButton(word));
+      });
+      trainCard.querySelectorAll('.sentence-actions').forEach(container => {
+        const sentence = container.dataset.sentence;
+        if (sentence) {
+          const mainWord = sentence.split(' ')[0].replace(/[.,!؟]/g, '');
+          if (mainWord && mainWord.length > 2) container.appendChild(window.createImageButton(mainWord));
+        }
+      });
+    }
+  }
+
+  const beforePreview = trainCard.querySelector('#beforePreview');
+  const afterPreview = trainCard.querySelector('#afterPreview');
+  const beforeContent = trainCard.querySelector('#beforeContent');
+  const afterContent = trainCard.querySelector('#afterContent');
+  const afterSection = trainCard.querySelector('#afterSection');
+
+  function setupRecording(btnId, type, previewEl, contentEl, nextSection) {
+    const btn = trainCard.querySelector('#' + btnId);
+    if (!btn) return;
+    btn.onclick = function() {
+      const l = this.dataset.letter;
+      contentEl.innerHTML = '<div style="color:#0288D1;font-weight:bold;">⏳ جاري التسجيل... انطق الآن</div>';
+      startLetterRecording(l, async (transcript, analysis, audioUrl) => {
+        if (!audioUrl) {
+          contentEl.innerHTML = `<button class="btn-record" id="${btnId}" data-letter="${l}">🎤 حاول مرة أخرى</button>`;
+          setupRecording(btnId, type, previewEl, contentEl, nextSection);
+          return;
+        }
+        previewEl.innerHTML = `
+          <div style="padding:10px;background:white;border:2px dashed #0288D1;border-radius:12px;">
+            <audio controls src="${audioUrl}" style="width:100%;margin-bottom:8px;"></audio>
+            <div style="text-align:center;"><button class="btn btn-success btn-sm" id="save-${type}-btn" style="border-radius:50px;padding:8px 24px;">💾 حفظ</button></div>
+          </div>
+        `;
+        const saveBtn = previewEl.querySelector('#save-' + type + '-btn');
+        saveBtn.onclick = async () => {
+          saveBtn.disabled = true; saveBtn.textContent = '⏳ جاري الحفظ...';
+          try {
+            const response = await fetch(audioUrl);
+            const blob = await response.blob();
+            const base64 = await blobToBase64(blob);
+            const recordingKey = type === 'before' ? 'beforeRecording' : 'afterRecording';
+            const recordingData = { base64: base64, savedAt: new Date().toISOString(), size: blob.size };
+            await updateDoc(doc(db, "sessions", sess.id), { [recordingKey]: recordingData });
+            if (type === 'before') { sess.beforeRecording = recordingData; } else { sess.afterRecording = recordingData; }
+            previewEl.innerHTML = `
+              <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
+                <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تم الحفظ</div>
+                <audio controls src="${base64}" style="width:100%;"></audio>
+              </div>
+            `;
+            contentEl.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">✅ تم التسجيل</div>';
+            if (nextSection && nextSection.style.display === 'none') {
+              nextSection.style.display = 'block';
+              if (type === 'before') setupRecording('recordAfterBtn', 'after', afterPreview, afterContent, null);
+            }
+          } catch (e) { showToast('خطأ: ' + e.message); saveBtn.disabled = false; saveBtn.textContent = 'إعادة المحاولة'; }
+        };
+      });
+    };
+  }
+
+  const hasBefore = !!(sess.beforeRecording && sess.beforeRecording.base64);
+  const hasAfter = !!(sess.afterRecording && sess.afterRecording.base64);
+
+  if (hasBefore) {
+    beforePreview.innerHTML = `
+      <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
+        <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تسجيل "قبل"</div>
+        <audio controls src="${sess.beforeRecording.base64}" style="width:100%;"></audio>
+      </div>
+    `;
+    if (!state.isGuest) beforeContent.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">✅ تم التسجيل</div>';
+    if (afterSection) afterSection.style.display = 'block';
+  }
+
+  if (hasAfter) {
+    afterPreview.innerHTML = `
+      <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
+        <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تسجيل "بعد"</div>
+        <audio controls src="${sess.afterRecording.base64}" style="width:100%;"></audio>
+      </div>
+    `;
+    if (!state.isGuest) afterContent.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">🎉 اكتمل التوثيق</div>';
+  }
+
+  if (!state.isGuest) {
+    if (!hasBefore) setupRecording('recordBeforeBtn', 'before', beforePreview, beforeContent, afterSection);
+    if (hasBefore && !hasAfter) setupRecording('recordAfterBtn', 'after', afterPreview, afterContent, null);
+  }
+}
+/* ─── [END SEC-42] ─── */
 /* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion ─── */
 async function checkAndSuggestMastery(studentId, letter) {
   try {
@@ -4949,6 +5043,101 @@ async function renderAchievement(app) {
         <strong>📅 ملخص هذا الأسبوع:</strong><br>
         الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
         متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
+/* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
+async function renderAchievement(app) {
+  if (!state.currentStudent) {
+    showToast('⚠️ اختر طالباً أولاً أو تأكد من صحة الرابط');
+    state.view = state.isGuest ? 'home' : 'teacher-dashboard';
+    return render();
+  }
+  
+  const backTarget = state.isGuest ? 'home' : (state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu');
+  
+  renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
+    state.view = backTarget;
+    render();
+  });
+  
+  try {
+    const studentRef = doc(db, "users", state.currentStudent.id);
+    const studentDoc = await getDoc(studentRef);
+    const studentData = studentDoc.exists() ? studentDoc.data() : {};
+    const diag = studentData.diagnostic || {};
+    
+    // تصحيح فلاتر الحروف لتفادي الأخطاء في المتصفحات
+    const passedLetters = ALL_LETTERS.filter(l => diag[l] && diag[l].status === 'passed');
+    const needLetters = ALL_LETTERS.filter(l => diag[l] && (diag[l].status === 'need' || diag[l].status === 'unclear'));
+    const trainedLetters = ALL_LETTERS.filter(l => diag[l] && diag[l].status === 'trained');
+    
+    const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+    const sessionsSnap = await getDocs(sessionsQuery);
+    const sessions = [];
+    sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
+    sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
+    
+    const totalSessions = sessions.length;
+    const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
+    const averageSuccess = evaluatedSessions.length > 0
+      ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+      : 0;
+      
+    const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
+    const points = calculateStudentPoints(studentData);
+    
+    let achievementLevel = '';
+    let achievementIcon = '';
+    if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
+    else if (masteryPercentage >= 50) { achievementLevel = 'جيد جداً'; achievementIcon = '⭐'; }
+    else if (masteryPercentage >= 30) { achievementLevel = 'جيد'; achievementIcon = '👍'; }
+    else { achievementLevel = 'يحتاج متابعة'; achievementIcon = '💪'; }
+
+    const weeklyStats = getWeeklyStats(sessions);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
+    card.style.border = '2px solid var(--mint-deep)';
+    card.innerHTML = `
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:60px;">${achievementIcon}</div>
+        <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
+        <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
+        ${state.isGuest ? `<div style="margin-top:10px;"><span class="badge" style="background:#FFF8E1;color:#F57F17;padding:6px 16px;">👁️ وضع العرض لولي الأمر (للقراءة والطباعة فقط)</span></div>` : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${passedLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">حروف متقنة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:#F57F17;">${needLetters.length}</div>
+          <div style="font-size:13px;color:#6B7A99;">تحتاج تدريب</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${totalSessions}</div>
+          <div style="font-size:13px;color:#6B7A99;">جلسة منفذة</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${averageSuccess}%</div>
+          <div style="font-size:13px;color:#6B7A99;">متوسط النجاح</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${masteryPercentage}%</div>
+          <div style="font-size:13px;color:#6B7A99;">نسبة الإتقان</div>
+        </div>
+        <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
+          <div style="font-size:32px;font-weight:bold;color:var(--mint-deep);">${points}</div>
+          <div style="font-size:13px;color:#6B7A99;">نقطة تحفيزية</div>
+        </div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>نسبة الإتقان:</strong>
+        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${masteryPercentage}%;">${masteryPercentage}%</div></div>
+      </div>
+      <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
+        <strong>📅 ملخص هذا الأسبوع:</strong><br>
+        الجلسات هذا الأسبوع: ${weeklyStats.totalThisWeek}<br>
+        متوسط النجاح هذا الأسبوع: ${weeklyStats.avgSuccess}%<br>
         الحروف المتدرب عليها: ${Object.keys(weeklyStats.lettersTrained).length ? Object.keys(weeklyStats.lettersTrained).join(' - ') : 'لا يوجد'}
       </div>
       <div style="background:white;padding:15px;border-radius:12px;margin-bottom:12px;">
@@ -5031,9 +5220,8 @@ function initApp() {
   const requestedView = currentUrl.searchParams.get('view');
   const requestedStudentId = currentUrl.searchParams.get('studentId');
   const requestedSessionId = currentUrl.searchParams.get('sessionId');
-  const requestedTeacherId = currentUrl.searchParams.get('teacherId'); // معرف المعلم للمدير
+  const requestedTeacherId = currentUrl.searchParams.get('teacherId'); 
 
-  // الصفحات المسموح بمشاركتها للزوار
   const guestAllowedViews = ['teacher-achievement', 'achievement', 'single-session', 'iep-single-student'];
 
   onAuthStateChanged(auth, async (user) => {
@@ -5041,32 +5229,44 @@ function initApp() {
       state.user = user;
       state.isGuest = false;
       await fetchUserData(user.uid); 
+      
+      if (requestedView && requestedView !== 'home' && requestedView !== 'auth') {
+         try {
+           if (requestedStudentId) {
+              const sDoc = await getDoc(doc(db, "users", requestedStudentId));
+              if (sDoc.exists()) state.currentStudent = { id: sDoc.id, ...sDoc.data() };
+           }
+           if (requestedSessionId) {
+              const sessDoc = await getDoc(doc(db, "sessions", requestedSessionId));
+              if (sessDoc.exists()) state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
+           }
+         } catch(e) {}
+         state.view = requestedView;
+         state.targetTeacherId = requestedTeacherId || null;
+         render();
+      }
     } else {
       state.user = null;
       state.role = null;
       
-      // إذا كان الرابط المطلوب من ضمن الصفحات المسموحة للزوار
       if (requestedView && guestAllowedViews.includes(requestedView)) {
          state.isGuest = true;
          state.view = requestedView;
          state.targetTeacherId = requestedTeacherId || null;
          
          try {
-           // جلب بيانات الطالب إذا كانت مطلوبة
            if (requestedStudentId) {
               const sDoc = await getDoc(doc(db, "users", requestedStudentId));
               if (sDoc.exists()) state.currentStudent = { id: sDoc.id, ...sDoc.data() };
            }
-           // جلب بيانات الجلسة إذا كانت مطلوبة
            if (requestedSessionId) {
               const sessDoc = await getDoc(doc(db, "sessions", requestedSessionId));
               if (sessDoc.exists()) state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
            }
-         } catch(e) { console.error("خطأ في جلب بيانات الزائر:", e); }
+         } catch(e) {}
          
-         render(); // عرض الصفحة للزائر
+         render(); 
       } else {
-         // إذا طلب صفحة أخرى، يعود للرئيسية
          const publicViews = ['home', 'auth', 'register', 'reset-password'];
          state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
          render();
@@ -5075,7 +5275,6 @@ function initApp() {
   });
 }
 /* ─── [END SEC-58] ─── */
-
 
 
 /* ─── [SEC-59] تصدير Firebase للذكاء الاصطناعي — Export Firebase ─── */
