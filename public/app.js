@@ -914,6 +914,54 @@ function showPrivacyPolicy() {
 function render() {
   const app = document.getElementById('app');
   app.innerHTML = '';
+
+  // --- تحديث الرابط ليدعم المشاركة المباشرة (Deep Linking) ---
+  const currentUrl = new URL(window.location);
+  let urlChanged = false;
+
+  // 1. تحديث اسم الصفحة (view)
+  if (currentUrl.searchParams.get('view') !== state.view) {
+    currentUrl.searchParams.set('view', state.view);
+    urlChanged = true;
+  }
+
+  // 2. تحديث معرف الطالب (studentId) في الصفحات التي تحتاجه
+  const needsStudent = ['diagnostic-session', 'speech-sessions', 'single-session', 'iep-single-student', 'achievement'];
+  if (needsStudent.includes(state.view) && state.currentStudent?.id) {
+    if (currentUrl.searchParams.get('studentId') !== state.currentStudent.id) {
+      currentUrl.searchParams.set('studentId', state.currentStudent.id);
+      urlChanged = true;
+    }
+  } else {
+    if (currentUrl.searchParams.has('studentId')) {
+      currentUrl.searchParams.delete('studentId');
+      urlChanged = true;
+    }
+  }
+
+  // 3. تحديث معرف الجلسة (sessionId)
+  if (state.view === 'single-session' && state.currentSession?.id) {
+    if (currentUrl.searchParams.get('sessionId') !== state.currentSession.id) {
+      currentUrl.searchParams.set('sessionId', state.currentSession.id);
+      urlChanged = true;
+    }
+  } else {
+    if (currentUrl.searchParams.has('sessionId')) {
+      currentUrl.searchParams.delete('sessionId');
+      urlChanged = true;
+    }
+  }
+
+  // تحديث شريط المتصفح بدون إعادة تحميل
+  if (urlChanged) {
+    window.history.pushState({ 
+      view: state.view, 
+      studentId: state.currentStudent?.id,
+      sessionId: state.currentSession?.id 
+    }, '', currentUrl.toString());
+  }
+  // ------------------------------------------------------------
+
   if (state.view === 'home') return renderHome(app);
   if (state.view === 'auth') return renderAuth(app);
   if (state.view === 'register') return renderRegister(app);
@@ -938,7 +986,14 @@ function render() {
   if (state.view === 'letter-training') return renderLetterTraining(app);
 }
 
-/* ✅ إصلاح إضافي: تصدير render إلى window (تحتاجه ai-features.js) */
+// تفعيل زر الرجوع للخلف في المتصفح أو الجوال
+window.addEventListener('popstate', (event) => {
+  if (event.state && event.state.view) {
+    state.view = event.state.view;
+    render(); 
+  }
+});
+
 window.render = render;
 /* ─── [END SEC-25] ─── */
 
@@ -5083,14 +5138,68 @@ function printAchievement(student, data) {
 /* ─── [SEC-58] التهيئة النهائية — Final Init ─── */
 function initApp() {
   initAccessibility();
-  onAuthStateChanged(auth, (user) => {
+  
+  // قراءة الرابط عند بداية التشغيل لمعرفة الصفحة والبيانات المطلوبة
+  const currentUrl = new URL(window.location);
+  const requestedView = currentUrl.searchParams.get('view');
+  const requestedStudentId = currentUrl.searchParams.get('studentId');
+  const requestedSessionId = currentUrl.searchParams.get('sessionId');
+  
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       state.user = user;
-      fetchUserData(user.uid);
+      
+      // 1. جلب بيانات المستخدم الأساسية
+      await fetchUserData(user.uid); 
+      
+      // 2. معالجة الرابط المباشر (Deep Link) إذا كان يطلب صفحة داخلية
+      if (requestedView && requestedView !== 'home' && requestedView !== 'auth' && requestedView !== 'teacher-dashboard' && requestedView !== 'student-menu') {
+        
+        try {
+          // جلب بيانات الجلسة إذا كانت مطلوبة بالرابط
+          if (requestedSessionId) {
+            const sessionDoc = await getDoc(doc(db, "sessions", requestedSessionId));
+            if (sessionDoc.exists()) {
+              state.currentSession = { id: sessionDoc.id, ...sessionDoc.data() };
+              // جلب الطالب المرتبط بالجلسة تلقائياً لضمان اكتمال البيانات
+              if (!requestedStudentId && state.currentSession.studentId) {
+                 const sDoc = await getDoc(doc(db, "users", state.currentSession.studentId));
+                 if (sDoc.exists()) {
+                   state.currentStudent = { id: sDoc.id, ...sDoc.data() };
+                   state.diagEval = state.currentStudent.diagnostic || {};
+                 }
+              }
+            }
+          }
+
+          // جلب بيانات الطالب إذا كانت مطلوبة بالرابط
+          if (requestedStudentId) {
+            const studentDoc = await getDoc(doc(db, "users", requestedStudentId));
+            if (studentDoc.exists()) {
+              state.currentStudent = { id: studentDoc.id, ...studentDoc.data() };
+              state.diagEval = state.currentStudent.diagnostic || {};
+              if (state.currentStudent.comprehensive) {
+                state.comprehensive = state.currentStudent.comprehensive;
+              }
+            }
+          }
+          
+        } catch (error) {
+          console.error("خطأ في جلب بيانات الرابط المباشر:", error);
+        }
+        
+        // الانتقال للصفحة المطلوبة بعد أن أصبحت البيانات جاهزة في الذاكرة
+        state.view = requestedView;
+        render();
+      }
     } else {
+      // إذا كان الزائر غير مسجل الدخول
       state.user = null;
       state.role = null;
-      state.view = 'home';
+      state.currentStudent = null;
+      state.currentSession = null;
+      const publicViews = ['home', 'auth', 'register', 'reset-password'];
+      state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
       render();
     }
   });
