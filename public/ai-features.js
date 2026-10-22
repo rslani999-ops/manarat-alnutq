@@ -1,19 +1,7 @@
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v13.0 — النسخة النهائية الكاملة الموحدة
-   ========================================
-   
-   📋 ما الجديد في v13.0:
-   ✅ دمج v12.0 (الأساس الأحدث) + ميزات v9.1 (المفقودة)
-   ✅ إعادة تخزين الصور المؤقت في Firebase (توفير رصيد AI)
-   ✅ برومبتات محسّنة:
-      - التوصيات: 4 توصيات + تمرينان منزليان (بدل 2 + 1)
-      - التمارين: 5 تمارين + لعبتان + 4 نصائح (بدل 3 + 1 + 3)
-      - القصة: 10-12 جملة + تكرار 8-10 مرات (بدل 5-7 + 4-6)
-   ✅ إصلاح: تصدير كامل لكل الدوال
-   ✅ إصلاح: خطأ showShortStoryModal
-   ✅ إصلاح: تصدير الدوال المفقودة
+   v13.0 — النسخة الكاملة الأصلية (Part 1/3)
    ======================================== */
 
 console.log('🚀 Starting ai-features.js v13.0 (final merged)...');
@@ -67,33 +55,37 @@ function getLetterTitle(letter) {
    👤 بيانات المعلم والطالب والجلسة
    ======================================== */
 
-async function getTeacherInfo() {
+async function getTeacherInfo(sessionData = {}) {
+  // جلب اسم المعلم من الجلسة مباشرة إن وجد، وإلا من حساب المستخدم الحالي
+  let fullName = sessionData.teacherName || '';
+  let schoolName = '';
   const role = window.state?.role || 'teacher';
   const roleLabel = role === 'admin' ? 'مدير المدرسة' : 'معلم تدريبات النطق';
   const user = window.state?.user || {};
   const email = user.email || '';
 
-  let fullName = 'المعلم';
-  let schoolName = '';
+  if (!fullName) {
+    try {
+      const fbDb = window.db;
+      const fbDoc = window.doc;
+      const fbGetDoc = window.getDoc;
 
-  try {
-    const fbDb = window.db;
-    const fbDoc = window.doc;
-    const fbGetDoc = window.getDoc;
-
-    if (fbDb && fbDoc && fbGetDoc && user.uid) {
-      const ref = fbDoc(fbDb, "users", user.uid);
-      const snap = await fbGetDoc(ref);
-      if (snap.exists()) {
-        const data = snap.data();
-        fullName = data.fullName || email || 'المعلم';
-        schoolName = data.schoolName || '';
+      if (fbDb && fbDoc && fbGetDoc && user.uid) {
+        const ref = fbDoc(fbDb, "users", user.uid);
+        const snap = await fbGetDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          fullName = data.fullName || email || 'المعلم';
+          schoolName = data.schoolName || '';
+        }
       }
+    } catch (e) {
+      console.warn('تعذر جلب بيانات المعلم:', e);
+      fullName = user.displayName || email || 'المعلم';
     }
-  } catch (e) {
-    console.warn('تعذر جلب بيانات المعلم:', e);
-    fullName = user.displayName || email || 'المعلم';
   }
+
+  if (!fullName) fullName = 'المعلم';
 
   return { fullName, roleLabel, schoolName };
 }
@@ -133,12 +125,12 @@ function getSessionDetails(sessionData) {
 }
 
 /* ========================================
-   📄 بناء الرسالة الموحدة لولي الأمر
+   📄 بناء الرسالة الموحدة لولي الأمر (مع تذييل اسم المعلم ومعلم تدريبات النطق)
    ======================================== */
 
 async function buildParentMessage(sessionData, content, contentType) {
   const student = getStudentInfo();
-  const teacher = await getTeacherInfo();
+  const teacher = await getTeacherInfo(sessionData);
   const details = getSessionDetails(sessionData);
 
   const header = `السلام عليكم ولي أمر ${student.fullName}
@@ -162,9 +154,10 @@ ${details.goal}
 
   const schoolLine = teacher.schoolName ? ` - ${teacher.schoolName}` : '';
 
+  // التذييل المحدث بالكامل: اسم المعلم + معلم تدريبات النطق
   const footer = `━━━━━━━━━━━━━━━━━━━━
 🌹 نرجو متابعة التدريب المنزلي بانتظام
-أ/ ${teacher.fullName} - ${teacher.roleLabel}${schoolLine}`;
+أ/ ${teacher.fullName} - معلم تدريبات النطق${schoolLine}`;
 
   return `${header}${body}${footer}`;
 }
@@ -238,7 +231,6 @@ async function generateWordImage(word) {
   }
 }
 
-/* ✅ جديد: البحث عن صورة في Firebase Cache (من v9.1) */
 async function getCachedImage(word) {
   try {
     const fbDb = window.db;
@@ -266,7 +258,6 @@ async function getCachedImage(word) {
   }
 }
 
-/* ✅ جديد: حفظ صورة في Firebase Cache (من v9.1) */
 async function saveImageToCache(word, imageData) {
   try {
     const fbDb = window.db;
@@ -295,20 +286,15 @@ async function saveImageToCache(word, imageData) {
   }
 }
 
-/* ✅ محدَّث: الدالة الموحدة (Cache ثم توليد) */
 async function getOrGenerateImage(word) {
   if (!word) throw new Error('الكلمة مطلوبة');
 
-  // 1. البحث في Cache
   const cachedImage = await getCachedImage(word);
   if (cachedImage) {
     return { image: cachedImage, fromCache: true };
   }
 
-  // 2. التوليد من API
   const newImage = await generateWordImage(word);
-
-  // 3. الحفظ في Cache (بدون انتظار)
   saveImageToCache(word, newImage).catch(e =>
     console.warn('⚠️ فشل حفظ الصورة في Cache:', e)
   );
@@ -483,9 +469,8 @@ function createGenerateLetterButton(letter, onSuccess) {
 }
 
 const createGenerateLetterButtonForSession = createGenerateLetterButton;
-
 /* ========================================
-   🤖 الاتصال بـ Worker v5.7
+   منارة النطق - ميزات الذكاء الاصطناعي (Part 2/3)
    ======================================== */
 
 async function callAI(prompt, type = 'general') {
@@ -644,23 +629,25 @@ function createAIButton(sessionData, studentData) {
 }
 
 /* ========================================
-   📝 التمارين المنزلية (برومبت محسّن — 5 تمارين + لعبتان)
+   📝 التمارين المنزلية (محدثة: جلب التقييم المحدث مباشرة + زر الإرسال المباشر لولي الأمر)
    ======================================== */
 
 async function generateHomeworkExercises(sessionData, studentData) {
   const sessionTypes = getSessionTypes();
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
 
+  const currentEval = sessionData.evaluation || 'قيد التقييم';
+  const successRate = sessionData.successRate || 0;
+
   const prompt = `
 أنت أخصائي نطق تعليمي متخصص في تمارين الأطفال (4-12 سنة).
-المطلوب: توليد تمارين منزلية شاملة ومتنوعة لولي الأمر.
+المطلوب: توليد تمارين منزلية شاملة ومتنوعة لولي الأمر بناءً على التقييم الحالي (${currentEval} - نسبة النجاح ${successRate}%).
 
 📋 معلومات الجلسة:
 - الطالب: ${studentData.fullName || 'الطالب'}
 - الحرف المستهدف: ${sessionData.letter}
 - نوع الجلسة: ${typeInfo.name}
-- نسبة النجاح: ${sessionData.successRate || 0}%
-- التقييم: ${sessionData.evaluation || 'غير مقيم'}
+- التقييم الحالي: ${currentEval} (${successRate}%)
 - ملاحظات: ${sessionData.recommendations || 'لا توجد'}
 
 اكتب التمارين بالضبط بهذا التنسيق:
@@ -739,41 +726,45 @@ function showHomeworkModal(homeworkText, sessionData) {
         <div style="background:#FFF7ED;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #EA580C;">
           <div style="font-size:13px;color:#555;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
         </div>
-        <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FFFBF5;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${fullMessage}</div>
+        <textarea id="homeworkTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#FFFBF5;resize:vertical;margin-bottom:12px;">${fullMessage}</textarea>
 
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
-          <button id="copyHWBtn" style="border-radius:50px;padding:10px 20px;background:#EA580C;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-          ${parentPhone ? `<button id="sendWhatsappHwBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
+          <button id="copyHWBtn" style="border-radius:50px;padding:10px 20px;background:#EA580C;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ النص</button>
+          ${parentPhone ? `<button id="sendWhatsappHwBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📤 إرسال لولي الأمر</button>` : ''}
           ${parentEmail ? `<button id="sendEmailHwBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
           <button id="closeHWModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
-    const closeModal = () => modal.remove();
-    modal.querySelector('#closeHWModal').onclick = closeModal;
-    modal.querySelector('#closeHWModalBtn').onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    modal.querySelector('#closeHWModal').onclick = () => modal.remove();
+    modal.querySelector('#closeHWModalBtn').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
     modal.querySelector('#copyHWBtn').onclick = () => {
-      navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ التمارين'));
+      const textarea = modal.querySelector('#homeworkTextarea');
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value).then(() => safeToast('✅ تم نسخ التمارين بنجاح'));
     };
 
     const waBtn = modal.querySelector('#sendWhatsappHwBtn');
     if (waBtn) {
       waBtn.onclick = () => {
+        const textarea = modal.querySelector('#homeworkTextarea');
         let phone = parentPhone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '966' + phone.substring(1);
         if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textarea.value)}`, '_blank');
+        safeToast('💬 جاري فتح واتساب لإرسال التمارين لولي الأمر');
       };
     }
 
     const emailBtn = modal.querySelector('#sendEmailHwBtn');
     if (emailBtn) {
       emailBtn.onclick = () => {
+        const textarea = modal.querySelector('#homeworkTextarea');
         const subject = encodeURIComponent(`تمارين منزلية - ${student.fullName} - حرف ${sessionData.letter}`);
-        window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(fullMessage)}`;
+        window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(textarea.value)}`;
       };
     }
   })();
@@ -785,6 +776,12 @@ function createHomeworkButton(sessionData, studentData) {
   btn.style.cssText = 'background:linear-gradient(135deg, #F97316, #EA580C);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
   btn.innerHTML = '📝 تمارين منزلية (AI)';
   btn.onclick = async () => {
+    // التقاط التقييم المحدث من الصفحة فوراً عند الضغط
+    const activeEvalBtn = document.querySelector('.btn-eval[style*="box-shadow"]');
+    if (activeEvalBtn) sessionData.evaluation = activeEvalBtn.dataset.value;
+    const rangeInput = document.querySelector('#successRange');
+    if (rangeInput) sessionData.successRate = parseInt(rangeInput.value) || 0;
+
     btn.disabled = true;
     btn.innerHTML = '⏳ جاري التوليد...';
     try {
@@ -877,18 +874,17 @@ function showShortStoryModal(storyText, sessionData) {
         <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FFF5F7;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${fullMessage}</div>
 
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
-          <button id="copyStoryBtn" style="border-radius:50px;padding:10px 20px;background:#DB2777;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-          ${parentPhone ? `<button id="sendWhatsappStoryBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
-          ${parentEmail ? `<button id="sendEmailStoryBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
-          <button id="closeStoryModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
+          <button id="copyStoryBtn" style="border-radius:50px;padding:10px 20px;background:#DB2777;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
+          ${parentPhone ? `<button id="sendWhatsappStoryBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-weight:bold;">📱 واتساب</button>` : ''}
+          ${parentEmail ? `<button id="sendEmailStoryBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-weight:bold;">📧 إيميل</button>` : ''}
+          <button id="closeStoryModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
-    const closeModal = () => modal.remove();
-    modal.querySelector('#closeStoryModal').onclick = closeModal;
-    modal.querySelector('#closeStoryModalBtn').onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    modal.querySelector('#closeStoryModal').onclick = () => modal.remove();
+    modal.querySelector('#closeStoryModalBtn').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
     modal.querySelector('#copyStoryBtn').onclick = () => {
       navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ القصة'));
@@ -935,6 +931,9 @@ function createShortStoryButton(sessionData, studentData) {
   };
   return btn;
 }
+/* ========================================
+   منارة النطق - ميزات الذكاء الاصطناعي (Part 3/3)
+   ======================================== */
 
 /* ========================================
    📊 تحليل التقدم
