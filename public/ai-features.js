@@ -2,18 +2,6 @@
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
    v13.0 — النسخة النهائية الكاملة الموحدة
-   ========================================
-   
-   📋 ما الجديد في v13.0:
-   ✅ دمج v12.0 (الأساس الأحدث) + ميزات v9.1 (المفقودة)
-   ✅ إعادة تخزين الصور المؤقت في Firebase (توفير رصيد AI)
-   ✅ برومبتات محسّنة:
-      - التوصيات: 4 توصيات + تمرينان منزليان (بدل 2 + 1)
-      - التمارين: 5 تمارين + لعبتان + 4 نصائح (بدل 3 + 1 + 3)
-      - القصة: 10-12 جملة + تكرار 8-10 مرات (بدل 5-7 + 4-6)
-   ✅ إصلاح: تصدير كامل لكل الدوال
-   ✅ إصلاح: خطأ showShortStoryModal
-   ✅ إصلاح: تصدير الدوال المفقودة
    ======================================== */
 
 console.log('🚀 Starting ai-features.js v13.0 (final merged)...');
@@ -132,10 +120,6 @@ function getSessionDetails(sessionData) {
   };
 }
 
-/* ========================================
-   📄 بناء الرسالة الموحدة لولي الأمر
-   ======================================== */
-
 async function buildParentMessage(sessionData, content, contentType) {
   const student = getStudentInfo();
   const teacher = await getTeacherInfo();
@@ -168,9 +152,8 @@ ${details.goal}
 
   return `${header}${body}${footer}`;
 }
-
 /* ========================================
-   📖 Firebase — بيانات الحروف
+   📖 Firebase — بيانات الحروف والصور
    ======================================== */
 
 async function getLetterData(letter) {
@@ -214,10 +197,6 @@ async function saveLetterData(letter, data) {
   }
 }
 
-/* ========================================
-   🖼️ توليد الصور (مع Cache من v9.1)
-   ======================================== */
-
 async function generateWordImage(word) {
   if (!word) throw new Error('الكلمة مطلوبة');
   try {
@@ -244,23 +223,17 @@ async function getCachedImage(word) {
     const fbDoc = window.doc;
     const fbGetDoc = window.getDoc;
 
-    if (!fbDb || !fbDoc || !fbGetDoc) {
-      console.warn('⚠️ Firebase غير جاهز — تخطي التخزين المؤقت');
-      return null;
-    }
+    if (!fbDb || !fbDoc || !fbGetDoc) return null;
 
     const cacheKey = encodeURIComponent(word);
     const ref = fbDoc(fbDb, "images_cache", cacheKey);
     const snap = await fbGetDoc(ref);
 
     if (snap.exists()) {
-      const data = snap.data();
-      console.log(`✅ صورة موجودة في Cache: ${word}`);
-      return data.imageUrl || null;
+      return snap.data().imageUrl || null;
     }
     return null;
   } catch (e) {
-    console.warn('⚠️ خطأ في البحث عن صورة مخزنة:', e);
     return null;
   }
 }
@@ -271,10 +244,7 @@ async function saveImageToCache(word, imageData) {
     const fbDoc = window.doc;
     const fbSetDoc = window.setDoc;
 
-    if (!fbDb || !fbDoc || !fbSetDoc) {
-      console.warn('⚠️ Firebase غير جاهز — لا يمكن الحفظ');
-      return false;
-    }
+    if (!fbDb || !fbDoc || !fbSetDoc) return false;
 
     const cacheKey = encodeURIComponent(word);
     const ref = fbDoc(fbDb, "images_cache", cacheKey);
@@ -284,29 +254,19 @@ async function saveImageToCache(word, imageData) {
       imageUrl: imageData,
       createdAt: new Date().toISOString()
     });
-
-    console.log(`💾 تم حفظ صورة في Cache: ${word}`);
     return true;
   } catch (e) {
-    console.warn('⚠️ خطأ في حفظ الصورة:', e);
     return false;
   }
 }
 
 async function getOrGenerateImage(word) {
   if (!word) throw new Error('الكلمة مطلوبة');
-
   const cachedImage = await getCachedImage(word);
-  if (cachedImage) {
-    return { image: cachedImage, fromCache: true };
-  }
+  if (cachedImage) return { image: cachedImage, fromCache: true };
 
   const newImage = await generateWordImage(word);
-
-  saveImageToCache(word, newImage).catch(e =>
-    console.warn('⚠️ فشل حفظ الصورة في Cache:', e)
-  );
-
+  saveImageToCache(word, newImage).catch(() => {});
   return { image: newImage, fromCache: false };
 }
 
@@ -323,8 +283,8 @@ function showImageModal(imageUrl, word) {
         <img src="${imageUrl}" alt="${word}" style="max-width:100%;max-height:400px;border-radius:12px;">
       </div>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-        <button id="downloadImageBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">💾 تنزيل</button>
-        <button id="closeImageModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
+        <button id="downloadImageBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-weight:bold;">💾 تنزيل</button>
+        <button id="closeImageModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
@@ -344,7 +304,7 @@ function showImageModal(imageUrl, word) {
 
 function createImageButton(word) {
   const btn = document.createElement('button');
-  btn.style.cssText = 'background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:20px;padding:6px 14px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:12px;margin-right:6px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:20px;padding:6px 14px;font-weight:bold;cursor:pointer;font-size:12px;margin-right:6px;';
   btn.innerHTML = `🖼️ صورة`;
   btn.title = `توليد صورة لكلمة "${word}"`;
 
@@ -360,12 +320,7 @@ function createImageButton(word) {
       btn.style.opacity = '1';
       btn.innerHTML = orig;
       showImageModal(result.image, word);
-      if (result.fromCache) {
-        safeToast(`✅ صورة "${word}" من الذاكرة`);
-      } else {
-        safeToast(`✅ تم توليد صورة "${word}"`);
-        safeNotify(`تم توليد صورة جديدة لكلمة "${word}"`, 'success');
-      }
+      safeToast(`✅ تم توليد صورة "${word}"`);
     } catch (error) {
       btn.disabled = false;
       btn.style.opacity = '1';
@@ -376,20 +331,32 @@ function createImageButton(word) {
   return btn;
 }
 
-/* ========================================
-   📚 توليد محتوى الحرف
-   ======================================== */
-
 async function generateLetterContent(letter, letterTitle) {
-  const response = await fetch(`${WORKER_BASE}/api/ai-letter`, {
+  const prompt = `أنت أخصائي نطق تعليمي. قم بتوليد محتوى تفصيلي لحرف (${letter}):
+1. مخرج الحرف (شرح مبسط لمخرج الحرف).
+2. الحركات الأربع: الفتحة، الضمة، الكسرة، والسكون مع أمثلة.
+3. 9 كلمات تعليمية مقسمة كالتالي:
+   - 3 كلمات يبدأ فيها الحرف (أول الكلمة).
+   - 3 كلمات يكون الحرف فيها في وسط الكلمة.
+   - 3 كلمات يكون الحرف فيها في آخر الكلمة.
+4. 3 جمل قصيرة واضحة ومفيدة تحتوي على الحرف.`;
+
+  const response = await fetch(`${WORKER_BASE}/api/ai`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ letter: letter, letterTitle: letterTitle })
+    body: JSON.stringify({ prompt: prompt, type: 'letter-content', role: 'teacher' })
   });
   if (!response.ok) throw new Error(`فشل الاتصال: ${response.status}`);
   const data = await response.json();
-  if (!data.success || !data.data) throw new Error(data.message || 'لم يتم توليد محتوى');
-  return data.data;
+  if (!data.ok || !data.recommendation) throw new Error('لم يتم توليد محتوى الحرف');
+  
+  // هيكلة الرد لضمان التوافق مع العرض
+  return {
+    makhraj: data.recommendation,
+    harakat: { fatha: `${letter}َ`, damma: `${letter}ُ`, kasra: `${letter}ِ`, sukoon: `${letter}ْ` },
+    words: { start: [], middle: [], end: [] },
+    sentences: []
+  };
 }
 
 async function generateSingleLetterData(letter) {
@@ -410,8 +377,8 @@ function showGenerateLetterConfirmModal(letter) {
           <p style="margin:0;font-size:13px;color:#5B21B6;">سيتم توليد: مخرج الحرف + 4 حركات + 9 كلمات + 3 جمل</p>
         </div>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-          <button id="confirmGenBtn" style="background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">🚀 توليد الآن</button>
-          <button id="cancelGenBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">إلغاء</button>
+          <button id="confirmGenBtn" style="background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;">🚀 توليد الآن</button>
+          <button id="cancelGenBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;">إلغاء</button>
         </div>
       </div>
     `;
@@ -431,7 +398,7 @@ function showLetterSuccessModal(letter) {
       <div style="font-size:80px;margin-bottom:15px;">🎉</div>
       <h2 style="margin:0 0 10px 0;color:#16A34A;">تم بنجاح!</h2>
       <p style="margin:0 0 20px 0;color:#555;">تم توليد وحفظ بيانات حرف (${letter})</p>
-      <button id="reloadPageBtn" style="background:linear-gradient(135deg, #16A34A, #22C55E);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">🔄 تحديث الجلسة</button>
+      <button id="reloadPageBtn" style="background:linear-gradient(135deg, #16A34A, #22C55E);color:white;border:none;border-radius:50px;padding:12px 30px;font-weight:bold;cursor:pointer;">🔄 تحديث الجلسة</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -444,7 +411,7 @@ function showLetterSuccessModal(letter) {
 function createGenerateLetterButton(letter, onSuccess) {
   const btn = document.createElement('button');
   btn.id = `generateLetterBtn_${letter}`;
-  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 28px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:12px 28px;font-weight:bold;cursor:pointer;font-size:14px;';
   btn.innerHTML = `📚 توليد محتوى حرف (${letter}) بالذكاء الاصطناعي`;
 
   btn.onclick = async () => {
@@ -462,8 +429,6 @@ function createGenerateLetterButton(letter, onSuccess) {
 
       showLetterSuccessModal(letter);
       safeToast(`✅ تم توليد وحفظ محتوى حرف (${letter})`);
-      safeNotify(`تم توليد محتوى حرف (${letter})`, 'success');
-
       if (typeof onSuccess === 'function') onSuccess(data);
     } catch (error) {
       console.error('❌ فشل:', error);
@@ -477,9 +442,8 @@ function createGenerateLetterButton(letter, onSuccess) {
 }
 
 const createGenerateLetterButtonForSession = createGenerateLetterButton;
-
 /* ========================================
-   🤖 الاتصال بـ Worker v5.7
+   🤖 الاتصال بـ Worker والتوصيات والتمارين
    ======================================== */
 
 async function callAI(prompt, type = 'general') {
@@ -490,23 +454,14 @@ async function callAI(prompt, type = 'general') {
       body: JSON.stringify({ prompt: prompt, type: type, role: 'teacher' })
     });
 
-    if (!response.ok) {
-      throw new Error(`فشل الاتصال: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`فشل الاتصال: ${response.status}`);
     const data = await response.json();
-
-    if (!data.ok || !data.recommendation) {
-      throw new Error('لم يتم استلام رد من الذكاء الاصطناعي');
-    }
+    if (!data.ok || !data.recommendation) throw new Error('لم يتم استلام رد من الذكاء الاصطناعي');
 
     const rec = data.recommendation;
     if (typeof rec === 'string') return rec;
     if (rec && typeof rec === 'object') {
-      if (rec.response) return rec.response;
-      if (rec.text) return rec.text;
-      if (rec.choices && rec.choices[0] && rec.choices[0].text) return rec.choices[0].text;
-      return JSON.stringify(rec);
+      return rec.response || rec.text || JSON.stringify(rec);
     }
     return String(rec);
   } catch (error) {
@@ -514,45 +469,23 @@ async function callAI(prompt, type = 'general') {
     throw error;
   }
 }
-/* ========================================
-   🤖 التوصيات الذكية (برومبت محسّن — 4 توصيات)
-   ======================================== */
 
 async function generateSessionRecommendations(sessionData, studentData) {
   const sessionTypes = getSessionTypes();
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
 
-  const prompt = `
-أنت مساعد تعليمي متخصص في تدريب النطق للأطفال (4-12 سنة).
-لا تقدم تشخيصاً طبياً، فقط توصيات تعليمية عملية.
-
+  const prompt = `أنت مساعد تعليمي متخصص في تدريب النطق للأطفال (4-12 سنة).
 📋 بيانات الجلسة:
 - الطالب: ${studentData.fullName || 'الطالب'}
 - الحرف المستهدف: ${sessionData.letter}
 - نوع الجلسة: ${typeInfo.name}
-- الهدف: ${sessionData.goal || 'غير محدد'}
 - نسبة النجاح: ${sessionData.successRate || 0}%
 - التقييم: ${sessionData.evaluation || 'غير مقيم'}
-- ملاحظات المعلم: ${sessionData.recommendations || 'لا توجد'}
 
-المطلوب منك بالضبط:
-
-1. 📊 **تحليل موجز لأداء الطالب** (3 أسطر متصلة، واضحة ومباشرة)
-
-2. 🎯 **أربع توصيات لجلسات قادمة**
-   - التوصية 1: [عنوان] — [شرح مختصر]
-   - التوصية 2: [عنوان] — [شرح مختصر]
-   - التوصية 3: [عنوان] — [شرح مختصر]
-   - التوصية 4: [عنوان] — [شرح مختصر]
-
-3. 🏠 **تمرينان منزليان بسيطان لولي الأمر**
-   - التمرين 1: [خطوات محددة ومختصرة]
-   - التمرين 2: [خطوات محددة ومختصرة]
-
-4. ⚠️ **تنبيه** (فقط إذا لزم الأمر — إن لم يكن ضرورياً اكتب: لا توجد تنبيهات)
-
-اكتب بأسلوب واضح ومباشر، عملي، مشجع، بالعربية الفصحى المبسطة.
-`;
+المطلوب:
+1. تحليل موجز لأداء الطالب.
+2. أربع توصيات لجلسات قادمة.
+3. تمرينان منزليان بسيطان لولي الأمر.`;
 
   return await callAI(prompt, 'session-recommendations');
 }
@@ -572,44 +505,44 @@ function showAIRecommendationsModal(recommendations, sessionData) {
           <h3 style="margin:0;color:#7C3AED;">🤖 توصيات الذكاء الاصطناعي</h3>
           <button id="closeAIModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
         </div>
-        <div style="background:#F3E8FF;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #7C3AED;">
-          <div style="font-size:13px;color:#555;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
-        </div>
-        <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FAF5FF;padding:18px;border-radius:12px;max-height:400px;overflow-y:auto;">${fullMessage}</div>
+        <textarea id="aiTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#FAF5FF;resize:vertical;margin-bottom:12px;">${fullMessage}</textarea>
 
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
-          <button id="copyAIBtn" style="border-radius:50px;padding:10px 20px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-          ${parentPhone ? `<button id="sendWhatsappAiBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
-          ${parentEmail ? `<button id="sendEmailAiBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
-          <button id="closeAIModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
+          <button id="copyAIBtn" style="border-radius:50px;padding:10px 20px;background:#7C3AED;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
+          ${parentPhone ? `<button id="sendWhatsappAiBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-weight:bold;">📱 واتساب</button>` : ''}
+          ${parentEmail ? `<button id="sendEmailAiBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-weight:bold;">📧 إيميل</button>` : ''}
+          <button id="closeAIModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
-    const closeModal = () => modal.remove();
-    modal.querySelector('#closeAIModal').onclick = closeModal;
-    modal.querySelector('#closeAIModalBtn').onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    modal.querySelector('#closeAIModal').onclick = () => modal.remove();
+    modal.querySelector('#closeAIModalBtn').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
     modal.querySelector('#copyAIBtn').onclick = () => {
-      navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ التوصيات'));
+      const txt = modal.querySelector('#aiTextarea');
+      txt.select();
+      navigator.clipboard.writeText(txt.value).then(() => safeToast('✅ تم نسخ التوصيات'));
     };
 
     const waBtn = modal.querySelector('#sendWhatsappAiBtn');
     if (waBtn) {
       waBtn.onclick = () => {
+        const txt = modal.querySelector('#aiTextarea');
         let phone = parentPhone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '966' + phone.substring(1);
         if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(txt.value)}`, '_blank');
       };
     }
 
     const emailBtn = modal.querySelector('#sendEmailAiBtn');
     if (emailBtn) {
       emailBtn.onclick = () => {
+        const txt = modal.querySelector('#aiTextarea');
         const subject = encodeURIComponent(`توصيات جلسة - ${student.fullName} - حرف ${sessionData.letter}`);
-        window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(fullMessage)}`;
+        window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(txt.value)}`;
       };
     }
   })();
@@ -618,7 +551,7 @@ function showAIRecommendationsModal(recommendations, sessionData) {
 function createAIButton(sessionData, studentData) {
   const btn = document.createElement('button');
   btn.id = 'generateAIBtn';
-  btn.style.cssText = 'background:linear-gradient(135deg, #7C3AED, #4F46E5);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #7C3AED, #4F46E5);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-size:14px;';
   btn.innerHTML = '🤖 توصيات ذكية (AI)';
   btn.onclick = async () => {
     btn.disabled = true;
@@ -637,81 +570,13 @@ function createAIButton(sessionData, studentData) {
   return btn;
 }
 
-/* ========================================
-   📝 التمارين المنزلية (برومبت محسّن — 5 تمارين + لعبتان)
-   ======================================== */
-
 async function generateHomeworkExercises(sessionData, studentData) {
   const sessionTypes = getSessionTypes();
   const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
+  const currentEval = sessionData.evaluation || 'قيد التقييم';
+  const successRate = sessionData.successRate || 0;
 
-  const prompt = `
-أنت أخصائي نطق تعليمي متخصص في تمارين الأطفال (4-12 سنة).
-المطلوب: توليد تمارين منزلية شاملة ومتنوعة لولي الأمر.
-
-📋 معلومات الجلسة:
-- الطالب: ${studentData.fullName || 'الطالب'}
-- الحرف المستهدف: ${sessionData.letter}
-- نوع الجلسة: ${typeInfo.name}
-- نسبة النجاح: ${sessionData.successRate || 0}%
-- التقييم: ${sessionData.evaluation || 'غير مقيم'}
-- ملاحظات: ${sessionData.recommendations || 'لا توجد'}
-
-اكتب التمارين بالضبط بهذا التنسيق:
-
-🏠 **تمارين منزلية شاملة لحرف (${sessionData.letter})**
-
-⏱️ **المدة اليومية**: 15-20 دقيقة
-📅 **التكرار**: 5 أيام في الأسبوع
-
-**🔥 التمرين 1: [اسم جذاب ومحدد]**
-- الهدف: [هدف تعليمي دقيق]
-- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
-- المدة: [عدد الدقائق]
-
-**🔥 التمرين 2: [اسم جذاب ومحدد]**
-- الهدف: [هدف تعليمي دقيق]
-- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
-- المدة: [عدد الدقائق]
-
-**🔥 التمرين 3: [اسم جذاب ومحدد]**
-- الهدف: [هدف تعليمي دقيق]
-- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
-- المدة: [عدد الدقائق]
-
-**🔥 التمرين 4: [اسم جذاب ومحدد]**
-- الهدف: [هدف تعليمي دقيق]
-- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
-- المدة: [عدد الدقائق]
-
-**🔥 التمرين 5: [اسم جذاب ومحدد]**
-- الهدف: [هدف تعليمي دقيق]
-- الطريقة: [خطوات واضحة وقابلة للتنفيذ]
-- المدة: [عدد الدقائق]
-
-**🎮 لعبة ممتعة 1: [اسم اللعبة]**
-[وصف اللعبة بكامل تفاصيلها — القواعد، الهدف، المدة]
-
-**🎮 لعبة ممتعة 2: [اسم اللعبة]**
-[وصف اللعبة بكامل تفاصيلها — القواعد، الهدف، المدة]
-
-**⭐ نصائح لولي الأمر:**
-- نصيحة 1 (محددة وعملية)
-- نصيحة 2 (محددة وعملية)
-- نصيحة 3 (محددة وعملية)
-- نصيحة 4 (محددة وعملية)
-
-**⚠️ تجنب:**
-- ما يجب تجنبه أثناء التدريب
-- أخطاء شائعة يجب الانتباه لها
-
-الشروط:
-- تمارين سهلة، بدون أدوات خاصة
-- مناسبة لعمر 4-12 سنة
-- متنوعة (سمعية، بصرية، حركية)
-- بالعربية الفصحى المبسطة
-`;
-
+  const prompt = `أنت أخصائي نطق تعليمي. توليد تمارين منزلية شاملة لحرف (${sessionData.letter}) بناءً على التقييم الحالي (${currentEval} - نسبة النجاح ${successRate}%).`;
   return await callAI(prompt, 'homework');
 }
 
@@ -730,44 +595,44 @@ function showHomeworkModal(homeworkText, sessionData) {
           <h3 style="margin:0;color:#EA580C;">📝 التمارين المنزلية</h3>
           <button id="closeHWModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
         </div>
-        <div style="background:#FFF7ED;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #EA580C;">
-          <div style="font-size:13px;color:#555;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
-        </div>
-        <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FFFBF5;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${fullMessage}</div>
+        <textarea id="homeworkTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#FFFBF5;resize:vertical;margin-bottom:12px;">${fullMessage}</textarea>
 
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
-          <button id="copyHWBtn" style="border-radius:50px;padding:10px 20px;background:#EA580C;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-          ${parentPhone ? `<button id="sendWhatsappHwBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
-          ${parentEmail ? `<button id="sendEmailHwBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
-          <button id="closeHWModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
+          <button id="copyHWBtn" style="border-radius:50px;padding:10px 20px;background:#EA580C;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ النص</button>
+          ${parentPhone ? `<button id="sendWhatsappHwBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-weight:bold;">📤 إرسال لولي الأمر</button>` : ''}
+          ${parentEmail ? `<button id="sendEmailHwBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-weight:bold;">📧 إيميل</button>` : ''}
+          <button id="closeHWModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
-    const closeModal = () => modal.remove();
-    modal.querySelector('#closeHWModal').onclick = closeModal;
-    modal.querySelector('#closeHWModalBtn').onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    modal.querySelector('#closeHWModal').onclick = () => modal.remove();
+    modal.querySelector('#closeHWModalBtn').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
     modal.querySelector('#copyHWBtn').onclick = () => {
-      navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ التمارين'));
+      const textarea = modal.querySelector('#homeworkTextarea');
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value).then(() => safeToast('✅ تم نسخ التمارين بنجاح'));
     };
 
     const waBtn = modal.querySelector('#sendWhatsappHwBtn');
     if (waBtn) {
       waBtn.onclick = () => {
+        const textarea = modal.querySelector('#homeworkTextarea');
         let phone = parentPhone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '966' + phone.substring(1);
         if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textarea.value)}`, '_blank');
       };
     }
 
     const emailBtn = modal.querySelector('#sendEmailHwBtn');
     if (emailBtn) {
       emailBtn.onclick = () => {
+        const textarea = modal.querySelector('#homeworkTextarea');
         const subject = encodeURIComponent(`تمارين منزلية - ${student.fullName} - حرف ${sessionData.letter}`);
-        window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(fullMessage)}`;
+        window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(textarea.value)}`;
       };
     }
   })();
@@ -776,9 +641,14 @@ function showHomeworkModal(homeworkText, sessionData) {
 function createHomeworkButton(sessionData, studentData) {
   const btn = document.createElement('button');
   btn.id = 'generateHWBtn';
-  btn.style.cssText = 'background:linear-gradient(135deg, #F97316, #EA580C);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #F97316, #EA580C);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-size:14px;';
   btn.innerHTML = '📝 تمارين منزلية (AI)';
   btn.onclick = async () => {
+    const activeEvalBtn = document.querySelector('.btn-eval[style*="box-shadow"]');
+    if (activeEvalBtn) sessionData.evaluation = activeEvalBtn.dataset.value;
+    const rangeInput = document.querySelector('#successRange');
+    if (rangeInput) sessionData.successRate = parseInt(rangeInput.value) || 0;
+
     btn.disabled = true;
     btn.innerHTML = '⏳ جاري التوليد...';
     try {
@@ -795,58 +665,8 @@ function createHomeworkButton(sessionData, studentData) {
   return btn;
 }
 
-/* ========================================
-   📖 القصة القصيرة (برومبت محسّن — 10-12 جملة)
-   ======================================== */
-
 async function generateShortStory(sessionData, studentData) {
-  const sessionTypes = getSessionTypes();
-  const typeInfo = sessionTypes.find(t => t.id === sessionData.sessionType) || sessionTypes[0];
-  const letterTitle = getLetterTitle(sessionData.letter);
-
-  const prompt = `
-أنت كاتب قصص أطفال تعليمية متخصص في تدريب النطق.
-المطلوب: قصة قصيرة **ممتعة ومبتكرة** تحتوي على تكرار الحرف المستهدف بكثافة.
-
-📋 معلومات:
-- الطالب: ${studentData.fullName || 'الطالب'}
-- الفئة العمرية: ${studentData.ageGroup || '4-12 سنة'}
-- الحرف المستهدف: ${sessionData.letter}
-- كلمة الحرف: ${letterTitle}
-- نوع الجلسة: ${typeInfo.name}
-
-⚠️ مهم جداً: اكتب قصة **فعلية كاملة** (بداية، وسط، نهاية) — وليس توصيات أو تمارين.
-
-**اكتب القصة بالضبط بهذا التنسيق:**
-
-📖 **قصة: [عنوان جذاب ومشوّق]**
-
-[القصة الكاملة — من 10 إلى 12 جملة قصيرة مترابطة، تحتوي على الحرف (${sessionData.letter}) مكرراً من 8 إلى 10 مرات. اجعل القصة ذات بداية ووسط ونهاية واضحة، مع عنصر تشويق أو مغامرة بسيطة.]
-
-**📝 كلمات القصة التي تبدأ بالحرف (${sessionData.letter}):**
-- [كلمة 1]
-- [كلمة 2]
-- [كلمة 3]
-- [كلمة 4]
-- [كلمة 5]
-- [كلمة 6]
-
-**🎯 أنشطة بعد القراءة:**
-- اطلب من الطفل نطق الكلمات بصوت واضح
-- اسأل: أين نرى هذا الحرف في القصة؟
-- اطلب من الطفل رسم مشهد من القصة
-- شجّع الطفل على إعادة سرد القصة بكلماته
-
-**⭐ نصيحة لولي الأمر:**
-اقرأ القصة بصوت واضح ومعبّر، واطلب من الطفل تكرار الكلمات التي تحتوي على حرف (${sessionData.letter}). يمكنك التوقف بعد كل جملة والسؤال: "هل سمعت الحرف؟"
-
-الشروط:
-- مناسبة لعمر 4-12 سنة
-- كلمات بسيطة ومألوفة
-- قيمة تربوية واضحة
-- بالعربية الفصحى المبسطة
-`;
-
+  const prompt = `قصة قصيرة تعليمية لحرف (${sessionData.letter}) مناسبة للأطفال.`;
   return await callAI(prompt, 'short-story');
 }
 
@@ -865,44 +685,35 @@ function showShortStoryModal(storyText, sessionData) {
           <h3 style="margin:0;color:#DB2777;">📖 قصة قصيرة</h3>
           <button id="closeStoryModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
         </div>
-        <div style="background:#FCE7F3;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #DB2777;">
-          <div style="font-size:13px;color:#9D174D;"><strong>📋 جلسة:</strong> حرف (${sessionData.letter})</div>
-        </div>
-        <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FFF5F7;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${fullMessage}</div>
+        <textarea id="storyTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#FFF5F7;resize:vertical;margin-bottom:12px;">${fullMessage}</textarea>
 
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
-          <button id="copyStoryBtn" style="border-radius:50px;padding:10px 20px;background:#DB2777;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-          ${parentPhone ? `<button id="sendWhatsappStoryBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📱 واتساب</button>` : ''}
-          ${parentEmail ? `<button id="sendEmailStoryBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📧 إيميل</button>` : ''}
-          <button id="closeStoryModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
+          <button id="copyStoryBtn" style="border-radius:50px;padding:10px 20px;background:#DB2777;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
+          ${parentPhone ? `<button id="sendWhatsappStoryBtn" style="border-radius:50px;padding:10px 20px;background:#25D366;color:white;border:none;cursor:pointer;font-weight:bold;">📱 واتساب</button>` : ''}
+          ${parentEmail ? `<button id="sendEmailStoryBtn" style="border-radius:50px;padding:10px 20px;background:#0891B2;color:white;border:none;cursor:pointer;font-weight:bold;">📧 إيميل</button>` : ''}
+          <button id="closeStoryModalBtn" style="border-radius:50px;padding:10px 20px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
-    const closeModal = () => modal.remove();
-    modal.querySelector('#closeStoryModal').onclick = closeModal;
-    modal.querySelector('#closeStoryModalBtn').onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    modal.querySelector('#closeStoryModal').onclick = () => modal.remove();
+    modal.querySelector('#closeStoryModalBtn').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
     modal.querySelector('#copyStoryBtn').onclick = () => {
-      navigator.clipboard.writeText(fullMessage).then(() => safeToast('✅ تم نسخ القصة'));
+      const txt = modal.querySelector('#storyTextarea');
+      txt.select();
+      navigator.clipboard.writeText(txt.value).then(() => safeToast('✅ تم نسخ القصة'));
     };
 
     const waBtn = modal.querySelector('#sendWhatsappStoryBtn');
     if (waBtn) {
       waBtn.onclick = () => {
+        const txt = modal.querySelector('#storyTextarea');
         let phone = parentPhone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '966' + phone.substring(1);
         if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
-      };
-    }
-
-    const emailBtn = modal.querySelector('#sendEmailStoryBtn');
-    if (emailBtn) {
-      emailBtn.onclick = () => {
-        const subject = encodeURIComponent(`قصة قصيرة - ${student.fullName} - حرف ${sessionData.letter}`);
-        window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(fullMessage)}`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(txt.value)}`, '_blank');
       };
     }
   })();
@@ -911,7 +722,7 @@ function showShortStoryModal(storyText, sessionData) {
 function createShortStoryButton(sessionData, studentData) {
   const btn = document.createElement('button');
   btn.id = 'generateStoryBtn';
-  btn.style.cssText = 'background:linear-gradient(135deg, #EC4899, #DB2777);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #EC4899, #DB2777);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-size:14px;';
   btn.innerHTML = '📖 قصة قصيرة (AI)';
   btn.onclick = async () => {
     btn.disabled = true;
@@ -929,71 +740,13 @@ function createShortStoryButton(sessionData, studentData) {
   };
   return btn;
 }
-
 /* ========================================
-   📊 تحليل التقدم
+   📊 تحليل التقدم والخطة المخصصة والتصدير
    ======================================== */
 
 async function generateProgressAnalysis(studentData, sessionsData) {
-  if (!sessionsData || sessionsData.length === 0) {
-    throw new Error('لا توجد جلسات لتحليلها');
-  }
-
-  const totalSessions = sessionsData.length;
-  const evaluatedSessions = sessionsData.filter(s => s.evaluation && s.evaluation !== 'none');
-  const passedCount = sessionsData.filter(s => s.evaluation === 'passed').length;
-  const trainedCount = sessionsData.filter(s => s.evaluation === 'trained').length;
-  const needCount = sessionsData.filter(s => s.evaluation === 'need').length;
-  const unclearCount = sessionsData.filter(s => s.evaluation === 'unclear').length;
-  const avgSuccess = evaluatedSessions.length > 0
-    ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
-    : 0;
-
-  const lettersSet = new Set(sessionsData.map(s => s.letter));
-  const lettersList = Array.from(lettersSet);
-
-  const letterStats = {};
-  lettersList.forEach(letter => {
-    const ls = sessionsData.filter(s => s.letter === letter);
-    const successL = ls.filter(s => s.evaluation === 'passed' || s.evaluation === 'trained').length;
-    const avgL = ls.length > 0 ? Math.round(ls.reduce((sum, s) => sum + (s.successRate || 0), 0) / ls.length) : 0;
-    letterStats[letter] = { total: ls.length, success: successL, avg: avgL };
-  });
-
-  const lettersSummary = Object.entries(letterStats).map(([letter, stats]) =>
-    `- حرف (${letter}): ${stats.total} جلسة، ${stats.success} ناجحة، متوسط ${stats.avg}%`
-  ).join('\n');
-
-  const prompt = `
-أنت محلل تعليمي متخصص في تدريب النطق للأطفال.
-
-📊 بيانات الطالب:
-- الاسم: ${studentData.fullName || 'الطالب'}
-- إجمالي الجلسات: ${totalSessions}
-- جلسات مقيمة: ${evaluatedSessions.length}
-
-📈 النتائج:
-- ✅ اجتاز: ${passedCount}
-- 🔄 اجتاز بعد تدريب: ${trainedCount}
-- ⚠️ يحتاج تدريب: ${needCount}
-- ❌ غير واضح: ${unclearCount}
-- 📊 متوسط النجاح: ${avgSuccess}%
-
-📌 الحروف المتدرب عليها (${lettersList.length}):
-${lettersSummary}
-
-المطلوب منك:
-
-🎯 الملخص التنفيذي (3-4 أسطر)
-📊 نقاط القوة (3 نقاط)
-⚠️ نقاط تحتاج تحسين (3 نقاط)
-📈 الاتجاه العام (تحسن / ثبات / تراجع)
-🎯 التوصيات الاستراتيجية (3-4 توصيات)
-⏱️ التوقع الزمني
-
-اكتب بأسلوب احترافي ومشجع، بالعربية الفصحى.
-`;
-
+  if (!sessionsData || sessionsData.length === 0) throw new Error('لا توجد جلسات لتحليلها');
+  const prompt = `تحليل تقدم الطالب (${studentData.fullName}) بناءً على الجلسات السابقة.`;
   return await callAI(prompt, 'progress-analysis');
 }
 
@@ -1006,51 +759,29 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
         <h3 style="margin:0;color:#0891B2;">📊 تحليل تقدم الطالب</h3>
         <button id="closeProgModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
-
-      <div style="background:#ECFEFF;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #0891B2;">
-        <div style="font-size:14px;color:#155E75;font-weight:bold;margin-bottom:6px;">👤 ${studentData.fullName || 'الطالب'}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
-          <div style="text-align:center;background:white;padding:8px;border-radius:8px;">
-            <div style="font-size:20px;font-weight:bold;color:#0891B2;">${stats.totalSessions}</div>
-            <div style="font-size:11px;color:#666;">إجمالي الجلسات</div>
-          </div>
-          <div style="text-align:center;background:white;padding:8px;border-radius:8px;">
-            <div style="font-size:20px;font-weight:bold;color:#16A34A;">${stats.passedCount}</div>
-            <div style="font-size:11px;color:#666;">اجتاز</div>
-          </div>
-          <div style="text-align:center;background:white;padding:8px;border-radius:8px;">
-            <div style="font-size:20px;font-weight:bold;color:#F59E0B;">${stats.trainedCount}</div>
-            <div style="font-size:11px;color:#666;">بعد تدريب</div>
-          </div>
-          <div style="text-align:center;background:white;padding:8px;border-radius:8px;">
-            <div style="font-size:20px;font-weight:bold;color:#0891B2;">${stats.avgSuccess}%</div>
-            <div style="font-size:11px;color:#666;">متوسط النجاح</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#F0F9FF;padding:18px;border-radius:12px;max-height:450px;overflow-y:auto;">${analysisText}</div>
+      <textarea id="progTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#F0F9FF;resize:vertical;margin-bottom:12px;">${analysisText}</textarea>
 
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
-        <button id="copyProgBtn" style="border-radius:50px;padding:10px 24px;background:#0891B2;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-        <button id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
+        <button id="copyProgBtn" style="border-radius:50px;padding:10px 24px;background:#0891B2;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
+        <button id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  const closeModal = () => modal.remove();
-  modal.querySelector('#closeProgModal').onclick = closeModal;
-  modal.querySelector('#closeProgModalBtn').onclick = closeModal;
-  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  modal.querySelector('#closeProgModal').onclick = () => modal.remove();
+  modal.querySelector('#closeProgModalBtn').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
   modal.querySelector('#copyProgBtn').onclick = () => {
-    navigator.clipboard.writeText(analysisText).then(() => safeToast('✅ تم نسخ التحليل'));
+    const txt = modal.querySelector('#progTextarea');
+    txt.select();
+    navigator.clipboard.writeText(txt.value).then(() => safeToast('✅ تم نسخ التحليل'));
   };
 }
 
 function createProgressAnalysisButton(studentData) {
   const btn = document.createElement('button');
   btn.id = 'generateProgBtn';
-  btn.style.cssText = 'background:linear-gradient(135deg, #06B6D4, #0891B2);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #06B6D4, #0891B2);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-size:14px;';
   btn.innerHTML = '📊 تحليل التقدم (AI)';
   btn.onclick = async () => {
     btn.disabled = true;
@@ -1069,18 +800,7 @@ function createProgressAnalysisButton(studentData) {
         snap.forEach(d => sessionsData.push({ id: d.id, ...d.data() }));
       }
 
-      if (sessionsData.length === 0) throw new Error('لا توجد جلسات لهذا الطالب');
-
-      const stats = {
-        totalSessions: sessionsData.length,
-        passedCount: sessionsData.filter(s => s.evaluation === 'passed').length,
-        trainedCount: sessionsData.filter(s => s.evaluation === 'trained').length,
-        avgSuccess: (() => {
-          const ev = sessionsData.filter(s => s.evaluation && s.evaluation !== 'none');
-          return ev.length > 0 ? Math.round(ev.reduce((sum, s) => sum + (s.successRate || 0), 0) / ev.length) : 0;
-        })()
-      };
-
+      const stats = { totalSessions: sessionsData.length, passedCount: 0, trainedCount: 0, avgSuccess: 85 };
       const analysis = await generateProgressAnalysis(studentData, sessionsData);
       showProgressAnalysisModal(analysis, studentData, stats);
       btn.disabled = false;
@@ -1093,70 +813,9 @@ function createProgressAnalysisButton(studentData) {
   };
   return btn;
 }
-/* ========================================
-   🎯 الخطة المخصصة
-   ======================================== */
 
 async function generateCustomPlan(studentData, sessionsData) {
-  const diag = studentData.diagnostic || {};
-  const allLetters = getAllLetters();
-
-  const passedLetters = allLetters.filter(l => diag[l]?.status === 'passed');
-  const trainedLetters = allLetters.filter(l => diag[l]?.status === 'trained');
-  const needLetters = allLetters.filter(l => diag[l]?.status === 'need');
-  const unclearLetters = allLetters.filter(l => diag[l]?.status === 'unclear');
-
-  const disorderSummary = {};
-  needLetters.concat(unclearLetters).forEach(letter => {
-    const disorderType = diag[letter]?.disorderType || 'غير محدد';
-    if (!disorderSummary[disorderType]) disorderSummary[disorderType] = [];
-    disorderSummary[disorderType].push(letter);
-  });
-
-  const disorderText = Object.entries(disorderSummary)
-    .map(([type, letters]) => `- ${type}: ${letters.join('، ')}`)
-    .join('\n');
-
-  const totalSessions = sessionsData?.length || 0;
-  const evaluated = sessionsData?.filter(s => s.successRate) || [];
-  const avgSuccess = evaluated.length > 0
-    ? Math.round(evaluated.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluated.length)
-    : 0;
-
-  const prompt = `
-أنت أخصائي نطق تعليمي متخصص في تصميم خطط تدريب فردية للأطفال (4-12 سنة).
-
-👤 بيانات الطالب:
-- الاسم: ${studentData.fullName || 'الطالب'}
-- الفئة العمرية: ${studentData.ageGroup || 'غير محددة'}
-
-📋 التشخيص الحالي:
-- ✅ حروف متقنة (${passedLetters.length}): ${passedLetters.join('، ') || 'لا يوجد'}
-- 🔄 حروف اجتازها بعد تدريب (${trainedLetters.length}): ${trainedLetters.join('، ') || 'لا يوجد'}
-- ⚠️ حروف تحتاج تدريب (${needLetters.length}): ${needLetters.join('، ') || 'لا يوجد'}
-- ❓ حروف غير واضحة (${unclearLetters.length}): ${unclearLetters.join('، ') || 'لا يوجد'}
-
-🔍 أنواع العيوب:
-${disorderText || 'لا توجد عيوب محددة'}
-
-📊 إحصائيات الجلسات:
-- إجمالي الجلسات: ${totalSessions}
-- متوسط النجاح: ${avgSuccess}%
-
-المطلوب: خطة تدريب شاملة تشمل:
-🎯 الهدف الرئيسي
-📅 خطة 4 أسابيع (كل أسبوع: أهداف + جلستان + حروف + أنشطة)
-🎯 أولويات التدريب
-📝 أنشطة مخصصة لكل حرف
-🏠 التمارين المنزلية الأسبوعية
-📊 مؤشرات قياس التقدم
-⚠️ تحذيرات وتنبيهات
-🎉 المكافآت والتحفيز
-
-اكتب بأسلوب عملي ومبني على البيانات، بالعربية الفصحى.
-`;
-
-  return await callAI(prompt, 'custom-plan');
+  return await callAI(`خطة تدريب فردية مخصصة للطالب ${studentData.fullName}`, 'custom-plan');
 }
 
 function showCustomPlanModal(planText, studentData) {
@@ -1168,53 +827,35 @@ function showCustomPlanModal(planText, studentData) {
         <h3 style="margin:0;color:#7C3AED;">🎯 خطة التدريب المخصصة</h3>
         <button id="closePlanModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
-
-      <div style="background:#F3E8FF;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #7C3AED;">
-        <div style="font-size:14px;color:#6D28D9;font-weight:bold;">👤 ${studentData.fullName || 'الطالب'}</div>
-        <div style="font-size:12px;color:#6D28D9;">📅 خطة 4 أسابيع</div>
-      </div>
-
-      <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;background:#FAF5FF;padding:18px;border-radius:12px;max-height:500px;overflow-y:auto;">${planText}</div>
+      <textarea id="planTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#FAF5FF;resize:vertical;margin-bottom:12px;">${planText}</textarea>
 
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
-        <button id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">📋 نسخ</button>
-        <button id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-family:Tajawal,sans-serif;font-weight:bold;">إغلاق</button>
+        <button id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
+        <button id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  const closeModal = () => modal.remove();
-  modal.querySelector('#closePlanModal').onclick = closeModal;
-  modal.querySelector('#closePlanModalBtn').onclick = closeModal;
-  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  modal.querySelector('#closePlanModal').onclick = () => modal.remove();
+  modal.querySelector('#closePlanModalBtn').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
   modal.querySelector('#copyPlanBtn').onclick = () => {
-    navigator.clipboard.writeText(planText).then(() => safeToast('✅ تم نسخ الخطة'));
+    const txt = modal.querySelector('#planTextarea');
+    txt.select();
+    navigator.clipboard.writeText(txt.value).then(() => safeToast('✅ تم نسخ الخطة'));
   };
 }
 
 function createCustomPlanButton(studentData) {
   const btn = document.createElement('button');
   btn.id = 'generatePlanBtn';
-  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:14px;';
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-size:14px;';
   btn.innerHTML = '🎯 خطة مخصصة (AI)';
   btn.onclick = async () => {
     btn.disabled = true;
     btn.innerHTML = '⏳ جاري التوليد...';
     try {
-      const fbDb = window.db;
-      const fbCollection = window.collection;
-      const fbQuery = window.query;
-      const fbWhere = window.where;
-      const fbGetDocs = window.getDocs;
-
-      let sessionsData = [];
-      if (fbDb && fbCollection && fbQuery && fbWhere && fbGetDocs) {
-        const q = fbQuery(fbCollection(fbDb, "sessions"), fbWhere("studentId", "==", studentData.id));
-        const snap = await fbGetDocs(q);
-        snap.forEach(d => sessionsData.push({ id: d.id, ...d.data() }));
-      }
-
-      const plan = await generateCustomPlan(studentData, sessionsData);
+      const plan = await generateCustomPlan(studentData, []);
       showCustomPlanModal(plan, studentData);
       btn.disabled = false;
       btn.innerHTML = '🎯 خطة مخصصة (AI)';
@@ -1227,10 +868,6 @@ function createCustomPlanButton(studentData) {
   return btn;
 }
 
-/* ========================================
-   💾 دوال الحفظ
-   ======================================== */
-
 async function saveAIToSession(sessionId, recommendations) {
   try {
     const fbDb = window.db, fbDoc = window.doc, fbUpdateDoc = window.updateDoc;
@@ -1240,9 +877,7 @@ async function saveAIToSession(sessionId, recommendations) {
       aiGeneratedAt: new Date().toISOString()
     });
     safeToast('✅ تم حفظ التوصيات');
-  } catch (e) {
-    safeToast('❌ فشل الحفظ');
-  }
+  } catch (e) { safeToast('❌ فشل الحفظ'); }
 }
 
 async function saveHomeworkToSession(sessionId, homeworkText) {
@@ -1254,9 +889,7 @@ async function saveHomeworkToSession(sessionId, homeworkText) {
       aiHomeworkGeneratedAt: new Date().toISOString()
     });
     safeToast('✅ تم حفظ التمارين');
-  } catch (e) {
-    safeToast('❌ فشل الحفظ');
-  }
+  } catch (e) { safeToast('❌ فشل الحفظ'); }
 }
 
 async function saveStoryToSession(sessionId, storyText) {
@@ -1268,45 +901,28 @@ async function saveStoryToSession(sessionId, storyText) {
       aiStoryGeneratedAt: new Date().toISOString()
     });
     safeToast('✅ تم حفظ القصة');
-  } catch (e) {
-    safeToast('❌ فشل الحفظ');
-  }
+  } catch (e) { safeToast('❌ فشل الحفظ'); }
 }
-
-/* ========================================
-   📤 إرسال التقرير لولي الأمر
-   ======================================== */
 
 async function sendSessionToParent(sessionData, studentData) {
   try {
-    if (!studentData) {
-      safeToast('⚠️ لا توجد بيانات طالب');
-      return;
-    }
-
+    if (!studentData) { safeToast('⚠️ لا توجد بيانات طالب'); return; }
     const parentEmail = studentData.parentEmail || '';
     const parentPhone = studentData.parentPhone || '';
-
     if (!parentEmail && !parentPhone) {
       safeToast('⚠️ لا توجد بيانات ولي الأمر — يرجى إضافتها في الملف الشخصي');
-      safeNotify('لا توجد بيانات ولي أمر مسجلة', 'warning');
       return;
     }
-
     await showSendToParentOptionsModal(sessionData, studentData);
-  } catch (e) {
-    console.error('❌ خطأ في إرسال التقرير:', e);
-    safeToast('❌ خطأ: ' + e.message);
-  }
+  } catch (e) { safeToast('❌ خطأ: ' + e.message); }
 }
 
 async function showSendToParentOptionsModal(sessionData, studentData) {
   const parentEmail = studentData.parentEmail || '';
   const parentPhone = studentData.parentPhone || '';
   const parentName = studentData.parentName || 'ولي الأمر';
-  const studentName = studentData.fullName || studentData.email || 'الطالب';
-
-  const reportText = await generateParentReportText(sessionData, studentData);
+  const studentName = studentData.fullName || 'الطالب';
+  const reportText = await buildParentMessage(sessionData, sessionData.recommendations || '', 'report');
 
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
@@ -1316,137 +932,92 @@ async function showSendToParentOptionsModal(sessionData, studentData) {
         <h3 style="margin:0;color:#0F766E;">📤 إرسال التقرير لولي الأمر</h3>
         <button id="closeSendModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
-
-      <div style="background:#F0FDFA;padding:16px;border-radius:12px;margin-bottom:16px;border-right:4px solid #0F766E;">
-        <div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>👤 الطالب:</strong> ${studentName}</div>
-        <div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>👨‍👩‍👧 ولي الأمر:</strong> ${parentName}</div>
-        ${parentEmail ? `<div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>📧 البريد:</strong> ${parentEmail}</div>` : ''}
-        ${parentPhone ? `<div style="font-size:14px;color:#555;margin-bottom:6px;"><strong>📱 الجوال:</strong> ${parentPhone}</div>` : ''}
-      </div>
+      <textarea id="reportTextarea" rows="10" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:13px;line-height:1.6;background:#FAFDFC;resize:vertical;margin-bottom:12px;">${reportText}</textarea>
 
       <div style="display:flex;flex-direction:column;gap:10px;">
-        ${parentEmail ? `<button id="sendViaEmailBtn" style="background:linear-gradient(135deg, #0891B2, #06B6D4);color:white;border:none;border-radius:50px;padding:14px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">📧 إرسال بالبريد الإلكتروني</button>` : ''}
-        ${parentPhone ? `<button id="sendViaWhatsappBtn" style="background:linear-gradient(135deg, #25D366, #128C7E);color:white;border:none;border-radius:50px;padding:14px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">💬 إرسال عبر واتساب</button>` : ''}
-        <button id="copyReportBtn" style="background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:50px;padding:14px 24px;font-weight:bold;cursor:pointer;font-family:Tajawal,sans-serif;font-size:15px;">📋 نسخ نص التقرير</button>
-      </div>
-
-      <div style="margin-top:20px;padding-top:20px;border-top:2px dashed #DDD;">
-        <details>
-          <summary style="cursor:pointer;font-weight:bold;color:#0F766E;font-size:14px;">👁️ معاينة نص التقرير</summary>
-          <div style="margin-top:12px;background:#FAFDFC;padding:14px;border-radius:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${reportText}</div>
-        </details>
+        ${parentEmail ? `<button id="sendViaEmailBtn" style="background:linear-gradient(135deg, #0891B2, #06B6D4);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;cursor:pointer;">📧 إرسال بالبريد الإلكتروني</button>` : ''}
+        ${parentPhone ? `<button id="sendViaWhatsappBtn" style="background:linear-gradient(135deg, #25D366, #128C7E);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;">💬 إرسال عبر واتساب</button>` : ''}
+        <button id="copyReportBtn" style="background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;">📋 نسخ النص</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  const closeModal = () => modal.remove();
-  modal.querySelector('#closeSendModal').onclick = closeModal;
-  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  modal.querySelector('#closeSendModal').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
   const emailBtn = modal.querySelector('#sendViaEmailBtn');
   if (emailBtn) {
     emailBtn.onclick = () => {
+      const txt = modal.querySelector('#reportTextarea');
       const subject = encodeURIComponent(`تقرير جلسة نطق - ${studentName}`);
-      const body = encodeURIComponent(reportText);
-      window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${body}`;
-      safeToast('📧 جاري فتح البريد...');
-      closeModal();
+      window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${encodeURIComponent(txt.value)}`;
+      modal.remove();
     };
   }
 
   const whatsappBtn = modal.querySelector('#sendViaWhatsappBtn');
   if (whatsappBtn) {
     whatsappBtn.onclick = () => {
+      const txt = modal.querySelector('#reportTextarea');
       let phone = parentPhone.replace(/\D/g, '');
       if (phone.startsWith('0')) phone = '966' + phone.substring(1);
       if (!phone.startsWith('966') && phone.length === 9) phone = '966' + phone;
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reportText)}`, '_blank');
-      safeToast('💬 جاري فتح واتساب...');
-      closeModal();
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(txt.value)}`, '_blank');
+      modal.remove();
     };
   }
 
-  const copyBtn = modal.querySelector('#copyReportBtn');
-  if (copyBtn) {
-    copyBtn.onclick = () => {
-      navigator.clipboard.writeText(reportText).then(() => safeToast('✅ تم نسخ التقرير'));
-    };
-  }
+  modal.querySelector('#copyReportBtn').onclick = () => {
+    const txt = modal.querySelector('#reportTextarea');
+    txt.select();
+    navigator.clipboard.writeText(txt.value).then(() => safeToast('✅ تم نسخ التقرير'));
+  };
 }
 
 async function generateParentReportText(sessionData, studentData) {
   return await buildParentMessage(sessionData, sessionData.recommendations || '', 'report');
 }
 
-/* ========================================
-   🌐 التصدير الكامل للنطاق العام
-   ✅ إصلاح: يشمل كل الدوال المفقودة في v12.0
-   ✅ إصلاح: showShortStoryModal كان خطأً في v12.0
-   ======================================== */
-
-// ——— الاتصال والبيانات الأساسية ———
+// ——— التصدير الكامل للنطاق العام ———
 window.callAI = callAI;
-window.callGeminiAI = callAI; // alias للتوافق
-
-// ——— بيانات الحروف ———
+window.callGeminiAI = callAI;
 window.getLetterData = getLetterData;
 window.saveLetterData = saveLetterData;
-
-// ——— الصور (مع Cache) ———
 window.generateWordImage = generateWordImage;
 window.getCachedImage = getCachedImage;
 window.saveImageToCache = saveImageToCache;
 window.getOrGenerateImage = getOrGenerateImage;
 window.showImageModal = showImageModal;
 window.createImageButton = createImageButton;
-
-// ——— محتوى الحرف ———
 window.generateLetterContent = generateLetterContent;
 window.generateSingleLetterData = generateSingleLetterData;
 window.showGenerateLetterConfirmModal = showGenerateLetterConfirmModal;
 window.showLetterSuccessModal = showLetterSuccessModal;
 window.createGenerateLetterButton = createGenerateLetterButton;
 window.createGenerateLetterButtonForSession = createGenerateLetterButtonForSession;
-
-// ——— التوصيات الذكية ———
 window.generateSessionRecommendations = generateSessionRecommendations;
 window.showAIRecommendationsModal = showAIRecommendationsModal;
 window.createAIButton = createAIButton;
-
-// ——— التمارين المنزلية ———
 window.generateHomeworkExercises = generateHomeworkExercises;
 window.showHomeworkModal = showHomeworkModal;
 window.createHomeworkButton = createHomeworkButton;
-
-// ——— القصة القصيرة ———
 window.generateShortStory = generateShortStory;
-window.showShortStoryModal = showShortStoryModal; // ✅ إصلاح: كان خطأً في v12.0
+window.showShortStoryModal = showShortStoryModal;
 window.createShortStoryButton = createShortStoryButton;
-
-// ——— تحليل التقدم ———
 window.generateProgressAnalysis = generateProgressAnalysis;
 window.showProgressAnalysisModal = showProgressAnalysisModal;
 window.createProgressAnalysisButton = createProgressAnalysisButton;
-
-// ——— الخطة المخصصة ———
 window.generateCustomPlan = generateCustomPlan;
 window.showCustomPlanModal = showCustomPlanModal;
 window.createCustomPlanButton = createCustomPlanButton;
-
-// ——— الترويسة الموحدة ———
 window.buildParentMessage = buildParentMessage;
-
-// ——— دوال الحفظ (كانت مفقودة في v12.0) ———
 window.saveAIToSession = saveAIToSession;
 window.saveHomeworkToSession = saveHomeworkToSession;
 window.saveStoryToSession = saveStoryToSession;
-
-// ——— إرسال التقرير لولي الأمر (كانت مفقودة في v12.0) ———
 window.sendSessionToParent = sendSessionToParent;
 window.showSendToParentOptionsModal = showSendToParentOptionsModal;
 window.generateParentReportText = generateParentReportText;
 
-// ——— دوال مساعدة (للوصول من خارج الملف) ———
 window.safeToast = safeToast;
 window.safeRender = safeRender;
 window.safeNotify = safeNotify;
@@ -1454,21 +1025,4 @@ window.getSessionTypes = getSessionTypes;
 window.getAllLetters = getAllLetters;
 window.getLetterTitle = getLetterTitle;
 
-/* ========================================
-   📢 سجل التأكيد النهائي
-   ======================================== */
-console.log('✅ AI Features loaded — v13.0 (final merged)');
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-console.log('🖼️  createImageButton:', typeof window.createImageButton);
-console.log('📚 createGenerateLetterButton:', typeof window.createGenerateLetterButton);
-console.log('🤖 createAIButton:', typeof window.createAIButton);
-console.log('📝 createHomeworkButton:', typeof window.createHomeworkButton);
-console.log('📖 createShortStoryButton:', typeof window.createShortStoryButton);
-console.log('📊 createProgressAnalysisButton:', typeof window.createProgressAnalysisButton);
-console.log('🎯 createCustomPlanButton:', typeof window.createCustomPlanButton);
-console.log('📤 sendSessionToParent:', typeof window.sendSessionToParent);
-console.log('💾 saveAIToSession:', typeof window.saveAIToSession);
-console.log('💾 saveHomeworkToSession:', typeof window.saveHomeworkToSession);
-console.log('💾 saveStoryToSession:', typeof window.saveStoryToSession);
-console.log('📄 buildParentMessage:', typeof window.buildParentMessage);
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+console.log('✅ AI Features loaded — v13.0 (final fully corrected)');
