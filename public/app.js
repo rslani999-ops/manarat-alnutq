@@ -3067,16 +3067,21 @@ async function renderSpeechSessions(app) {
 /* ─── [SEC-42] عرض جلسة واحدة — Single Session ─── */
 async function renderSingleSession(app) {
   const sess = state.currentSession;
-  if (!sess) { state.view = 'student-menu'; return render(); }
+  if (!sess) { 
+    state.view = state.isGuest ? 'home' : 'student-menu'; 
+    return render(); 
+  }
 
   const typeInfo = SESSION_TYPES.find(t => t.id === sess.sessionType) || SESSION_TYPES[0];
   const letter = sess.letter;
-  const teacherName = state.user?.displayName || state.user?.email || 'المعلم';
+  const teacherName = state.user?.displayName || state.user?.email || sess.teacherName || 'المعلم';
   const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const dayName = days[new Date(sess.date + 'T00:00:00').getDay()] || '';
 
+  const backTarget = state.isGuest ? 'home' : (state.role === 'teacher' || state.role === 'admin' ? 'speech-sessions' : 'student-menu');
+  
   renderTopbar(app, `${typeInfo.icon} ${typeInfo.name}`, `حرف (${letter}) - #${sess.sessionNumber || '?'}`, () => {
-    state.view = state.role === 'teacher' || state.role === 'admin' ? 'speech-sessions' : 'student-menu';
+    state.view = backTarget;
     render();
   });
 
@@ -3109,7 +3114,11 @@ async function renderSingleSession(app) {
   infoCard.className = 'card';
   infoCard.style.borderRadius = '24px';
   infoCard.style.borderRight = '6px solid var(--mint-deep)';
+  
+  const guestBadge = state.isGuest ? `<div style="text-align:center; margin-bottom:16px;"><span class="badge" style="background:#FFF8E1;color:#F57F17;padding:6px 16px;">👁️ وضع العرض لولي الأمر (للقراءة فقط)</span></div>` : '';
+
   infoCard.innerHTML = `
+    ${guestBadge}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;background:#F0F7FF;padding:16px;border-radius:18px;margin-bottom:16px;">
       <div><strong>📅 اليوم:</strong> ${dayName}</div>
       <div><strong>📆 التاريخ:</strong> ${sess.date}</div>
@@ -3123,13 +3132,13 @@ async function renderSingleSession(app) {
 
     <div style="margin-top:12px;">
       <label><strong>📝 التوصيات (اختياري):</strong></label>
-      ${state.role === 'teacher' || state.role === 'admin' ?
+      ${!state.isGuest && (state.role === 'teacher' || state.role === 'admin') ?
         `<textarea id="recommendationsInput" rows="2" style="width:100%;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;margin-top:4px;">${recommendations}</textarea>` :
         `<div style="background:#f9f9f9;padding:8px 12px;border-radius:12px;margin-top:4px;">${recommendations || 'لا توجد توصيات'}</div>`
       }
     </div>
 
-    ${state.role === 'teacher' || state.role === 'admin' ? `
+    ${!state.isGuest && (state.role === 'teacher' || state.role === 'admin') ? `
     <div style="margin-top:12px;">
       <label><strong>🔍 نوع العيب الملاحظ في الجلسة:</strong></label>
       <select id="sessionDisorderSelect" style="width:100%;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);font-family:'Tajawal';font-size:14px;margin-top:4px;background:white;">
@@ -3144,7 +3153,8 @@ async function renderSingleSession(app) {
       <div><strong>📊 التقييم الحالي:</strong> <span style="font-size:18px;font-weight:bold;color:${evalColors[currentEval]};">${evalLabels[currentEval]}</span> ${sess.successRate ? `| 📈 نسبة النجاح: <strong>${sess.successRate}%</strong>` : ''}</div>
       <div><strong>🧑‍🏫 مدرب النطق:</strong> ${teacherName}</div>
     </div>
-    ${state.role === 'teacher' || state.role === 'admin' ? `
+    
+    ${!state.isGuest && (state.role === 'teacher' || state.role === 'admin') ? `
       <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
         <button class="btn-eval" data-value="passed" style="background:#E8F5E9;color:#2E7D32;border:2px solid #2E7D32;border-radius:50px;padding:8px 20px;font-weight:bold;cursor:pointer;${currentEval === 'passed' ? 'box-shadow:0 0 0 3px #2E7D32;' : ''}">✅ اجتاز</button>
         <button class="btn-eval" data-value="trained" style="background:#E3F2FD;color:#0288D1;border:2px solid #0288D1;border-radius:50px;padding:8px 20px;font-weight:bold;cursor:pointer;${currentEval === 'trained' ? 'box-shadow:0 0 0 3px #0288D1;' : ''}">🔄 اجتاز بعد تدريب</button>
@@ -3164,30 +3174,32 @@ async function renderSingleSession(app) {
         <button class="btn btn-danger btn-sm" id="deleteSessBtn" style="border-radius:50px;padding:8px 24px;">🗑️ حذف الجلسة</button>
         <button class="btn btn-success btn-sm" id="sendToParentBtn" style="border-radius:50px;padding:8px 24px;">📤 إرسال لولي الأمر</button>
       </div>
-    ` : `<div style="margin-top:12px;background:#F0F7FF;padding:12px;border-radius:16px;font-size:14px;color:#0288D1;">💡 التقييم متاح للمعلم فقط.</div>`}
+    ` : `<div style="margin-top:12px;background:#F0F7FF;padding:12px;border-radius:16px;font-size:14px;color:#0288D1;">💡 ${state.isGuest ? 'أزرار التقييم والتعديل مخفية في وضع القراءة.' : 'التقييم متاح للمعلم فقط.'}</div>`}
   `;
   app.appendChild(infoCard);
 
-  const sendToParentBtn = infoCard.querySelector('#sendToParentBtn');
-  if (sendToParentBtn) {
-    sendToParentBtn.onclick = () => {
-      const studentData = state.currentStudent || {};
-      const sessionData = {
-        ...sess,
-        recommendations: document.getElementById('recommendationsInput')?.value || sess.recommendations || '',
-        evaluation: sess.evaluation || 'none',
-        successRate: sess.successRate || 0
+  if (!state.isGuest) {
+    const sendToParentBtn = infoCard.querySelector('#sendToParentBtn');
+    if (sendToParentBtn) {
+      sendToParentBtn.onclick = () => {
+        const studentData = state.currentStudent || {};
+        const sessionData = {
+          ...sess,
+          recommendations: document.getElementById('recommendationsInput')?.value || sess.recommendations || '',
+          evaluation: sess.evaluation || 'none',
+          successRate: sess.successRate || 0
+        };
+        if (typeof window.sendSessionToParent === 'function') {
+          window.sendSessionToParent(sessionData, studentData);
+        } else {
+          showToast('⚠️ دالة الإرسال غير متوفرة');
+        }
       };
-      if (typeof window.sendSessionToParent === 'function') {
-        window.sendSessionToParent(sessionData, studentData);
-      } else {
-        showToast('⚠️ دالة الإرسال غير متوفرة');
-      }
-    };
+    }
   }
 
-  /* ===== 🤖 أدوات الذكاء الاصطناعي ===== */
-  if (state.role === 'teacher' || state.role === 'admin') {
+  /* ===== 🤖 أدوات الذكاء الاصطناعي (للمعلم فقط) ===== */
+  if (!state.isGuest && (state.role === 'teacher' || state.role === 'admin')) {
     if (typeof window.createAIButton === 'function') {
       const aiSection = document.createElement('div');
       aiSection.className = 'card';
@@ -3213,13 +3225,12 @@ async function renderSingleSession(app) {
         const storyBtn = window.createShortStoryButton(sess, state.currentStudent || {});
         buttonsContainer.appendChild(storyBtn);
       }
-
       app.appendChild(aiSection);
     }
   }
 
-  /* ===== ربط الأحداث ===== */
-  if (state.role === 'teacher' || state.role === 'admin') {
+  /* ===== ربط أحداث أزرار التقييم (للمعلم فقط) ===== */
+  if (!state.isGuest && (state.role === 'teacher' || state.role === 'admin')) {
     let selectedEval = currentEval;
     let selectedRate = sess.successRate || 0;
     let selectedDisorder = currentDisorderType;
@@ -3341,26 +3352,30 @@ async function renderSingleSession(app) {
     };
   }
 
-  /* ===== بطاقة التدريب ===== */
+  /* ===== بطاقة التدريب الصوتي ===== */
   const trainCard = document.createElement('div');
   trainCard.className = 'card';
   trainCard.style.borderRadius = '24px';
   let content = '';
   const st = sess.sessionType || 1;
 
+  // إخفاء منطقة التسجيل في وضع الزائر إذا لم يكن هناك تسجيل محفوظ
+  const showBefore = sess.beforeRecording || !state.isGuest;
+  const showAfter = sess.afterRecording || (!state.isGuest && sess.beforeRecording);
+
   const recordSection = `
     <div style="margin:16px 0;">
-      <div id="beforeSection" style="background:#FFF3E0;border:2px solid #FF9800;border-radius:16px;padding:14px;margin-bottom:12px;">
+      <div id="beforeSection" style="background:#FFF3E0;border:2px solid #FF9800;border-radius:16px;padding:14px;margin-bottom:12px;display:${showBefore ? 'block' : 'none'};">
         <h4 style="margin:0 0 8px 0;color:#E65100;">🔴 تسجيل قبل التدريب</h4>
         <div id="beforeContent" style="text-align:center;">
-          <button class="btn-record" id="recordBeforeBtn" data-letter="${letter}">🎤 سجل الآن</button>
+          ${!state.isGuest ? `<button class="btn-record" id="recordBeforeBtn" data-letter="${letter}">🎤 سجل الآن</button>` : ''}
         </div>
         <div id="beforePreview" style="margin-top:10px;"></div>
       </div>
-      <div id="afterSection" style="background:#E8F5E9;border:2px solid #4CAF50;border-radius:16px;padding:14px;display:none;">
+      <div id="afterSection" style="background:#E8F5E9;border:2px solid #4CAF50;border-radius:16px;padding:14px;display:${showAfter ? 'block' : 'none'};">
         <h4 style="margin:0 0 8px 0;color:#1B5E20;">🟢 تسجيل بعد التدريب</h4>
         <div id="afterContent" style="text-align:center;">
-          <button class="btn-record" id="recordAfterBtn" data-letter="${letter}">🎤 سجل الآن</button>
+          ${!state.isGuest ? `<button class="btn-record" id="recordAfterBtn" data-letter="${letter}">🎤 سجل الآن</button>` : ''}
         </div>
         <div id="afterPreview" style="margin-top:10px;"></div>
       </div>
@@ -3435,189 +3450,7 @@ async function renderSingleSession(app) {
                 <button class="speak-btn" onclick="speakText('${sentence}')" style="background:var(--mint);color:white;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;">🔊</button>
               </span>
             </div>
-          `).join('')}
-        </div>
-        ${recordSection}
-      </div>
-    `;
-  }
-
-  trainCard.innerHTML = content;
-  app.appendChild(trainCard);
-
-  /* ===== 🆕 إضافة زر "توليد محتوى الحرف" (للمعلم فقط) ===== */
-  if (state.role === 'teacher' || state.role === 'admin') {
-    const generateLetterSection = document.createElement('div');
-    generateLetterSection.className = 'card';
-    generateLetterSection.style.cssText = 'background:linear-gradient(135deg, #F3E8FF, #EDE9FE);border:2px solid #7C3AED;text-align:center;margin-top:16px;';
-    generateLetterSection.innerHTML = `
-      <h3 style="color:#6D28D9;margin-bottom:8px;">📚 توليد محتوى هذا الحرف بالذكاء الاصطناعي</h3>
-      <p style="font-size:13px;color:#555;margin-bottom:12px;">
-        إذا لم تكن بيانات الحرف كافية، يمكنك توليدها بالذكاء الاصطناعي (حركات + كلمات + جمل).
-      </p>
-      <div id="generateLetterContainer" style="text-align:center;"></div>
-    `;
-    const genContainer = generateLetterSection.querySelector('#generateLetterContainer');
-    if (typeof window.createGenerateLetterButton === 'function') {
-      const genBtn = window.createGenerateLetterButton(letter, () => {
-        setTimeout(() => { renderSingleSession(app); }, 1000);
-      });
-      genContainer.appendChild(genBtn);
-    } else {
-      genContainer.innerHTML = '<p class="muted">⚠️ ميزة التوليد غير متوفرة</p>';
-    }
-    app.appendChild(generateLetterSection);
-  }
-
-  /* ===== 🆕 إضافة أزرار توليد الصور بجانب الكلمات (للمعلم) ===== */
-  if (state.role === 'teacher' || state.role === 'admin') {
-    if (typeof window.createImageButton === 'function') {
-      trainCard.querySelectorAll('.word-chip').forEach(chip => {
-        const word = chip.dataset.word;
-        if (word) {
-          const imgBtn = window.createImageButton(word);
-          chip.appendChild(imgBtn);
-        }
-      });
-
-      trainCard.querySelectorAll('.sentence-actions').forEach(container => {
-        const sentence = container.dataset.sentence;
-        if (sentence) {
-          const mainWord = sentence.split(' ')[0].replace(/[.,!؟]/g, '');
-          if (mainWord && mainWord.length > 2) {
-            const imgBtn = window.createImageButton(mainWord);
-            container.appendChild(imgBtn);
-          }
-        }
-      });
-    }
-  }
-
-     /* ═══ [SEC-42-B] منطق التسجيل (قبل/بعد) ═══ */
-  const beforeSection = trainCard.querySelector('#beforeSection');
-  const afterSection = trainCard.querySelector('#afterSection');
-  const beforeContent = trainCard.querySelector('#beforeContent');
-  const afterContent = trainCard.querySelector('#afterContent');
-  const beforePreview = trainCard.querySelector('#beforePreview');
-  const afterPreview = trainCard.querySelector('#afterPreview');
-
-  // ─── دالة موحّدة لمعالجة التسجيل ───
-  function setupRecording(btnId, type, previewEl, contentEl, nextSection) {
-    const btn = trainCard.querySelector('#' + btnId);
-    if (!btn) return;
-    btn.onclick = function() {
-      const l = this.dataset.letter;
-      contentEl.innerHTML = '<div style="color:#0288D1;font-weight:bold;">⏳ جاري التسجيل... انطق الآن</div>';
-
-      startLetterRecording(l, async (transcript, analysis, audioUrl) => {
-        // 1) فشل التسجيل
-        if (!audioUrl) {
-          contentEl.innerHTML = `<button class="btn-record" id="${btnId}" data-letter="${l}">🎤 حاول مرة أخرى</button>`;
-          setupRecording(btnId, type, previewEl, contentEl, nextSection);
-          showToast('❌ تعذر التسجيل');
-          return;
-        }
-
-        // 2) عرض المشغّل + زر الحفظ
-        previewEl.innerHTML = `
-          <div style="padding:10px;background:white;border:2px dashed #0288D1;border-radius:12px;">
-            <audio controls src="${audioUrl}" style="width:100%;margin-bottom:8px;"></audio>
-            <div style="text-align:center;">
-              <button class="btn btn-success btn-sm" id="save-${type}-btn" style="border-radius:50px;padding:8px 24px;">💾 حفظ تسجيل "${type === 'before' ? 'قبل' : 'بعد'}"</button>
-            </div>
-          </div>
-        `;
-
-        // 3) معالج زر الحفظ
-        const saveBtn = previewEl.querySelector('#save-' + type + '-btn');
-        saveBtn.onclick = async () => {
-          saveBtn.disabled = true;
-          saveBtn.textContent = '⏳ جاري الحفظ...';
-          try {
-            // جلب الـ Blob من URL
-            const response = await fetch(audioUrl);
-            const blob = await response.blob();
-            // تحويل إلى Base64
-            const base64 = await blobToBase64(blob);
-            // البيانات
-            const recordingKey = type === 'before' ? 'beforeRecording' : 'afterRecording';
-            const recordingData = {
-              base64: base64,
-              savedAt: new Date().toISOString(),
-              size: blob.size
-            };
-            // حفظ في Firestore
-            await updateDoc(doc(db, "sessions", sess.id), { [recordingKey]: recordingData });
-            // تحديث state
-            if (type === 'before') { sess.beforeRecording = recordingData; }
-            else { sess.afterRecording = recordingData; }
-
-            showToast('✅ تم حفظ تسجيل "' + (type === 'before' ? 'قبل' : 'بعد') + '"');
-
-            // عرض النسخة المحفوظة
-            previewEl.innerHTML = `
-              <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
-                <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تم الحفظ — ${new Date().toLocaleString('ar-SA')}</div>
-                <audio controls src="${base64}" style="width:100%;"></audio>
-              </div>
-            `;
-            contentEl.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">✅ تم تسجيل "' + (type === 'before' ? 'قبل التدريب' : 'بعد التدريب') + '"</div>';
-
-            // إظهار القسم التالي
-            if (nextSection && nextSection.style.display === 'none') {
-              nextSection.style.display = 'block';
-              setTimeout(() => nextSection.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
-              if (type === 'before') {
-                setupRecording('recordAfterBtn', 'after', afterPreview, afterContent, null);
-              }
-            } else if (type === 'after') {
-              showToast('🎉 اكتمل التوثيق (قبل + بعد)!');
-            }
-          } catch (e) {
-            console.error('خطأ في الحفظ:', e);
-            showToast('❌ خطأ: ' + e.message);
-            saveBtn.disabled = false;
-            saveBtn.textContent = '💾 إعادة المحاولة';
-          }
-        };
-      });
-    };
-  }
-
-  // ─── التحقق من التسجيلات المحفوظة مسبقاً ───
-  const hasBefore = !!(sess.beforeRecording && sess.beforeRecording.base64);
-  const hasAfter = !!(sess.afterRecording && sess.afterRecording.base64);
-
-  if (hasBefore) {
-    beforePreview.innerHTML = `
-      <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
-        <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تسجيل "قبل" — ${new Date(sess.beforeRecording.savedAt).toLocaleString('ar-SA')}</div>
-        <audio controls src="${sess.beforeRecording.base64}" style="width:100%;"></audio>
-      </div>
-    `;
-    beforeContent.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">✅ تم تسجيل "قبل التدريب"</div>';
-    afterSection.style.display = 'block';
-  }
-
-  if (hasAfter) {
-    afterPreview.innerHTML = `
-      <div style="padding:10px;background:white;border:2px solid #4CAF50;border-radius:12px;">
-        <div style="font-size:13px;color:#2E7D32;font-weight:bold;margin-bottom:6px;">✅ تسجيل "بعد" — ${new Date(sess.afterRecording.savedAt).toLocaleString('ar-SA')}</div>
-        <audio controls src="${sess.afterRecording.base64}" style="width:100%;"></audio>
-      </div>
-    `;
-    afterContent.innerHTML = '<div style="color:#2E7D32;font-weight:bold;">🎉 اكتمل التوثيق (قبل + بعد)</div>';
-  }
-
-  // ─── ربط الأزرار ───
-  if (!hasBefore) {
-    setupRecording('recordBeforeBtn', 'before', beforePreview, beforeContent, afterSection);
-  }
-  if (hasBefore && !hasAfter) {
-    setupRecording('recordAfterBtn', 'after', afterPreview, afterContent, null);
-  }
-}
-/* ─── [END SEC-42] ─── */
+          `).join(
 
 /* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion ─── */
 async function checkAndSuggestMastery(studentId, letter) {
@@ -5025,14 +4858,19 @@ function printTeacherAchievement(teacherName, existingFiles, extraData = {}) {
 /* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
 async function renderAchievement(app) {
   if (!state.currentStudent) {
-    showToast('اختر طالباً أولاً');
-    state.view = 'teacher-dashboard';
+    showToast('⚠️ اختر طالباً أولاً أو تأكد من صحة الرابط');
+    state.view = state.isGuest ? 'home' : 'teacher-dashboard';
     return render();
   }
+  
+  // تحديد مسار زر الرجوع بناءً على نوع المستخدم
+  const backTarget = state.isGuest ? 'home' : (state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu');
+  
   renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
-    state.view = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
+    state.view = backTarget;
     render();
   });
+  
   try {
     const studentRef = doc(db, "users", state.currentStudent.id);
     const studentDoc = await getDoc(studentRef);
@@ -5041,18 +4879,22 @@ async function renderAchievement(app) {
     const passedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'passed');
     const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
     const trainedLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'trained');
+    
     const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
     const sessionsSnap = await getDocs(sessionsQuery);
     const sessions = [];
     sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
     sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
+    
     const totalSessions = sessions.length;
     const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
     const averageSuccess = evaluatedSessions.length > 0
       ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
       : 0;
+      
     const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
     const points = calculateStudentPoints(studentData);
+    
     let achievementLevel = '';
     let achievementIcon = '';
     if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
@@ -5071,6 +4913,7 @@ async function renderAchievement(app) {
         <div style="font-size:60px;">${achievementIcon}</div>
         <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
         <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
+        ${state.isGuest ? `<div style="margin-top:10px;"><span class="badge" style="background:#FFF8E1;color:#F57F17;padding:6px 16px;">👁️ وضع العرض لولي الأمر (للقراءة والطباعة فقط)</span></div>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
         <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
@@ -5125,6 +4968,7 @@ async function renderAchievement(app) {
       </div>
     `;
     app.appendChild(card);
+    
     const printBtn = card.querySelector('#printAchievementBtn');
     if (printBtn) {
       printBtn.onclick = () => {
