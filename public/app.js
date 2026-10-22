@@ -614,6 +614,8 @@ let state = {
   view: 'home',
   user: null,
   role: null,
+  isGuest: false,          // إضافة حالة الزائر
+  targetTeacherId: null,   // إضافة معرف المعلم المطلوب للمدير
   myStudents: [],
   freeStudents: [],
   currentStudent: null,
@@ -632,6 +634,7 @@ let iepPrintArea = null;
 let toastTimer = null;
 let diagnosticAudio = { letters: {}, words: {} };
 /* ─── [END SEC-17] ─── */
+
 
 
 /* ─── [SEC-18] التنبيهات — Toast + Notification ─── */
@@ -952,12 +955,26 @@ function render() {
     }
   }
 
+  // 4. تحديث معرف المعلم (teacherId) لملف إنجاز المعلم
+  if (state.view === 'teacher-achievement' && state.user?.uid && !state.isGuest) {
+    if (currentUrl.searchParams.get('teacherId') !== state.user.uid) {
+      currentUrl.searchParams.set('teacherId', state.user.uid);
+      urlChanged = true;
+    }
+  } else if (state.view !== 'teacher-achievement') {
+    if (currentUrl.searchParams.has('teacherId')) {
+      currentUrl.searchParams.delete('teacherId');
+      urlChanged = true;
+    }
+  }
+
   // تحديث شريط المتصفح بدون إعادة تحميل
   if (urlChanged) {
     window.history.pushState({ 
       view: state.view, 
       studentId: state.currentStudent?.id,
-      sessionId: state.currentSession?.id 
+      sessionId: state.currentSession?.id,
+      teacherId: state.user?.uid
     }, '', currentUrl.toString());
   }
   // ------------------------------------------------------------
@@ -996,6 +1013,7 @@ window.addEventListener('popstate', (event) => {
 
 window.render = render;
 /* ─── [END SEC-25] ─── */
+
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -5139,72 +5157,55 @@ function printAchievement(student, data) {
 function initApp() {
   initAccessibility();
   
-  // قراءة الرابط عند بداية التشغيل لمعرفة الصفحة والبيانات المطلوبة
   const currentUrl = new URL(window.location);
   const requestedView = currentUrl.searchParams.get('view');
   const requestedStudentId = currentUrl.searchParams.get('studentId');
   const requestedSessionId = currentUrl.searchParams.get('sessionId');
-  
+  const requestedTeacherId = currentUrl.searchParams.get('teacherId'); // معرف المعلم للمدير
+
+  // الصفحات المسموح بمشاركتها للزوار
+  const guestAllowedViews = ['teacher-achievement', 'achievement', 'single-session', 'iep-single-student'];
+
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       state.user = user;
-      
-      // 1. جلب بيانات المستخدم الأساسية
+      state.isGuest = false;
       await fetchUserData(user.uid); 
-      
-      // 2. معالجة الرابط المباشر (Deep Link) إذا كان يطلب صفحة داخلية
-      if (requestedView && requestedView !== 'home' && requestedView !== 'auth' && requestedView !== 'teacher-dashboard' && requestedView !== 'student-menu') {
-        
-        try {
-          // جلب بيانات الجلسة إذا كانت مطلوبة بالرابط
-          if (requestedSessionId) {
-            const sessionDoc = await getDoc(doc(db, "sessions", requestedSessionId));
-            if (sessionDoc.exists()) {
-              state.currentSession = { id: sessionDoc.id, ...sessionDoc.data() };
-              // جلب الطالب المرتبط بالجلسة تلقائياً لضمان اكتمال البيانات
-              if (!requestedStudentId && state.currentSession.studentId) {
-                 const sDoc = await getDoc(doc(db, "users", state.currentSession.studentId));
-                 if (sDoc.exists()) {
-                   state.currentStudent = { id: sDoc.id, ...sDoc.data() };
-                   state.diagEval = state.currentStudent.diagnostic || {};
-                 }
-              }
-            }
-          }
-
-          // جلب بيانات الطالب إذا كانت مطلوبة بالرابط
-          if (requestedStudentId) {
-            const studentDoc = await getDoc(doc(db, "users", requestedStudentId));
-            if (studentDoc.exists()) {
-              state.currentStudent = { id: studentDoc.id, ...studentDoc.data() };
-              state.diagEval = state.currentStudent.diagnostic || {};
-              if (state.currentStudent.comprehensive) {
-                state.comprehensive = state.currentStudent.comprehensive;
-              }
-            }
-          }
-          
-        } catch (error) {
-          console.error("خطأ في جلب بيانات الرابط المباشر:", error);
-        }
-        
-        // الانتقال للصفحة المطلوبة بعد أن أصبحت البيانات جاهزة في الذاكرة
-        state.view = requestedView;
-        render();
-      }
     } else {
-      // إذا كان الزائر غير مسجل الدخول
       state.user = null;
       state.role = null;
-      state.currentStudent = null;
-      state.currentSession = null;
-      const publicViews = ['home', 'auth', 'register', 'reset-password'];
-      state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
-      render();
+      
+      // إذا كان الرابط المطلوب من ضمن الصفحات المسموحة للزوار
+      if (requestedView && guestAllowedViews.includes(requestedView)) {
+         state.isGuest = true;
+         state.view = requestedView;
+         state.targetTeacherId = requestedTeacherId || null;
+         
+         try {
+           // جلب بيانات الطالب إذا كانت مطلوبة
+           if (requestedStudentId) {
+              const sDoc = await getDoc(doc(db, "users", requestedStudentId));
+              if (sDoc.exists()) state.currentStudent = { id: sDoc.id, ...sDoc.data() };
+           }
+           // جلب بيانات الجلسة إذا كانت مطلوبة
+           if (requestedSessionId) {
+              const sessDoc = await getDoc(doc(db, "sessions", requestedSessionId));
+              if (sessDoc.exists()) state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
+           }
+         } catch(e) { console.error("خطأ في جلب بيانات الزائر:", e); }
+         
+         render(); // عرض الصفحة للزائر
+      } else {
+         // إذا طلب صفحة أخرى، يعود للرئيسية
+         const publicViews = ['home', 'auth', 'register', 'reset-password'];
+         state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
+         render();
+      }
     }
   });
 }
 /* ─── [END SEC-58] ─── */
+
 
 
 /* ─── [SEC-59] تصدير Firebase للذكاء الاصطناعي — Export Firebase ─── */
