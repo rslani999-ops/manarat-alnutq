@@ -2451,7 +2451,7 @@ function renderDiagnosticSession(app) {
       try {
         await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
         showToast('تم مسح تشخيص الحروف');
-        renderDiagnosticSession(app);
+        render(); // ✅ تم التعديل هنا
       } catch (e) { showToast('خطأ في المسح'); }
     }
   };
@@ -2582,7 +2582,7 @@ function renderDiagnosticSession(app) {
           const v = this.dataset.value;
           if (!state.diagEval[l]) state.diagEval[l] = {};
           state.diagEval[l].status = v;
-          renderDiagnosticSession(app);
+          render(); // ✅ تم التعديل هنا
         };
       });
 
@@ -2711,6 +2711,7 @@ function renderDiagnosticSession(app) {
   });
 }
 /* ─── [END SEC-38] ─── */
+           
 
 /* ─── [SEC-39] توليد الخطة الفردية — IEP Generator ─── */
 function generateIEP(passed, trained, need, unclear, student) {
@@ -2850,7 +2851,6 @@ async function renderStudentMenu(app) {
 }
 /* ─── [END SEC-40] ─── */
 
-
 /* ─── [SEC-41] إدارة جلسات التدريب — Speech Sessions ─── */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
@@ -2910,7 +2910,7 @@ async function renderSpeechSessions(app) {
         <label style="font-weight:bold;display:block;margin-bottom:4px;">📚 نوع الجلسة:</label>
         <select id="sessType">
           ${SESSION_TYPES.map(t => `
-            <option value="${t.id}" ${t.id === defaultSessionType ? 'selected' : ''}>${t.icon} ${t.name}</option>
+            <option value="${t.id}" ${t.id === defaultSessionType ? 'selected' : ''}>${t.icon}${t.name}</option>
           `).join('')}
         </select>
       </div>
@@ -2996,7 +2996,7 @@ async function renderSpeechSessions(app) {
       });
       showToast(`✅ تمت إضافة الجلسة رقم (${sessionNumber}) بنجاح!`);
       showNotification(`تمت إضافة جلسة جديدة لحرف ${letter}`, 'success');
-      renderSpeechSessions(app);
+      render(); // ✅ تم التعديل هنا
     } catch (e) {
       console.error(e);
       showToast('❌ فشل في إضافة الجلسة');
@@ -3058,6 +3058,7 @@ async function renderSpeechSessions(app) {
   app.appendChild(listCard);
 }
 /* ─── [END SEC-41] ─── */
+
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -3277,7 +3278,7 @@ async function renderSingleSession(app) {
         });
         showToast('تم حفظ التقييم والتوصيات');
         state.currentSession = { ...sess, evaluation: selectedEval, successRate: selectedRate, recommendations: recText, disorderType: selectedDisorder };
-        renderSingleSession(app);
+        render(); // ✅ تم التعديل هنا
         checkAndSuggestMastery(sess.studentId, sess.letter);
       } catch (e) { showToast('خطأ: ' + e.message); }
     };
@@ -3290,7 +3291,7 @@ async function renderSingleSession(app) {
         });
         showToast('تم إعادة ضبط التقييم');
         state.currentSession = { ...sess, evaluation: 'none', successRate: 0, recommendations: '', disorderType: 'طبيعي' };
-        renderSingleSession(app);
+        render(); // ✅ تم التعديل هنا
       } catch (e) { showToast('خطأ: ' + e.message); }
     };
 
@@ -3445,7 +3446,7 @@ async function renderSingleSession(app) {
     `;
     const genContainer = generateLetterSection.querySelector('#generateLetterContainer');
     if (typeof window.createGenerateLetterButton === 'function') {
-      genContainer.appendChild(window.createGenerateLetterButton(letter, () => { setTimeout(() => { renderSingleSession(app); }, 1000); }));
+      genContainer.appendChild(window.createGenerateLetterButton(letter, () => { setTimeout(() => { render(); /* ✅ تم التعديل هنا */ }, 1000); }));
     }
     app.appendChild(generateLetterSection);
 
@@ -3546,6 +3547,7 @@ async function renderSingleSession(app) {
   }
 }
 /* ─── [END SEC-42] ─── */
+
 /* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion ─── */
 async function checkAndSuggestMastery(studentId, letter) {
   try {
