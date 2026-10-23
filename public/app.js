@@ -5074,47 +5074,51 @@ function printTeacherAchievement(teacherName, existingFiles, extraData = {}) {
 
          
 
-/* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement ─── */
+/* ─── [SEC-57] ملف الإنجاز الرقمي للطالب — Student Achievement (v2: يدعم قواعد الأمان) ─── */
 async function renderAchievement(app) {
   if (!state.currentStudent) {
     showToast('⚠️ اختر طالباً أولاً أو تأكد من صحة الرابط');
-    state.view = state.isGuest ? 'home' : 'teacher-dashboard';
+    state.view = state.role === 'teacher' || state.role === 'admin' ? 'teacher-dashboard' : 'home';
     return render();
   }
-  
-  const backTarget = state.isGuest ? 'home' : (state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu');
-  
+
+  const backTarget = state.role === 'teacher' || state.role === 'admin' ? 'student-achievement-list' : 'student-menu';
+
   renderTopbar(app, '🏆 ملف الإنجاز', `${state.currentStudent.fullName || state.currentStudent.email}`, () => {
     state.view = backTarget;
     render();
   });
-  
+
   try {
     const studentRef = doc(db, "users", state.currentStudent.id);
     const studentDoc = await getDoc(studentRef);
     const studentData = studentDoc.exists() ? studentDoc.data() : {};
     const diag = studentData.diagnostic || {};
-    
-    // تصحيح فلاتر الحروف لتفادي الأخطاء في المتصفحات
+
     const passedLetters = ALL_LETTERS.filter(l => diag[l] && diag[l].status === 'passed');
     const needLetters = ALL_LETTERS.filter(l => diag[l] && (diag[l].status === 'need' || diag[l].status === 'unclear'));
     const trainedLetters = ALL_LETTERS.filter(l => diag[l] && diag[l].status === 'trained');
-    
-    const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+
+    // ✅ فلترة بـ teacherId (متوافق مع قواعد الأمان الجديدة)
+    const sessionsQuery = query(
+      collection(db, "sessions"),
+      where("studentId", "==", state.currentStudent.id),
+      where("teacherId", "==", state.user.uid)
+    );
     const sessionsSnap = await getDocs(sessionsQuery);
     const sessions = [];
     sessionsSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
     sessions.sort((a, b) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
-    
+
     const totalSessions = sessions.length;
     const evaluatedSessions = sessions.filter(s => s.evaluation && s.evaluation !== 'none');
     const averageSuccess = evaluatedSessions.length > 0
       ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
       : 0;
-      
+
     const masteryPercentage = Math.round((passedLetters.length / ALL_LETTERS.length) * 100);
     const points = calculateStudentPoints(studentData);
-    
+
     let achievementLevel = '';
     let achievementIcon = '';
     if (masteryPercentage >= 80) { achievementLevel = 'ممتاز'; achievementIcon = '🌟'; }
@@ -5133,7 +5137,6 @@ async function renderAchievement(app) {
         <div style="font-size:60px;">${achievementIcon}</div>
         <h2 style="margin:10px 0;color:var(--mint-deep);">${state.currentStudent.fullName || state.currentStudent.email}</h2>
         <p style="font-size:16px;color:#555;">${state.currentStudent.email || ''}</p>
-        ${state.isGuest ? `<div style="margin-top:10px;"><span class="badge" style="background:#FFF8E1;color:#F57F17;padding:6px 16px;">👁️ وضع العرض لولي الأمر (للقراءة والطباعة فقط)</span></div>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
         <div style="background:white;padding:15px;border-radius:12px;text-align:center;">
@@ -5188,7 +5191,7 @@ async function renderAchievement(app) {
       </div>
     `;
     app.appendChild(card);
-    
+
     const printBtn = card.querySelector('#printAchievementBtn');
     if (printBtn) {
       printBtn.onclick = () => {
