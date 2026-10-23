@@ -2405,8 +2405,28 @@ function renderComprehensiveDiagnosis(container) {
 /* ─── [END SEC-37] ─── */
 
 
-/* ─── [SEC-38] التشخيص المتقدم — Advanced Diagnostic ─── */
+/* ─── [SEC-38] التشخيص المتقدم — Advanced Diagnostic (v2: محمي من مسح البيانات) ─── */
 function renderDiagnosticSession(app) {
+  // 🔒 حماية: التأكد من وجود طالب
+  if (!state.currentStudent) {
+    showToast('⚠️ اختر طالباً أولاً');
+    state.view = 'teacher-dashboard';
+    return render();
+  }
+
+  // 🔄 تهيئة ذكية: تحميل بيانات الطالب الحقيقي فقط عند تغيّر الطالب
+  if (state._diagLoadedFor !== state.currentStudent.id) {
+    state.diagEval = { ...(state.currentStudent.diagnostic || {}) };
+    state.comprehensive = {
+      hearing: 'normal', hearingAid: 'none', vision: 'normal', movement: 'none',
+      attention: 'stable', comprehension: 'normal', physical: 'normal',
+      psychological: 'stable', scans: 'none', surgeries: 'none',
+      scanDetails: '', surgeryDetails: '',
+      ...(state.currentStudent.comprehensive || {})
+    };
+    state._diagLoadedFor = state.currentStudent.id;
+  }
+
   renderTopbar(app, `تشخيص: ${state.currentStudent?.fullName || state.currentStudent?.email}`, 'تقييم شامل + تشخيص الحروف المتقدم', () => {
     state.view = 'teacher-dashboard';
     render();
@@ -2447,11 +2467,12 @@ function renderDiagnosticSession(app) {
   if (resetDiagBtn) resetDiagBtn.onclick = async () => {
     if (confirm('هل أنت متأكد؟ سيتم مسح تشخيص الحروف بالكامل.')) {
       state.diagEval = {};
+      state.currentStudent.diagnostic = {};   // ✅ مزامنة الحالة المحلية
       diagnosticAudio = { letters: {}, words: {} };
       try {
         await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
         showToast('تم مسح تشخيص الحروف');
-        render(); // ✅ تم التعديل هنا
+        render();
       } catch (e) { showToast('خطأ في المسح'); }
     }
   };
@@ -2464,6 +2485,11 @@ function renderDiagnosticSession(app) {
         diagnostic: state.diagEval,
         comprehensive: state.comprehensive
       });
+
+      // ✅ مزامنة الحالة المحلية (ليعرفها النظام عند التنقل بين الطلاب)
+      state.currentStudent.diagnostic = { ...state.diagEval };
+      state.currentStudent.comprehensive = { ...state.comprehensive };
+
       const letters = state.diagEval || {};
       const passed = []; const trained = []; const need = []; const unclear = [];
       Object.keys(letters).forEach(letter => {
@@ -2582,11 +2608,11 @@ function renderDiagnosticSession(app) {
           const v = this.dataset.value;
           if (!state.diagEval[l]) state.diagEval[l] = {};
           state.diagEval[l].status = v;
-          render(); // ✅ تم التعديل هنا
+          render();
         };
       });
 
-      /* ═══ [إصلاح] تسجيل الحرف — يستخدم MediaRecorder بدلاً من SpeechRecognition ═══ */
+      /* ═══ تسجيل الحرف — MediaRecorder ═══ */
       const recordLetterBtn = card.querySelector(`#recordLetterBtn_${letter}`);
       if (recordLetterBtn) {
         recordLetterBtn.onclick = function() {
@@ -2595,17 +2621,14 @@ function renderDiagnosticSession(app) {
           if (feedbackEl) feedbackEl.innerHTML = '⏳ جاري التسجيل...';
 
           startLetterRecording(l, (transcript, analysis, audioUrl) => {
-            // 1) فشل التسجيل تماماً
             if (!audioUrl) {
               if (feedbackEl) feedbackEl.innerHTML = '❌ تعذر التسجيل. تأكد من صلاحية الميكروفون ثم حاول مجدداً.';
               return;
             }
 
-            // 2) نجهّز الرسالة الافتراضية (تشجيع دائماً)
             let msg = '🎉 أحسنت! استمع لتسجيلك ثم اختر التقييم المناسب.';
             let msgColor = '#0a7a0a';
 
-            // 3) لو نجح التعرف على النص (نادر مع الحرف المفرد) نضيف التفاصيل
             if (transcript && analysis) {
               if (!state.diagEval[l]) state.diagEval[l] = {};
               state.diagEval[l].disorderType = analysis.disorderType;
@@ -2617,7 +2640,6 @@ function renderDiagnosticSession(app) {
               }
             }
 
-            // 4) نعرض المشغّل + الرسالة (بدون إعادة رسم الصفحة حتى لا تختفي)
             const html =
               '<div style="margin-top:8px;padding:10px;background:#E8F5E9;border:2px solid #4CAF50;border-radius:10px;">' +
               `<audio controls src="${audioUrl}" style="width:100%;margin-bottom:6px;"></audio>` +
