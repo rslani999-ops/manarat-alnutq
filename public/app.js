@@ -2895,7 +2895,8 @@ async function renderStudentMenu(app) {
 }
 /* ─── [END SEC-40] ─── */
 
-/* ─── [SEC-41] إدارة جلسات التدريب — Speech Sessions ─── */
+
+/* ─── [SEC-41] إدارة جلسات التدريب — Speech Sessions (v2: يدعم قواعد الأمان) ─── */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
@@ -2916,7 +2917,12 @@ async function renderSpeechSessions(app) {
 
   let existingSessions = [];
   try {
-    const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+    // ✅ فلترة بـ teacherId (متوافق مع قواعد الأمان الجديدة)
+    const qS = query(
+      collection(db, "sessions"),
+      where("studentId", "==", state.currentStudent.id),
+      where("teacherId", "==", state.user.uid)
+    );
     const snap = await getDocs(qS);
     snap.forEach(d => existingSessions.push({ id: d.id, ...d.data() }));
   } catch (e) { console.error('خطأ في جلب الجلسات:', e); }
@@ -3014,9 +3020,18 @@ async function renderSpeechSessions(app) {
       return;
     }
     try {
-      const qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+      // ✅ فلترة بـ teacherId
+      const qCount = query(
+        collection(db, "sessions"),
+        where("studentId", "==", state.currentStudent.id),
+        where("teacherId", "==", state.user.uid)
+      );
       const snapCount = await getDocs(qCount);
       const sessionNumber = snapCount.size + 1;
+
+      // ✅ مزامنة نوع العيب من التشخيص
+      const letterDiagnostic = state.currentStudent?.diagnostic?.[letter] || state.diagEval?.[letter] || {};
+      const syncedDisorderType = letterDiagnostic.disorderType || 'طبيعي';
 
       await addDoc(collection(db, "sessions"), {
         studentId: state.currentStudent.id,
@@ -3036,11 +3051,12 @@ async function renderSpeechSessions(app) {
         successRate: 0,
         notes: '',
         recommendations: '',
+        disorderType: syncedDisorderType,
         createdAt: new Date().toISOString()
       });
       showToast(`✅ تمت إضافة الجلسة رقم (${sessionNumber}) بنجاح!`);
       showNotification(`تمت إضافة جلسة جديدة لحرف ${letter}`, 'success');
-      render(); // ✅ تم التعديل هنا
+      render();
     } catch (e) {
       console.error(e);
       showToast('❌ فشل في إضافة الجلسة');
@@ -3051,7 +3067,12 @@ async function renderSpeechSessions(app) {
   listCard.className = 'card';
   listCard.innerHTML = '<h3>📋 الجلسات المسجلة للطالب</h3>';
   try {
-    const qS = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+    // ✅ فلترة بـ teacherId
+    const qS = query(
+      collection(db, "sessions"),
+      where("studentId", "==", state.currentStudent.id),
+      where("teacherId", "==", state.user.uid)
+    );
     const snap = await getDocs(qS);
     if (snap.empty) {
       listCard.innerHTML += '<p class="muted">لا توجد جلسات سابقة.</p>';
@@ -3102,7 +3123,6 @@ async function renderSpeechSessions(app) {
   app.appendChild(listCard);
 }
 /* ─── [END SEC-41] ─── */
-
 
 
 /* ═══════════════════════════════════════════════════════════
