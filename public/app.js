@@ -3580,9 +3580,16 @@ async function checkAndSuggestMastery(studentId, letter) {
 /* ─── [END SEC-43] ─── */
 
 
-/* ─── [SEC-44] سجل الجلسات — Sessions Log ─── */
+/* ─── [SEC-44] سجل الجلسات — Sessions Log (جلسات المعلم فقط) ─── */
 async function renderSessionsLog(app) {
-  renderTopbar(app, '📊 جدول سجل الجلسات', 'جميع الجلسات مرتبة حسب التاريخ', () => {
+  // 🔒 حماية: التأكد من تسجيل الدخول
+  if (!state.user) {
+    showToast('⚠️ يجب تسجيل الدخول أولاً');
+    state.view = 'home';
+    return render();
+  }
+
+  renderTopbar(app, '📊 جدول سجل الجلسات', 'جلساتك المسجلة مرتبة حسب التاريخ', () => {
     state.view = 'teacher-dashboard';
     render();
   });
@@ -3591,10 +3598,9 @@ async function renderSessionsLog(app) {
   card.className = 'card';
   card.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-      <h3 style="margin:0;">📋 جميع الجلسات</h3>
+      <h3 style="margin:0;">📋 جلساتي</h3>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-primary btn-sm" id="printSessionsLogBtn" style="border-radius:50px;padding:6px 16px;">🖨️ طباعة</button>
-        <button class="btn btn-danger btn-sm" id="cleanUnknownSessionsBtn" style="border-radius:50px;padding:6px 16px;">🧹 مسح الجلسات غير المعروفة</button>
       </div>
     </div>
     <div id="sessionsStatsBox" style="background:#F0F9FF; padding:12px; border-radius:10px; margin-bottom:15px; text-align:center; font-size:14px; color:#155E75;"></div>
@@ -3610,27 +3616,6 @@ async function renderSessionsLog(app) {
     printBtn.onclick = () => printSessionsLog();
   }
 
-  const cleanBtn = card.querySelector('#cleanUnknownSessionsBtn');
-  if (cleanBtn) {
-    cleanBtn.onclick = async () => {
-      if (!confirm('سيتم حذف جميع الجلسات التي لا تنتمي لطلابك. متأكد؟')) return;
-      try {
-        const allSessionsSnap = await getDocs(collection(db, "sessions"));
-        const myStudentIds = new Set(state.myStudents.map(s => s.id));
-        let deletedCount = 0;
-        for (const d of allSessionsSnap.docs) {
-          const data = d.data();
-          if (!myStudentIds.has(data.studentId)) {
-            await deleteDoc(doc(db, "sessions", d.id));
-            deletedCount++;
-          }
-        }
-        showToast(`تم حذف ${deletedCount} جلسة`);
-        renderSessionsLog(app);
-      } catch (e) { showToast('خطأ: ' + e.message); }
-    };
-  }
-
   function getStudentNameById(studentId) {
     const allStudents = [...state.myStudents, ...state.freeStudents];
     const found = allStudents.find(s => s.id === studentId);
@@ -3638,8 +3623,10 @@ async function renderSessionsLog(app) {
   }
 
   try {
+    // ✅ جلب جلسات المعلم الحالي فقط
+    const q = query(collection(db, "sessions"), where("teacherId", "==", state.user.uid));
+    const snap = await getDocs(q);
     const allSessions = [];
-    const snap = await getDocs(collection(db, "sessions"));
     snap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
 
     allSessions.sort((a, b) => {
@@ -3652,19 +3639,19 @@ async function renderSessionsLog(app) {
     const statsBox = card.querySelector('#sessionsStatsBox');
     if (statsBox) {
       const totalSessions = allSessions.length;
-      const evaluated = allSessions.filter(s => s.evaluation && s.evaluation !== 'none').length;
-      const avgSuccess = evaluated > 0
-        ? Math.round(allSessions.filter(s => s.successRate).reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluated)
+      const evaluatedSessions = allSessions.filter(s => s.evaluation && s.evaluation !== 'none');
+      const avgSuccess = evaluatedSessions.length > 0
+        ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
         : 0;
       statsBox.innerHTML = `
-        📊 إجمالي: <strong>${totalSessions}</strong> جلسة | 
-        ✅ مقيمة: <strong>${evaluated}</strong> | 
+        📊 إجمالي جلساتك: <strong>${totalSessions}</strong> جلسة | 
+        ✅ مقيمة: <strong>${evaluatedSessions.length}</strong> | 
         📈 متوسط النجاح: <strong>${avgSuccess}%</strong>
       `;
     }
 
     if (allSessions.length === 0) {
-      tableContainer.innerHTML = '<p class="muted">لا توجد جلسات مسجلة.</p>';
+      tableContainer.innerHTML = '<p class="muted" style="text-align:center;padding:20px;">لا توجد جلسات مسجلة بعد. ابدأ بإضافة جلسة من قائمة الطلاب.</p>';
     } else {
       const table = document.createElement('table');
       table.className = 'sessions-table';
@@ -3719,64 +3706,6 @@ async function renderSessionsLog(app) {
   } catch (e) {
     tableContainer.innerHTML = `<p class="muted">⚠️ خطأ: ${e.message}</p>`;
   }
-}
-
-function printSessionsLog() {
-  let printArea = document.getElementById('iep-print-area');
-  if (!printArea) {
-    printArea = document.createElement('div');
-    printArea.id = 'iep-print-area';
-    document.body.appendChild(printArea);
-  }
-
-  const tableElement = document.querySelector('.sessions-table');
-  const statsHTML = document.getElementById('sessionsStatsBox')?.innerHTML || '';
-  const teacherName = state.user?.displayName || state.user?.email || 'المعلم';
-
-  if (!tableElement) {
-    showToast('⚠️ لا توجد بيانات للطباعة');
-    return;
-  }
-
-  printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:14px;color:#555;">جدول سجل الجلسات</p>
-        <hr style="border:1px solid #ddd;margin:10px 0;">
-      </div>
-      <div style="margin-bottom:15px;text-align:center;font-size:13px;">
-        <strong>المعلم:</strong> ${teacherName} | 
-        <strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-SA')}
-      </div>
-      <div style="margin-bottom:15px;padding:10px;background:#f5f5f5;border-radius:8px;text-align:center;font-size:13px;">
-        ${statsHTML}
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        ${tableElement.innerHTML}
-      </table>
-      <style>
-        #iep-print-area table th,
-        #iep-print-area table td {
-          border: 1px solid #ddd;
-          padding: 8px 6px;
-          text-align: center;
-        }
-        #iep-print-area table th {
-          background: #EAF6F4;
-          color: #357E74;
-        }
-        #iep-print-area .delete-session-btn,
-        #iep-print-area th:last-child,
-        #iep-print-area td:last-child {
-          display: none !important;
-        }
-      </style>
-      <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">تم إنشاء هذا الجدول تلقائياً من منارة النطق</div>
-    </div>
-  `;
-  window.print();
-  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
 /* ─── [END SEC-44] ─── */
 
@@ -5200,6 +5129,7 @@ window.collection = collection;
 window.query = query;
 window.where = where;
 window.getCurrentStudent = function() { return state.currentStudent; };
+window.state = state;   // ✅ تصدير الحالة لـ ai-features.js
 /* ─── [END SEC-59] ─── */
 
 
