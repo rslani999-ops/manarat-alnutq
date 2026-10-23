@@ -3621,10 +3621,17 @@ if (!state.isGuest && (state.role === 'teacher' || state.role === 'admin')) {
   }
 }
 /* ─── [END SEC-42] ─── */
-/* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion ─── */
+
+/* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion (v2: يدعم قواعد الأمان) ─── */
 async function checkAndSuggestMastery(studentId, letter) {
   try {
-    const qS = query(collection(db, "sessions"), where("studentId", "==", studentId), where("letter", "==", letter));
+    // ✅ فلترة بـ teacherId (متوافق مع قواعد الأمان)
+    const qS = query(
+      collection(db, "sessions"),
+      where("studentId", "==", studentId),
+      where("letter", "==", letter),
+      where("teacherId", "==", state.user.uid)
+    );
     const snap = await getDocs(qS);
     const sessions = [];
     snap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
