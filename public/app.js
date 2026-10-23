@@ -4289,17 +4289,20 @@ function printParentGuide(contentHTML) {
 /* ─── [END SEC-50] ─── */
 
 
-/* ─── [SEC-51] الخطة الأسبوعية الذكية — Weekly Plan (v5: أيام الأحد-الخميس + قواعد الأمان) ─── */
+/* ─── [SEC-51] الخطة الأسبوعية الذكية — Weekly Plan (v8: مجموعتان + تقوية الخميس) ─── */
 async function renderWeeklyPlan(app) {
-  renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
+  renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'مجموعتان متوازنتان + جلسة تقوية جماعية الخميس', () => {
     state.view = 'teacher-dashboard';
     render();
   });
 
-  state._weeklyPlanData = [];
+  state._weeklyPlanData = {
+    groupA: { name: 'المجموعة أ', days: ['الأحد', 'الثلاثاء'], students: [] },
+    groupB: { name: 'المجموعة ب', days: ['الإثنين', 'الأربعاء'], students: [] },
+    thursdayGroup: { name: 'جلسة التقوية الجماعية', day: 'الخميس', students: [] }
+  };
   state._weeklyPlanTeacherName = 'المعلم';
 
-  // ✅ جلب اسم المعلم الحقيقي من Firestore
   try {
     if (state.user?.uid) {
       const teacherSnap = await getDoc(doc(db, "users", state.user.uid));
@@ -4312,14 +4315,13 @@ async function renderWeeklyPlan(app) {
     }
   } catch (e) {
     console.warn('تعذر جلب اسم المعلم:', e);
-    state._weeklyPlanTeacherName = state.user?.email || 'المعلم';
   }
 
   const container = document.createElement('div');
   container.innerHTML = `
     <div class="card" style="background:linear-gradient(135deg, #E0F7FA, #B2EBF2); border:2px solid var(--mint-deep); margin-bottom:15px;">
-      <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 الخطة الأسبوعية المقترحة</h3>
-      <p class="muted" style="text-align:center;">تتحدث تلقائياً حسب الجلسات المكتملة وشدة الحالة</p>
+      <h3 style="margin:0;color:var(--mint-deep);text-align:center;">📅 خطة المجموعات الأسبوعية</h3>
+      <p class="muted" style="text-align:center;">مجموعتان متوازنتان + جلسة تقوية جماعية الخميس للأشد ضعفاً</p>
       <div style="text-align:center;margin-top:10px;">
         <button class="btn btn-primary btn-sm" id="printWeeklyPlanBtn" style="border-radius:50px;">🖨️ طباعة / حفظ PDF</button>
       </div>
@@ -4338,41 +4340,19 @@ async function renderWeeklyPlan(app) {
     return;
   }
 
-  // ✅ جلب جلسات المعلم فقط (متوافق مع قواعد الأمان)
   const allSessionsSnap = await getDocs(
     query(collection(db, "sessions"), where("teacherId", "==", state.user.uid))
   );
   const allSessions = [];
   allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
 
-  // ✅ أيام الأسبوع الدراسي (الأحد إلى الخميس)
-  const schoolDays = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-
-  function getWeeklySessions(studentData) {
-    const diag = studentData.diagnostic || {};
-    const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
-    const severeTypes = ['حذف', 'قلب', 'خنف', 'تأتأة / تلعثم', 'حبسة'];
-    let severity = 0;
-    needLetters.forEach(letter => {
-      const info = diag[letter] || {};
-      if (severeTypes.includes(info.disorderType)) severity += 2;
-      else severity += 1;
-    });
-    if (severity <= 2) return 1;
-    else if (severity <= 4) return 2;
-    else return 3;
-  }
-
   function getCompletedSessions(letter, studentId) {
     return allSessions.filter(s => s.studentId === studentId && s.letter === letter && (s.evaluation === 'passed' || s.evaluation === 'trained')).length;
   }
 
-  // توزيع الأيام بشكل غير متتالي (للأحد - الخميس)
-  function getDaysForSessions(count) {
-    if (count === 1) return ['الأحد'];
-    if (count === 2) return ['الأحد', 'الثلاثاء'];
-    return ['الأحد', 'الإثنين', 'الأربعاء']; // 3 جلسات أو أكثر
-  }
+  // 1. تجميع الطلاب النشطين وحساب الجهد
+  const activeStudents = [];
+  const completedStudents = [];
 
   for (const student of state.myStudents) {
     const studentDoc = await getDoc(doc(db, "users", student.id));
@@ -4381,64 +4361,149 @@ async function renderWeeklyPlan(app) {
     const needLetters = ALL_LETTERS.filter(l => diag[l]?.status === 'need' || diag[l]?.status === 'unclear');
 
     if (needLetters.length === 0) {
-      const okCard = document.createElement('div');
-      okCard.className = 'card';
-      okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً.</p>`;
-      app.appendChild(okCard);
-      state._weeklyPlanData.push({
-        studentName: student.fullName || student.email,
-        completed: true
-      });
+      completedStudents.push(student.fullName || student.email);
       continue;
     }
 
-    const sessionsPerWeek = getWeeklySessions(studentData);
-    const daysForStudent = getDaysForSessions(sessionsPerWeek);
+    const severeTypes = ['حذف', 'قلب', 'خنف', 'تأتأة / تلعثم', 'حبسة'];
+    let severity = 0;
+    needLetters.forEach(letter => {
+      const info = diag[letter] || {};
+      if (severeTypes.includes(info.disorderType)) severity += 2;
+      else severity += 1;
+    });
 
-    const lettersForPrint = needLetters.slice(0, 4).map(letter => {
-      const completed = getCompletedSessions(letter, student.id);
-      return { letter, completed, totalNeeded: 4 };
+    activeStudents.push({
+      student,
+      needLetters,
+      severity
     });
-    state._weeklyPlanData.push({
-      studentName: student.fullName || student.email,
-      sessionsPerWeek,
-      days: daysForStudent,
-      letters: lettersForPrint,
-      totalNeedLetters: needLetters.length,
-      completed: false
-    });
+  }
+
+  // 2. ترتيب الطلاب حسب الجهد (تنازلياً)
+  activeStudents.sort((a, b) => b.severity - a.severity);
+
+  // 3. تحديد "الأشد ضعفاً" لجلسة الخميس
+  // المعيار: الطلاب الذين لديهم جهد عالٍ (severity >= 3) أو أعلى 30% من الطلاب
+  const threshold = activeStudents.length > 0 
+    ? Math.max(3, Math.ceil(activeStudents[0].severity * 0.6)) 
+    : 3;
+  const thursdayStudents = activeStudents.filter(s => s.severity >= threshold);
+
+  // 4. توزيع باقي الطلاب على المجموعتين بالتناوب (لتحقيق التوازن)
+  // نوزع من الأعلى جهداً للأقل لضمان توازن المجموعتين
+  activeStudents.forEach((s, idx) => {
+    const target = idx % 2 === 0 ? 'groupA' : 'groupB';
+    state._weeklyPlanData[target].students.push(s);
+  });
+
+  state._weeklyPlanData.thursdayGroup.students = thursdayStudents;
+
+  // 5. عرض المجموعتين
+  ['groupA', 'groupB'].forEach(key => {
+    const group = state._weeklyPlanData[key];
+    if (group.students.length === 0) return;
 
     const planCard = document.createElement('div');
     planCard.className = 'card weekly-plan-card';
     planCard.style.borderRight = '4px solid var(--mint-deep)';
+    
+    let studentsHtml = '';
+    group.students.forEach(s => {
+      const completedPerLetter = s.needLetters.slice(0, 3).map(letter => {
+        const comp = getCompletedSessions(letter, s.student.id);
+        return `<span style="font-size:11px;color:${comp >= 4 ? 'green' : '#F57F17'};">${letter}(${comp}/4)</span>`;
+      }).join(' - ');
+      
+      const severityLabel = s.severity >= threshold 
+        ? '<span style="color:#C62828;font-size:11px;">(جهد عالٍ)</span>' 
+        : '<span style="color:#2E7D32;font-size:11px;">(جهد متوسط)</span>';
+      
+      studentsHtml += `
+        <div style="display:flex; flex-direction:column; padding:6px 0; border-bottom:1px dashed #eee;">
+          <div style="display:flex; justify-content:space-between;">
+            <strong>👤 ${s.student.fullName || s.student.email}</strong>
+            ${severityLabel}
+          </div>
+          <div style="font-size:12px; color:#6B7A99; margin-top:2px;">
+            الحروف: ${s.needLetters.slice(0, 3).join('، ')} ${s.needLetters.length > 3 ? '...' : ''}
+            <br>الإنجاز: ${completedPerLetter}
+          </div>
+        </div>
+      `;
+    });
+
     planCard.innerHTML = `
-      <h4 style="margin:0;color:var(--mint-deep);">👤 ${student.fullName || student.email}</h4>
-      <p style="font-size:13px;color:#555;margin:4px 0;">
-        الجلسات الأسبوعية الموصى بها: <strong>${sessionsPerWeek}</strong> - الأيام: ${daysForStudent.join(' و ')}
-      </p>
-      <div style="margin-top:8px;">
-        ${needLetters.slice(0, 4).map(letter => {
-          const completed = getCompletedSessions(letter, student.id);
-          const totalNeeded = 4;
-          return `
-            <div style="display:flex; gap:10px; align-items:center; padding:4px 0; border-bottom:1px solid #eee;">
-              <span style="min-width:70px;">حرف ${letter}</span>
-              <span style="color:${completed >= totalNeeded ? 'green' : '#F57F17'};">${completed}/${totalNeeded} جلسات</span>
-              <button class="btn btn-soft btn-sm" onclick="speakText('${letter}')">🔊</button>
-            </div>
-          `;
-        }).join('')}
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h4 style="margin:0;color:var(--mint-deep);">👥 ${group.name}</h4>
+        <span class="badge badge-assigned" style="background:#EAF6F4;color:var(--mint-deep);">${group.students.length} طالب</span>
       </div>
-      <p class="muted" style="margin-top:8px;font-size:12px;">✏️ الجلسات الفردية فقط، دون دمج الطلاب.</p>
+      <p style="font-size:13px;color:#555;margin:4px 0;">
+        📅 أيام التدريب: <strong>${group.days.join(' و ')}</strong>
+      </p>
+      <div style="margin-top:8px; background:#F9FDFC; padding:10px; border-radius:12px;">
+        ${studentsHtml}
+      </div>
     `;
     app.appendChild(planCard);
+  });
+
+  // 6. عرض جلسة الخميس الجماعية
+  const thursday = state._weeklyPlanData.thursdayGroup;
+  if (thursday.students.length > 0) {
+    const thursdayCard = document.createElement('div');
+    thursdayCard.className = 'card weekly-plan-card';
+    thursdayCard.style.borderRight = '4px solid #EA580C';
+    thursdayCard.style.background = 'linear-gradient(135deg, #FFF7ED, #FFEDD5)';
+
+    let studentsHtml = '';
+    thursday.students.forEach(s => {
+      const completedPerLetter = s.needLetters.slice(0, 3).map(letter => {
+        const comp = getCompletedSessions(letter, s.student.id);
+        return `<span style="font-size:11px;color:${comp >= 4 ? 'green' : '#C2410C'};">${letter}(${comp}/4)</span>`;
+      }).join(' - ');
+      
+      studentsHtml += `
+        <div style="display:flex; flex-direction:column; padding:6px 0; border-bottom:1px dashed #FED7AA;">
+          <strong>👤 ${s.student.fullName || s.student.email}</strong>
+          <div style="font-size:12px; color:#9A3412; margin-top:2px;">
+            الحروف: ${s.needLetters.slice(0, 3).join('، ')} ${s.needLetters.length > 3 ? '...' : ''}
+            <br>الإنجاز: ${completedPerLetter}
+          </div>
+        </div>
+      `;
+    });
+
+    thursdayCard.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h4 style="margin:0;color:#9A3412;">🤝 ${thursday.name}</h4>
+        <span class="badge" style="background:#FED7AA;color:#9A3412;">${thursday.students.length} طالب</span>
+      </div>
+      <p style="font-size:13px;color:#9A3412;margin:4px 0;">
+        📅 اليوم: <strong>الخميس</strong> — <span style="font-weight:bold;">للطلاب الأشد ضعفاً فقط (من كلتا المجموعتين)</span>
+      </p>
+      <p style="font-size:12px;color:#9A3412;margin:2px 0;">
+        🎯 الهدف: تقوية جماعية مركّزة للحروف الأصعب، مع أنشطة تفاعلية بين الطلاب.
+      </p>
+      <div style="margin-top:8px; background:#FFFBEB; padding:10px; border-radius:12px;">
+        ${studentsHtml}
+      </div>
+    `;
+    app.appendChild(thursdayCard);
   }
-}
 
+  // 7. عرض الطلاب المكتملين
+  if (completedStudents.length > 0) {
+    const okCard = document.createElement('div');
+    okCard.className = 'card';
+    okCard.innerHTML = `<h4 style="margin:0;color:#16A34A;">✅ طلاب أتقنوا جميع الحروف</h4>
+      <p class="muted" style="font-size:13px; margin-top:6px;">${completedStudents.join('، ')}</p>`;
+    app.appendChild(okCard);
+  }
+                              }
 function printWeeklyPlan() {
-  const data = state._weeklyPlanData || [];
-
-  if (data.length === 0) {
+  const data = state._weeklyPlanData;
+  if (!data) {
     showToast('⚠️ لا توجد بيانات للطباعة');
     return;
   }
@@ -4451,7 +4516,6 @@ function printWeeklyPlan() {
   }
 
   const teacherName = state._weeklyPlanTeacherName || 'المعلم';
-
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -4460,77 +4524,73 @@ function printWeeklyPlan() {
 
   let hijriDate = '';
   try {
-    hijriDate = today.toLocaleDateString('ar-SA-u-ca-islamic-umalqura', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch (e) {
-    hijriDate = '';
-  }
+    hijriDate = today.toLocaleDateString('ar-SA-u-ca-islamic-umalqura', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch (e) {}
   const dateLine = hijriDate ? `${gregDate} م — ${hijriDate} هـ` : `${gregDate} م`;
 
   const tdStyle = 'border:1px solid #333;padding:8px;vertical-align:top;';
   const thStyle = 'border:1px solid #333;padding:8px;background:#EAF6F4;color:#357E74;font-weight:bold;';
 
-  const activeCount = data.filter(d => !d.completed).length;
-
-  const rows = data.map((item, idx) => {
-    if (item.completed) {
+  function renderGroupRow(group, isThursday = false) {
+    if (group.students.length === 0) {
       return `
         <tr>
-          <td style="${tdStyle}text-align:center;font-weight:bold;">${idx + 1}</td>
-          <td style="${tdStyle}font-weight:bold;">${item.studentName}</td>
-          <td colspan="3" style="${tdStyle}text-align:center;color:#16A34A;font-weight:bold;">✅ لا يحتاج تدريباً حالياً — أتقن جميع الحروف</td>
+          <td style="${tdStyle}text-align:center;font-weight:bold;">${group.name}</td>
+          <td style="${tdStyle}text-align:center;">${group.days ? group.days.join(' / ') : group.day}</td>
+          <td colspan="2" style="${tdStyle}text-align:center;color:#999;">لا يوجد طلاب</td>
         </tr>
       `;
     }
-    const daysStr = item.days.join(' / ');
-    const lettersStr = item.letters.map(l =>
-      `• حرف (${l.letter}): ${l.completed}/${l.totalNeeded} جلسة ${l.completed >= l.totalNeeded ? '✅' : ''}`
-    ).join('<br>');
-    const extraStr = item.totalNeedLetters > 4
-      ? `<br><span style="color:#6B7A99;font-size:11px;">... +${item.totalNeedLetters - 4} حرفاً آخر</span>`
-      : '';
+    
+    const studentsStr = group.students.map(s => 
+      `<div style="margin-bottom:4px;">
+        <strong>${s.student.fullName || s.student.email}</strong>
+        <span style="font-size:11px;color:#555;">(${s.needLetters.slice(0, 3).join('، ')})</span>
+      </div>`
+    ).join('');
+    
+    const daysStr = group.days ? group.days.join(' / ') : group.day;
+    const badgeColor = isThursday ? 'color:#9A3412;font-weight:bold;' : '';
+    
     return `
       <tr>
-        <td style="${tdStyle}text-align:center;font-weight:bold;">${idx + 1}</td>
-        <td style="${tdStyle}font-weight:bold;">${item.studentName}</td>
-        <td style="${tdStyle}text-align:center;">${item.sessionsPerWeek}</td>
-        <td style="${tdStyle}text-align:center;font-size:12px;">${daysStr}</td>
-        <td style="${tdStyle}font-size:12px;">${lettersStr}${extraStr}</td>
+        <td style="${tdStyle}text-align:center;font-weight:bold;${badgeColor}">${group.name}</td>
+        <td style="${tdStyle}text-align:center;${badgeColor}">${daysStr}</td>
+        <td style="${tdStyle}text-align:center;">${group.students.length}</td>
+        <td style="${tdStyle}">${studentsStr}</td>
       </tr>
     `;
-  }).join('');
+  }
 
   printArea.innerHTML = `
     <div style="font-family:'Tajawal','Arial',sans-serif;direction:rtl;padding:25px;background:white;color:#1E2A47;">
       <div style="text-align:center;margin-bottom:20px;">
         <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
-        <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب</p>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب — المجموعات المتوازنة</p>
         <hr style="border:1px solid #ddd;margin:10px 0;">
       </div>
       <div style="margin-bottom:15px;text-align:center;font-size:13px;line-height:1.9;">
         <div><strong>المعلم:</strong> ${teacherName}</div>
         <div><strong>التاريخ:</strong> ${dateLine}</div>
-        <div><strong>عدد الطلاب:</strong> ${activeCount} بحاجة تدريب</div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #333;">
         <thead>
           <tr>
-            <th style="${thStyle}">م</th>
-            <th style="${thStyle}">الطالب</th>
-            <th style="${thStyle}">الجلسات / أسبوع</th>
-            <th style="${thStyle}">أيام الجلسات</th>
-            <th style="${thStyle}">الحروف المستهدفة</th>
+            <th style="${thStyle}">المجموعة</th>
+            <th style="${thStyle}">الأيام</th>
+            <th style="${thStyle}">عدد الطلاب</th>
+            <th style="${thStyle}">الطلاب (الحروف المستهدفة)</th>
           </tr>
         </thead>
         <tbody>
-          ${rows}
+          ${renderGroupRow(data.groupA)}
+          ${renderGroupRow(data.groupB)}
+          ${renderGroupRow(data.thursdayGroup, true)}
         </tbody>
       </table>
       <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
-        تم توليد هذه الخطة تلقائياً من منصة منارة النطق بتاريخ ${gregDate}
+        * جلسة الخميس مخصصة كتقوية جماعية للطلاب الأشد ضعفاً من كلا المجموعتين.
+        <br>تم توليد هذه الخطة تلقائياً من منصة منارة النطق بتاريخ ${gregDate}
       </div>
     </div>
   `;
@@ -4538,8 +4598,6 @@ function printWeeklyPlan() {
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
 /* ─── [END SEC-51] ─── */
-
-
 /* ─── [SEC-52] قائمة ملفات إنجاز الطلاب — Achievement List ─── */
 async function renderStudentAchievementList(app) {
   renderTopbar(app, '🏆 ملفات إنجاز الطلاب', 'اختر طالباً لعرض ملف إنجازه', () => {
