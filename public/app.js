@@ -4289,7 +4289,7 @@ function printParentGuide(contentHTML) {
 /* ─── [END SEC-50] ─── */
 
 
-/* ─── [SEC-51] الخطة الأسبوعية الذكية — Weekly Plan (v4: تنسيق يدوي للتاريخ + تشخيص) ─── */
+/* ─── [SEC-51] الخطة الأسبوعية الذكية — Weekly Plan (v5: أيام الأحد-الخميس + قواعد الأمان) ─── */
 async function renderWeeklyPlan(app) {
   renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
     state.view = 'teacher-dashboard';
@@ -4306,10 +4306,8 @@ async function renderWeeklyPlan(app) {
       if (teacherSnap.exists()) {
         const tData = teacherSnap.data();
         state._weeklyPlanTeacherName = tData.fullName || tData.email || 'المعلم';
-        console.log('🎯 اسم المعلم للطباعة:', state._weeklyPlanTeacherName);
       } else {
         state._weeklyPlanTeacherName = state.user.email || 'المعلم';
-        console.warn('⚠️ مستند المستخدم غير موجود — سيُستخدم البريد');
       }
     }
   } catch (e) {
@@ -4340,12 +4338,15 @@ async function renderWeeklyPlan(app) {
     return;
   }
 
-  const allSessionsSnap = await getDocs(collection(db, "sessions"));
+  // ✅ جلب جلسات المعلم فقط (متوافق مع قواعد الأمان)
+  const allSessionsSnap = await getDocs(
+    query(collection(db, "sessions"), where("teacherId", "==", state.user.uid))
+  );
   const allSessions = [];
   allSessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
 
-  const nonConsecutiveDays = ['السبت', 'الإثنين', 'الأربعاء'];
-  const singleDay = ['الأحد'];
+  // ✅ أيام الأسبوع الدراسي (الأحد إلى الخميس)
+  const schoolDays = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
 
   function getWeeklySessions(studentData) {
     const diag = studentData.diagnostic || {};
@@ -4364,6 +4365,13 @@ async function renderWeeklyPlan(app) {
 
   function getCompletedSessions(letter, studentId) {
     return allSessions.filter(s => s.studentId === studentId && s.letter === letter && (s.evaluation === 'passed' || s.evaluation === 'trained')).length;
+  }
+
+  // توزيع الأيام بشكل غير متتالي (للأحد - الخميس)
+  function getDaysForSessions(count) {
+    if (count === 1) return ['الأحد'];
+    if (count === 2) return ['الأحد', 'الثلاثاء'];
+    return ['الأحد', 'الإثنين', 'الأربعاء']; // 3 جلسات أو أكثر
   }
 
   for (const student of state.myStudents) {
@@ -4385,7 +4393,7 @@ async function renderWeeklyPlan(app) {
     }
 
     const sessionsPerWeek = getWeeklySessions(studentData);
-    const daysForStudent = sessionsPerWeek === 1 ? singleDay : nonConsecutiveDays.slice(0, sessionsPerWeek);
+    const daysForStudent = getDaysForSessions(sessionsPerWeek);
 
     const lettersForPrint = needLetters.slice(0, 4).map(letter => {
       const completed = getCompletedSessions(letter, student.id);
@@ -4444,14 +4452,12 @@ function printWeeklyPlan() {
 
   const teacherName = state._weeklyPlanTeacherName || 'المعلم';
 
-  // ✅ تنسيق يدوي للتاريخ (لا يعتمد على سلوك المتصفح)
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const year = today.getFullYear();
-  const gregDate = `${day}/${month}/${year}`;   // 23/10/2026
+  const gregDate = `${day}/${month}/${year}`;
 
-  // ✅ التقويم الهجري مُجبر عبر umalqura
   let hijriDate = '';
   try {
     hijriDate = today.toLocaleDateString('ar-SA-u-ca-islamic-umalqura', {
@@ -4464,7 +4470,6 @@ function printWeeklyPlan() {
   }
   const dateLine = hijriDate ? `${gregDate} م — ${hijriDate} هـ` : `${gregDate} م`;
 
-  // ✅ تنسيقات موحدة
   const tdStyle = 'border:1px solid #333;padding:8px;vertical-align:top;';
   const thStyle = 'border:1px solid #333;padding:8px;background:#EAF6F4;color:#357E74;font-weight:bold;';
 
