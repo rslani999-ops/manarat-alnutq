@@ -1160,17 +1160,18 @@ async function fetchUserData(uid) {
 async function fetchTeacherStudents() {
   if (!state.user) return;
   try {
-    state.myStudents = [];
-    state.freeStudents = [];
+    // ✅ مصفوفات محلية (تمنع التكرار عند التزامن/الاستدعاء المزدوج)
+    const myStudents = [];
+    const freeStudents = [];
 
-    // ✅ استعلام 1: طلابي المباشرون (teacherId = معرّفي)
+    // ✅ استعلام 1: طلابي المباشرون
     const qMine = query(
       collection(db, "users"),
       where("role", "==", "student"),
       where("teacherId", "==", state.user.uid)
     );
     const snapMine = await getDocs(qMine);
-    snapMine.forEach(d => state.myStudents.push({ id: d.id, ...d.data() }));
+    snapMine.forEach(d => myStudents.push({ id: d.id, ...d.data() }));
 
     // ✅ استعلام 2: الطلاب المتاحون (بدون معلم)
     const qFree = query(
@@ -1179,7 +1180,11 @@ async function fetchTeacherStudents() {
       where("teacherId", "==", null)
     );
     const snapFree = await getDocs(qFree);
-    snapFree.forEach(d => state.freeStudents.push({ id: d.id, ...d.data() }));
+    snapFree.forEach(d => freeStudents.push({ id: d.id, ...d.data() }));
+
+    // ✅ إسناد نهائي (بعد اكتمال كل شيء)
+    state.myStudents = myStudents;
+    state.freeStudents = freeStudents;
 
     render();
   } catch (e) {
