@@ -4926,15 +4926,15 @@ function restoreSavedEvidences(teacherId) {
            
              
 
-
-/* ─── [SEC-55] توليد وحفظ وتحديث الشواهد ─── */
+/* ─── [SEC-55] توليد وحفظ وتحديث الشواهد (v2: يدعم قواعد الأمان) ─── */
 async function generateEvidenceReport(teacherName) {
   showToast('⏳ جاري جلب الشواهد وربط الأدلة...');
   try {
     const teacherId = state.user.uid;
 
+    // ✅ إصلاح: إضافة فلترة teacherId في الجلسات
     const [allSessionsSnap, teacherFilesSnap] = await Promise.all([
-      getDocs(collection(db, "sessions")),
+      getDocs(query(collection(db, "sessions"), where("teacherId", "==", teacherId))),
       getDocs(query(collection(db, "teacher_files"), where("teacherId", "==", teacherId)))
     ]);
 
@@ -5002,6 +5002,7 @@ async function generateEvidenceReport(teacherName) {
   }
 }
 /* ─── [END SEC-55] ─── */
+
    
 
 /* ─── [SEC-56] طباعة ملف إنجاز المعلم — Print Teacher Achievement ─── */
