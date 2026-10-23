@@ -4244,15 +4244,33 @@ function printParentGuide(contentHTML) {
 /* ─── [END SEC-50] ─── */
 
 
-/* ─── [SEC-51] الخطة الأسبوعية الذكية — Weekly Plan (v2: طباعة احترافية بجدول) ─── */
+/* ─── [SEC-51] الخطة الأسبوعية الذكية — Weekly Plan (v4: تنسيق يدوي للتاريخ + تشخيص) ─── */
 async function renderWeeklyPlan(app) {
   renderTopbar(app, '📅 الخطة الأسبوعية الذكية', 'خطة تلقائية حسب شدة الحالة وأيام غير متتالية', () => {
     state.view = 'teacher-dashboard';
     render();
   });
 
-  // 🔄 جمع بيانات الخطة للطباعة لاحقاً
   state._weeklyPlanData = [];
+  state._weeklyPlanTeacherName = 'المعلم';
+
+  // ✅ جلب اسم المعلم الحقيقي من Firestore
+  try {
+    if (state.user?.uid) {
+      const teacherSnap = await getDoc(doc(db, "users", state.user.uid));
+      if (teacherSnap.exists()) {
+        const tData = teacherSnap.data();
+        state._weeklyPlanTeacherName = tData.fullName || tData.email || 'المعلم';
+        console.log('🎯 اسم المعلم للطباعة:', state._weeklyPlanTeacherName);
+      } else {
+        state._weeklyPlanTeacherName = state.user.email || 'المعلم';
+        console.warn('⚠️ مستند المستخدم غير موجود — سيُستخدم البريد');
+      }
+    }
+  } catch (e) {
+    console.warn('تعذر جلب اسم المعلم:', e);
+    state._weeklyPlanTeacherName = state.user?.email || 'المعلم';
+  }
 
   const container = document.createElement('div');
   container.innerHTML = `
@@ -4314,7 +4332,6 @@ async function renderWeeklyPlan(app) {
       okCard.className = 'card';
       okCard.innerHTML = `<p class="muted">✅ ${student.fullName || student.email} لا يحتاج تدريباً حالياً.</p>`;
       app.appendChild(okCard);
-      // نضيفه لبيانات الطباعة (كـ "مكتمل")
       state._weeklyPlanData.push({
         studentName: student.fullName || student.email,
         completed: true
@@ -4325,7 +4342,6 @@ async function renderWeeklyPlan(app) {
     const sessionsPerWeek = getWeeklySessions(studentData);
     const daysForStudent = sessionsPerWeek === 1 ? singleDay : nonConsecutiveDays.slice(0, sessionsPerWeek);
 
-    // 🔄 جمع بيانات الطباعة
     const lettersForPrint = needLetters.slice(0, 4).map(letter => {
       const completed = getCompletedSessions(letter, student.id);
       return { letter, completed, totalNeeded: 4 };
@@ -4381,15 +4397,41 @@ function printWeeklyPlan() {
     document.body.appendChild(printArea);
   }
 
-  const teacherName = state.user?.displayName || state.user?.email || 'المعلم';
+  const teacherName = state._weeklyPlanTeacherName || 'المعلم';
+
+  // ✅ تنسيق يدوي للتاريخ (لا يعتمد على سلوك المتصفح)
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  const gregDate = `${day}/${month}/${year}`;   // 23/10/2026
+
+  // ✅ التقويم الهجري مُجبر عبر umalqura
+  let hijriDate = '';
+  try {
+    hijriDate = today.toLocaleDateString('ar-SA-u-ca-islamic-umalqura', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (e) {
+    hijriDate = '';
+  }
+  const dateLine = hijriDate ? `${gregDate} م — ${hijriDate} هـ` : `${gregDate} م`;
+
+  // ✅ تنسيقات موحدة
+  const tdStyle = 'border:1px solid #333;padding:8px;vertical-align:top;';
+  const thStyle = 'border:1px solid #333;padding:8px;background:#EAF6F4;color:#357E74;font-weight:bold;';
+
+  const activeCount = data.filter(d => !d.completed).length;
 
   const rows = data.map((item, idx) => {
     if (item.completed) {
       return `
         <tr>
-          <td style="text-align:center;font-weight:bold;">${idx + 1}</td>
-          <td style="font-weight:bold;">${item.studentName}</td>
-          <td colspan="3" style="text-align:center;color:#16A34A;font-weight:bold;">✅ لا يحتاج تدريباً حالياً — أتقن جميع الحروف</td>
+          <td style="${tdStyle}text-align:center;font-weight:bold;">${idx + 1}</td>
+          <td style="${tdStyle}font-weight:bold;">${item.studentName}</td>
+          <td colspan="3" style="${tdStyle}text-align:center;color:#16A34A;font-weight:bold;">✅ لا يحتاج تدريباً حالياً — أتقن جميع الحروف</td>
         </tr>
       `;
     }
@@ -4397,37 +4439,40 @@ function printWeeklyPlan() {
     const lettersStr = item.letters.map(l =>
       `• حرف (${l.letter}): ${l.completed}/${l.totalNeeded} جلسة ${l.completed >= l.totalNeeded ? '✅' : ''}`
     ).join('<br>');
+    const extraStr = item.totalNeedLetters > 4
+      ? `<br><span style="color:#6B7A99;font-size:11px;">... +${item.totalNeedLetters - 4} حرفاً آخر</span>`
+      : '';
     return `
       <tr>
-        <td style="text-align:center;font-weight:bold;">${idx + 1}</td>
-        <td style="font-weight:bold;">${item.studentName}</td>
-        <td style="text-align:center;">${item.sessionsPerWeek}</td>
-        <td style="text-align:center;font-size:12px;">${daysStr}</td>
-        <td style="font-size:12px;">${lettersStr}${item.totalNeedLetters > 4 ? `<br><span style="color:#6B7A99;">... +${item.totalNeedLetters - 4} حرفاً آخر</span>` : ''}</td>
+        <td style="${tdStyle}text-align:center;font-weight:bold;">${idx + 1}</td>
+        <td style="${tdStyle}font-weight:bold;">${item.studentName}</td>
+        <td style="${tdStyle}text-align:center;">${item.sessionsPerWeek}</td>
+        <td style="${tdStyle}text-align:center;font-size:12px;">${daysStr}</td>
+        <td style="${tdStyle}font-size:12px;">${lettersStr}${extraStr}</td>
       </tr>
     `;
   }).join('');
 
   printArea.innerHTML = `
-    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:25px;background:white;color:#1E2A47;">
+    <div style="font-family:'Tajawal','Arial',sans-serif;direction:rtl;padding:25px;background:white;color:#1E2A47;">
       <div style="text-align:center;margin-bottom:20px;">
         <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
         <p style="margin:5px 0 0;font-size:14px;color:#555;">الخطة الأسبوعية للتدريب</p>
         <hr style="border:1px solid #ddd;margin:10px 0;">
       </div>
-      <div style="margin-bottom:15px;text-align:center;font-size:13px;">
-        <strong>المعلم:</strong> ${teacherName} |
-        <strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-SA')} |
-        <strong>عدد الطلاب:</strong> ${data.filter(d => !d.completed).length}
+      <div style="margin-bottom:15px;text-align:center;font-size:13px;line-height:1.9;">
+        <div><strong>المعلم:</strong> ${teacherName}</div>
+        <div><strong>التاريخ:</strong> ${dateLine}</div>
+        <div><strong>عدد الطلاب:</strong> ${activeCount} بحاجة تدريب</div>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #333;">
         <thead>
-          <tr style="background:#EAF6F4;color:#357E74;">
-            <th style="border:1px solid #ccc;padding:8px;">م</th>
-            <th style="border:1px solid #ccc;padding:8px;">الطالب</th>
-            <th style="border:1px solid #ccc;padding:8px;">الجلسات / أسبوع</th>
-            <th style="border:1px solid #ccc;padding:8px;">أيام الجلسات</th>
-            <th style="border:1px solid #ccc;padding:8px;">الحروف المستهدفة</th>
+          <tr>
+            <th style="${thStyle}">م</th>
+            <th style="${thStyle}">الطالب</th>
+            <th style="${thStyle}">الجلسات / أسبوع</th>
+            <th style="${thStyle}">أيام الجلسات</th>
+            <th style="${thStyle}">الحروف المستهدفة</th>
           </tr>
         </thead>
         <tbody>
@@ -4435,7 +4480,7 @@ function printWeeklyPlan() {
         </tbody>
       </table>
       <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;">
-        تم توليد هذه الخطة تلقائياً من منصة منارة النطق بتاريخ ${new Date().toLocaleDateString('ar-SA')}
+        تم توليد هذه الخطة تلقائياً من منصة منارة النطق بتاريخ ${gregDate}
       </div>
     </div>
   `;
