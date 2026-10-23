@@ -1134,7 +1134,7 @@ function renderResetPassword(app) {
 /* ─── [END SEC-26] ─── */
 
 
-/* ─── [SEC-27] جلب بيانات المستخدم — Fetch User Data ─── */
+/* ─── [SEC-27] جلب بيانات المستخدم والطلاب — Fetch User & Students Data (v2: محصّن) ─── */
 async function fetchUserData(uid) {
   try {
     const uDoc = await getDoc(doc(db, "users", uid));
@@ -1151,24 +1151,41 @@ async function fetchUserData(uid) {
         render();
       }
     }
-  } catch (e) { showToast('خطأ في جلب بيانات المستخدم'); }
+  } catch (e) {
+    console.error('خطأ في جلب بيانات المستخدم:', e);
+    showToast('خطأ في جلب بيانات المستخدم');
+  }
 }
 
 async function fetchTeacherStudents() {
   if (!state.user) return;
   try {
-    const q = query(collection(db, "users"), where("role", "==", "student"));
-    const snap = await getDocs(q);
     state.myStudents = [];
     state.freeStudents = [];
-    snap.forEach(d => {
-      const data = d.data();
-      const obj = { id: d.id, ...data };
-      if (data.teacherId === state.user.uid) state.myStudents.push(obj);
-      else if (!data.teacherId) state.freeStudents.push(obj);
-    });
+
+    // ✅ استعلام 1: طلابي المباشرون (teacherId = معرّفي)
+    const qMine = query(
+      collection(db, "users"),
+      where("role", "==", "student"),
+      where("teacherId", "==", state.user.uid)
+    );
+    const snapMine = await getDocs(qMine);
+    snapMine.forEach(d => state.myStudents.push({ id: d.id, ...d.data() }));
+
+    // ✅ استعلام 2: الطلاب المتاحون (بدون معلم)
+    const qFree = query(
+      collection(db, "users"),
+      where("role", "==", "student"),
+      where("teacherId", "==", null)
+    );
+    const snapFree = await getDocs(qFree);
+    snapFree.forEach(d => state.freeStudents.push({ id: d.id, ...d.data() }));
+
     render();
-  } catch (e) { showToast('خطأ في تحميل بيانات الطلاب'); }
+  } catch (e) {
+    console.error('خطأ في تحميل الطلاب:', e);
+    showToast('❌ خطأ في تحميل بيانات الطلاب: ' + (e.message || e.code));
+  }
 }
 /* ─── [END SEC-27] ─── */
 
@@ -5201,70 +5218,71 @@ function printAchievement(student, data) {
 /* ─── [END SEC-57] ─── */
      
 
-/* ─── [SEC-58] التهيئة النهائية — Final Init ─── */
+/* ─── [SEC-58] التهيئة النهائية — Final Init (v2: أمان + تعطيل الزوار) ─── */
 function initApp() {
   initAccessibility();
-  
+
   const currentUrl = new URL(window.location);
   const requestedView = currentUrl.searchParams.get('view');
   const requestedStudentId = currentUrl.searchParams.get('studentId');
   const requestedSessionId = currentUrl.searchParams.get('sessionId');
-  const requestedTeacherId = currentUrl.searchParams.get('teacherId'); 
-
-  const guestAllowedViews = ['teacher-achievement', 'achievement', 'single-session', 'iep-single-student'];
+  const requestedTeacherId = currentUrl.searchParams.get('teacherId');
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
+      // ═══ مستخدم مسجل الدخول ═══
       state.user = user;
       state.isGuest = false;
-      await fetchUserData(user.uid); 
-      
+      await fetchUserData(user.uid);
+
+      // معالجة الروابط المباشرة (deep links) للمستخدمين المسجلين
       if (requestedView && requestedView !== 'home' && requestedView !== 'auth') {
-         try {
-           if (requestedStudentId) {
-              const sDoc = await getDoc(doc(db, "users", requestedStudentId));
-              if (sDoc.exists()) state.currentStudent = { id: sDoc.id, ...sDoc.data() };
-           }
-           if (requestedSessionId) {
-              const sessDoc = await getDoc(doc(db, "sessions", requestedSessionId));
-              if (sessDoc.exists()) state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
-           }
-         } catch(e) {}
-         state.view = requestedView;
-         state.targetTeacherId = requestedTeacherId || null;
-         render();
+        try {
+          if (requestedStudentId) {
+            const sDoc = await getDoc(doc(db, "users", requestedStudentId));
+            if (sDoc.exists()) {
+              state.currentStudent = { id: sDoc.id, ...sDoc.data() };
+            }
+          }
+          if (requestedSessionId) {
+            const sessDoc = await getDoc(doc(db, "sessions", requestedSessionId));
+            if (sessDoc.exists()) {
+              state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
+            }
+          }
+        } catch (e) {
+          console.warn('تعذر تحميل بيانات الرابط:', e.code || e.message);
+        }
+        state.view = requestedView;
+        state.targetTeacherId = requestedTeacherId || null;
+        render();
       }
+
     } else {
+      // ═══ زائر (غير مسجل الدخول) ═══
       state.user = null;
       state.role = null;
-      
-      if (requestedView && guestAllowedViews.includes(requestedView)) {
-         state.isGuest = true;
-         state.view = requestedView;
-         state.targetTeacherId = requestedTeacherId || null;
-         
-         try {
-           if (requestedStudentId) {
-              const sDoc = await getDoc(doc(db, "users", requestedStudentId));
-              if (sDoc.exists()) state.currentStudent = { id: sDoc.id, ...sDoc.data() };
-           }
-           if (requestedSessionId) {
-              const sessDoc = await getDoc(doc(db, "sessions", requestedSessionId));
-              if (sessDoc.exists()) state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
-           }
-         } catch(e) {}
-         
-         render(); 
-      } else {
-         const publicViews = ['home', 'auth', 'register', 'reset-password'];
-         state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
-         render();
+      state.isGuest = false;   // ✅ وضع الزائر معطّل — الحماية الأمنية
+
+      // السماح فقط بالصفحات العامة
+      const publicViews = ['home', 'auth', 'register', 'reset-password'];
+      state.view = (requestedView && publicViews.includes(requestedView))
+        ? requestedView
+        : 'home';
+
+      // رسالة إرشادية لمن حاول فتح رابط زائر قديم
+      const guestViews = ['achievement', 'single-session', 'teacher-achievement', 'iep-single-student'];
+      if (requestedView && guestViews.includes(requestedView)) {
+        setTimeout(() => {
+          showToast('⚠️ هذا الرابط يتطلب تسجيل الدخول. اطلب من المعلم إرسال رابط جديد.');
+        }, 500);
       }
+
+      render();
     }
   });
 }
 /* ─── [END SEC-58] ─── */
-
 
 /* ─── [SEC-59] تصدير Firebase للذكاء الاصطناعي — Export Firebase ─── */
 window.db = db;
