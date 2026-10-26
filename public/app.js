@@ -1503,12 +1503,8 @@ async function renderTeacherDashboard(app) {
   } else {
     for (const student of state.myStudents) {
       const studentSessions = allSessionsForTeacher.filter(s => s.studentId === student.id);
-      let studentData = student;
-      try {
-        const studentDoc = await getDoc(doc(db, "users", student.id));
-        if (studentDoc.exists()) studentData = studentDoc.data();
-      } catch (e) { console.warn('تعذر جلب بيانات الطالب:', e); }
-      const suggestions = getAdaptiveSuggestion(studentData, studentSessions);
+      // ✅ إزالة طلب الشبكة الزائد: نستخدم بيانات الطالب الموجودة في الذاكرة مباشرة
+      const suggestions = getAdaptiveSuggestion(student, studentSessions);
       const suggestionDiv = document.createElement('div');
       suggestionDiv.style.marginBottom = '12px';
       suggestionDiv.style.padding = '10px';
@@ -1516,7 +1512,7 @@ async function renderTeacherDashboard(app) {
       suggestionDiv.style.background = '#F9FDFC';
       suggestionDiv.style.borderRadius = '10px';
       suggestionDiv.innerHTML = `
-        <strong>👤 ${studentData.fullName || student.email}</strong>
+        <strong>👤 ${student.fullName || student.email}</strong>
         <div style="margin-top:6px;font-size:13px;">
           ${suggestions.map(s => `• ${s}`).join('<br>')}
         </div>
@@ -1542,7 +1538,14 @@ async function renderTeacherDashboard(app) {
       freeCard.appendChild(row);
       setTimeout(() => {
         const claimBtn = document.getElementById(`claim_${st.id}`);
-        if (claimBtn) claimBtn.onclick = () => window.claimStudent(st.id);
+        if (claimBtn) {
+          // ✅ تعطيل الزر فوراً لمنع تكرار الطلبات (سبب خطأ AbortError)
+          claimBtn.onclick = async () => {
+            claimBtn.disabled = true;
+            claimBtn.textContent = '⏳ جاري الإضافة...';
+            await window.claimStudent(st.id);
+          };
+        }
       }, 0);
     });
   }
@@ -1572,7 +1575,6 @@ window.showConsentManagementModal = function() {
 
       const parentPhone = st.parentPhone || '';
       
-      // ✅ النص المعتمد الجديد (يحتوي على الموافقة على الصوت والفيديو)
       const waMessage = encodeURIComponent(`السلام عليكم ورحمة الله وبركاته،
 ولي أمر الطالب/ة: ${st.fullName || st.email}
 
@@ -1919,7 +1921,10 @@ window.claimStudent = async function(studentId) {
     showToast('تمت إضافة الطالب بنجاح');
     showNotification('تمت إضافة طالب جديد إلى قائمتك', 'success');
     await fetchTeacherStudents();
-  } catch (e) { showToast('فشل في إضافة الطالب'); }
+  } catch (e) { 
+    console.error('خطأ في إضافة الطالب:', e);
+    showToast('فشل في إضافة الطالب: ' + (e.message || e.code)); 
+  }
 };
 
 window.removeStudent = async function(studentId) {
