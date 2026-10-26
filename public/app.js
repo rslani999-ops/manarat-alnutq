@@ -13,7 +13,8 @@ import {
   onAuthStateChanged,
   signOut,
   sendPasswordResetEmail,
-  updateEmail
+  updateEmail,
+  verifyBeforeUpdateEmail
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
   getFirestore,
@@ -1871,7 +1872,7 @@ window.addRetroactiveConsent = addRetroactiveConsent;
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-33] صفحة الملف الشخصي — Student Profile (v2: تعديل الإيميل الآمن) ─── */
+/* ─── [SEC-33] صفحة الملف الشخصي — Student Profile (v3: تحديث الإيميل الآمن) ─── */
 function renderStudentProfile(app) {
   if (!state.user) {
     showToast('يجب تسجيل الدخول');
@@ -1983,7 +1984,7 @@ async function loadProfileData(container) {
 
         <label style="font-weight:bold; display:block; margin-bottom:4px;">البريد الإلكتروني (للدخول):</label>
         <input type="email" id="profileEmail" value="${email}" placeholder="البريد الإلكتروني">
-        <p class="muted" style="font-size:12px; margin-top:4px; margin-bottom:12px; color:#EA580C;">⚠️ ملاحظة: تغيير البريد الإلكتروني يتطلب إعادة تسجيل الدخول لاحقاً لتأمين الحساب.</p>
+        <p class="muted" style="font-size:12px; margin-top:4px; margin-bottom:12px; color:#EA580C;">⚠️ ملاحظة: تغيير البريد الإلكتروني يتطلب تأكيداً من البريد الجديد.</p>
 
         ${isTeacher ? `
           <label style="font-weight:bold; display:block; margin-bottom:4px;">🏫 اسم المدرسة:</label>
@@ -2052,13 +2053,14 @@ async function loadProfileData(container) {
         saveProfileBtn.textContent = '⏳ جاري الحفظ...';
         
         try {
-          // 1. تحديث الإيميل في Firebase Auth (إذا تم تغييره)
           if (newEmail !== state.user.email) {
             try {
-              await updateEmail(state.user, newEmail);
+              // ✅ استخدام الدالة الآمنة (إرسال رابط تأكيد)
+              await verifyBeforeUpdateEmail(state.user, newEmail);
+              showToast('📧 تم إرسال رابط التأكيد إلى بريدك الجديد. يرجى فتحه لتأكيد التغيير.');
             } catch (authError) {
               if (authError.code === 'auth/requires-recent-login') {
-                showToast('⚠️ لأسباب أمنية، لتغيير البريد يجب إعادة تسجيل الدخول. سيتم تسجيل خروجك الآن، يرجى الدخول مجدداً ثم تغيير البريد.');
+                showToast('⚠️ لأسباب أمنية، يجب إعادة تسجيل الدخول لتغيير البريد. سيتم تسجيل خروجك الآن.');
                 await signOut(auth);
                 window.location.reload();
                 return;
@@ -2068,10 +2070,8 @@ async function loadProfileData(container) {
             }
           }
 
-          // 2. تحديث البيانات في Firestore
           const updatePayload = {
             fullName: newName,
-            email: newEmail,
             updatedAt: new Date().toISOString()
           };
           if (isTeacher) {
@@ -2083,7 +2083,13 @@ async function loadProfileData(container) {
           
           showToast('✅ تم حفظ البيانات بنجاح');
           showNotification('تم تحديث ملفك الشخصي', 'success');
-          renderStudentProfile(app);
+          saveProfileBtn.disabled = false;
+          saveProfileBtn.textContent = '💾 حفظ التعديلات';
+          
+          // إذا تم تغيير الإيميل، لا نعيد رسم الصفحة (لأن الإيميل لم يتغير في Firebase Auth بعد)
+          if (newEmail === state.user.email) {
+            renderStudentProfile(app);
+          }
         } catch (e) {
           showToast('❌ فشل الحفظ: ' + e.message);
           saveProfileBtn.disabled = false;
@@ -2121,7 +2127,7 @@ async function loadProfileData(container) {
       resetPasswordProfileBtn.onclick = async () => {
         if (!confirm('هل تريد إرسال رابط تغيير كلمة المرور؟')) return;
         try {
-          await sendPasswordResetEmail(auth, state.user.email); // نستخدم الإيميل الحالي من Firebase
+          await sendPasswordResetEmail(auth, state.user.email);
           showToast('✅ تم إرسال الرابط');
         } catch (e) { showToast('❌ فشل الإرسال: ' + e.message); }
       };
