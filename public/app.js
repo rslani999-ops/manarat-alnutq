@@ -918,8 +918,17 @@ function showPrivacyPolicy() {
 /* ─── [END SEC-24] ─── */
 
 
-/* ─── [SEC-25] التصيير الرئيسي — Main Renderer ─── */
+/* ─── [SEC-25] التصيير الرئيسي — Main Renderer (v2: حماية من التكرار) ─── */
+let renderDebounceTimer = null;
 function render() {
+  if (renderDebounceTimer) clearTimeout(renderDebounceTimer);
+  renderDebounceTimer = setTimeout(() => {
+    renderDebounceTimer = null;
+    _actualRender();
+  }, 50);
+}
+
+function _actualRender() {
   const app = document.getElementById('app');
   if (!app) return;
   app.innerHTML = '';
@@ -948,7 +957,7 @@ function render() {
   if (state.view === 'auth') return renderAuth(app);
   if (state.view === 'register') return renderRegister(app);
   if (state.view === 'reset-password') return renderResetPassword(app);
-  if (state.view === 'approve-teacher') return renderApproveTeacher(app); // ✅ الصفحة الجديدة
+  if (state.view === 'approve-teacher') return renderApproveTeacher(app);
   
   if (state.view === 'teacher-dashboard') return renderTeacherDashboard(app);
   if (state.view === 'diagnostic-session') return renderDiagnosticSession(app);
@@ -1315,7 +1324,6 @@ async function fetchTeacherStudents() {
 }
 /* ─── [END SEC-27] ─── */
 
-
 /* ─── [SEC-28] لوحة المعلم وإدارة الموافقات — Teacher Dashboard & Consent Management ─── */
 async function renderTeacherDashboard(app) {
   renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
@@ -1552,7 +1560,6 @@ async function renderTeacherDashboard(app) {
 
 // ✅ إدارة الموافقات (Modal)
 window.showConsentManagementModal = async function() {
-  // ✅ جلب اسم المعلم الحقيقي من Firestore قبل بناء الرسالة
   let teacherName = state.user?.email || 'المعلم';
   try {
     if (state.user?.uid) {
@@ -1668,10 +1675,10 @@ window.showConsentManagementModal = async function() {
         });
         showToast('✅ تم تأكيد الموافقة يدوياً.');
         modal.remove();
-        // تحديث الحالة المحلية
+        // ✅ تحديث الحالة المحلية واستخدام render() بدلاً من renderTeacherDashboard مباشرة
         const st = state.myStudents.find(s => s.id === studentId);
         if (st) st.parentConsent = { granted: true };
-        renderTeacherDashboard(document.getElementById('app'));
+        render(); 
       } catch (e) {
         showToast('❌ فشل التأكيد: ' + e.message);
         btn.disabled = false;
@@ -5663,7 +5670,7 @@ function printAchievement(student, data) {
 /* ─── [END SEC-57] ─── */
      
 
-/* ─── [SEC-58] التهيئة النهائية — Final Init (v3: دعم رابط الاعتماد) ─── */
+/* ─── [SEC-58] التهيئة النهائية — Final Init (v4: رسم مرة واحدة) ─── */
 function initApp() {
   initAccessibility();
 
@@ -5676,16 +5683,14 @@ function initApp() {
     if (user) {
       state.user = user;
       state.isGuest = false;
+      
+      // جلب البيانات (بدون رسم)
       await fetchUserData(user.uid);
-
-      // ✅ دعم رابط اعتماد المعلم (حتى لو كان المستخدم مديراً)
+      
+      // معالجة الروابط المباشرة
       if (requestedView === 'approve-teacher') {
         state.view = 'approve-teacher';
-        render();
-        return;
-      }
-
-      if (requestedView && requestedView !== 'home' && requestedView !== 'auth') {
+      } else if (requestedView && requestedView !== 'home' && requestedView !== 'auth') {
         try {
           if (requestedStudentId) {
             const sDoc = await getDoc(doc(db, "users", requestedStudentId));
@@ -5697,23 +5702,23 @@ function initApp() {
           }
         } catch (e) {}
         state.view = requestedView;
-        render();
       }
+      
+      // ✅ رسم واحد فقط في النهاية
+      render();
+      
     } else {
       state.user = null;
       state.role = null;
       state.isGuest = false;
 
-      // إذا فتح رابط الاعتماد بدون تسجيل دخول، اطلب منه تسجيل الدخول
       if (requestedView === 'approve-teacher') {
         state.view = 'auth';
         setTimeout(() => showToast('⚠️ يرجى تسجيل الدخول بصفتك مديراً لاعتماد الطلب.'), 500);
-        render();
-        return;
+      } else {
+        const publicViews = ['home', 'auth', 'register', 'reset-password'];
+        state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
       }
-
-      const publicViews = ['home', 'auth', 'register', 'reset-password'];
-      state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
       render();
     }
   });
