@@ -6051,7 +6051,7 @@ async function renderAdminDashboard(app) {
 /* ─── [END SEC-61] ─── */
 
 
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v7: مطابقة نصية مطلقة) ─── */
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v10: إخفاء الأدمن) ─── */
 async function renderSchoolDashboard(app) {
   if (!state.managedSchool) { 
     showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
@@ -6070,39 +6070,35 @@ async function renderSchoolDashboard(app) {
     return; 
   }
 
-  // ✅ دالة مطابقة قوية جداً تتجاوز أخطاء الإملاء (ة/ه، أ/ا، المسافات)
-  function cleanStr(str) {
+  function normalizeAr(str) {
     if (!str) return '';
-    return str
-      .replace(/[\u064B-\u0652]/g, '') // إزالة التشكيل
-      .replace(/[أإآ]/g, 'ا')          // توحيد الألف
-      .replace(/ة/g, 'ه')             // توحيد التاء المربوطة
-      .replace(/ى/g, 'ي')             // توحيد الألف المقصورة
-      .replace(/مدرسة/g, '')
-      .replace(/ابتدائيه/g, '').replace(/ابتدائية/g, '')
-      .replace(/متوسطه/g, '').replace(/متوسطة/g, '')
-      .replace(/ثانويه/g, '').replace(/ثانوية/g, '')
-      .replace(/اداره/g, '').replace(/إدارة/g, '')
-      .replace(/بن/g, '')  
-      .replace(/ابن/g, '') 
-      .replace(/\s+/g, '') // إزالة جميع المسافات
-      .trim();
+    return str.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[\u064B-\u0652]/g, '');
   }
 
-  const targetClean = cleanStr(state.managedSchool);
+  function isSameSchool(adminSchool, teacherSchool) {
+    if (!adminSchool || !teacherSchool) return false;
+    const normAdmin = normalizeAr(adminSchool);
+    const normTeacher = normalizeAr(teacherSchool);
+    if (normAdmin === normTeacher) return true;
+    
+    const stopWords = ['مدرسه', 'ابتدائيه', 'متوسطه', 'ثانويه', 'اداره', 'بن', 'ابن', 'ال', 'و', 'في', 'من'];
+    const adminWords = normAdmin.split(/\s+/).filter(w => w.length > 1 && !stopWords.includes(w));
+    if (adminWords.length === 0) return false;
+    return adminWords.every(word => normTeacher.includes(word));
+  }
 
-  // 1. جلب جميع المعلمين (مع تجاهل فروقات الإملاء في اسم المدرسة)
+  // 1. فلترة المعلمين (يعتمد فقط على مطابقة اسم المدرسة)
   const schoolTeachers = allUsers.filter(u => {
     if (u.role !== 'teacher' && u.role !== 'admin') return false;
     
-    // دائماً أضف حساب المدير الحالي
+    // إضافة حساب المدير الحالي
     if (u.id === state.user.uid) return true;
     
-    const userSchoolClean = cleanStr(u.schoolName);
-    return userSchoolClean === targetClean || userSchoolClean.includes(targetClean) || targetClean.includes(userSchoolClean);
+    // مطابقة اسم المدرسة لباقي المعلمين
+    return isSameSchool(state.managedSchool, u.schoolName);
   });
 
-  // 2. جلب طلاب هؤلاء المعلمين
+  // 2. فلترة الطلاب التابعين لهؤلاء المعلمين
   const teacherIds = schoolTeachers.map(t => t.id);
   const schoolStudents = allUsers.filter(u => u.role === 'student' && u.teacherId && teacherIds.includes(u.teacherId));
 
