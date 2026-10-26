@@ -998,7 +998,7 @@ window.render = render;
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-26] دوال المصادقة واعتماد المعلمين — Authentication & Admin Approval ─── */
+/* ─── [SEC-26] دوال المصادقة واعتماد المعلمين — Authentication & Admin Approval (v4: اتفاقية الاستخدام) ─── */
 function renderAuth(app) {
   renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -1054,7 +1054,7 @@ function renderRegister(app) {
       <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
         <input type="checkbox" id="parentConsentCheck" required style="margin-top:4px; width:18px; height:18px;">
         <span style="font-size:12px; line-height:1.5; color:#334155;">
-          أوافق بصفتي ولي الأمر على جمع ومعالجة بيانات طفلي (بما في ذلك التسجيلات الصوتية) لأغراض التدريب والتشخيص، وفقاً لسياسة الخصوصية.
+          أوافق بصفتي ولي الأمر على جمع ومعالجة بيانات طفلي (بما في ذلك التسجيلات الصوتية والمرئية) لأغراض التدريب والتشخيص، وفقاً لسياسة الخصوصية.
         </span>
       </label>
     </div>
@@ -1064,6 +1064,16 @@ function renderRegister(app) {
       <p style="margin:0; font-size:13px; color:#9A3412;">
         ⚠️ <strong>تنبيه:</strong> حساب المعلم يتطلب موافقة المشرف. سيتم إرسال إشعار للإدارة لاعتماد حسابك.
       </p>
+    </div>
+
+    <!-- اتفاقية الاستخدام وإخلاء المسؤولية -->
+    <div style="margin-top:15px; padding:10px; background:#F8FAFC; border-radius:8px; border:1px solid #E2E8F0;">
+      <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="termsCheck" required style="margin-top:4px; width:18px; height:18px;">
+        <span style="font-size:12px; line-height:1.5; color:#334155;">
+          أوافق على <a href="#" onclick="event.preventDefault(); showPrivacyPolicy();" style="color:#0284C7; text-decoration:underline;">سياسة الخصوصية</a> و <a href="#" onclick="event.preventDefault(); showTermsOfUse();" style="color:#0284C7; text-decoration:underline;">شروط الاستخدام</a>، وأقر بأن المنصة أداة تعليمية مساعدة ولا تغني عن التشخيص الطبي الرسمي.
+        </span>
+      </label>
     </div>
 
     <button class="btn btn-primary btn-block" id="regBtn" style="margin-top:15px;">تسجيل الحساب</button>
@@ -1089,12 +1099,14 @@ function renderRegister(app) {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const role = roleSelect.value;
+    const termsCheck = document.getElementById('termsCheck').checked;
     
     const parentName = role === 'student' ? document.getElementById('parentName').value.trim() : '';
     const parentEmail = role === 'student' ? document.getElementById('parentEmail').value.trim() : '';
     const parentConsentCheck = role === 'student' ? document.getElementById('parentConsentCheck').checked : true;
 
     if (!email || !password) return showToast('يرجى ملء جميع الحقول المطلوبة');
+    if (!termsCheck) return showToast('⚠️ يجب الموافقة على شروط الاستخدام وسياسة الخصوصية للتسجيل');
     
     if (role === 'student') {
       if (!parentName || !parentEmail) return showToast('⚠️ يرجى إدخال بيانات ولي الأمر');
@@ -1115,6 +1127,7 @@ function renderRegister(app) {
         parentEmail: parentEmail,
         parentPhone: '',
         isApproved: role === 'teacher' ? false : true,
+        termsAccepted: true, // ✅ توثيق الموافقة على الشروط
         createdAt: new Date().toISOString()
       };
 
@@ -1130,7 +1143,6 @@ function renderRegister(app) {
       await setDoc(doc(db, "users", res.user.uid), userData);
       
       if (role === 'teacher') {
-        // ✅ إرسال إيميل للمدير عبر FormSubmit
         const approvalLink = `${window.location.origin}/?view=approve-teacher&teacherUid=${res.user.uid}`;
         
         fetch("https://formsubmit.co/ajax/manarat.alnutq@gmail.com", {
@@ -1188,6 +1200,31 @@ function renderResetPassword(app) {
   app.appendChild(card);
 }
 
+// ✅ نافذة شروط الاستخدام
+function showTermsOfUse() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;">
+      <h3 style="margin-bottom:16px;color:var(--mint-deep);">شروط الاستخدام وإخلاء المسؤولية</h3>
+      <div style="font-size:14px;line-height:1.8;margin-bottom:10px; color:#334155;">
+        <ul style="list-style:disc; padding-right:20px; margin-bottom:12px;">
+          <li><strong>طبيعة الخدمة:</strong> منصة "منارة النطق" هي أداة تعليمية مساعدة لتدريب النطق، <strong>ولا تغني بأي حال من الأحوال عن التشخيص الطبي أو العلاج</strong> لدى أخصائيي النطق والتخاطب المعتمدين.</li>
+          <li><strong>استخدام الحساب:</strong> يجب استخدام الحساب من قبل المعلم أو ولي الأمر فقط، ويُمنع مشاركة بيانات الدخول مع أي طرف ثالث.</li>
+          <li><strong>الملكية الفكرية:</strong> جميع محتويات المنصة وتصميمها هي ملكية فكرية محفوظة لمطور المنصة.</li>
+          <li><strong>الاستخدام التجاري:</strong> يُمنع استخدام المنصة لأي أغراض تجارية دون إذن مسبق.</li>
+          <li><strong>التعديلات:</strong> تحتفظ إدارة المنصة بحق تعديل هذه الشروط في أي وقت، ويُعد استمرار استخدام المنصة موافقة على التعديلات.</li>
+        </ul>
+      </div>
+      <button class="btn btn-primary btn-block" id="closeTermsBtn" style="border-radius:50px;">موافق، إغلاق</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const closeBtn = modal.querySelector('#closeTermsBtn');
+  if (closeBtn) closeBtn.onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+}
+
 /* ─── [SEC-26-B] صفحة اعتماد المعلم (للمدير) ─── */
 async function renderApproveTeacher(app) {
   renderTopbar(app, 'اعتماد حساب معلم', 'مراجعة طلب الانضمام للمنصة', () => { state.view = 'teacher-dashboard'; render(); });
@@ -1195,7 +1232,6 @@ async function renderApproveTeacher(app) {
   const urlParams = new URLSearchParams(window.location.search);
   const teacherUid = urlParams.get('teacherUid');
 
-  // ✅ التحقق الصارم: فقط إيميل منارة النطق أو من يملك دور admin
   const isAdmin = state.role === 'admin' || (state.user && state.user.email === 'manarat.alnutq@gmail.com');
   
   if (!isAdmin) {
