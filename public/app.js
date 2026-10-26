@@ -5978,7 +5978,7 @@ async function renderAdminDashboard(app) {
 /* ─── [END SEC-61] ─── */
 
 
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard ─── */
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v2: متوافق مع الصلاحيات) ─── */
 async function renderSchoolDashboard(app) {
   if (!state.managedSchool) { 
     showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
@@ -5990,24 +5990,21 @@ async function renderSchoolDashboard(app) {
 
   let schoolTeachers = [], schoolStudents = [];
   try {
-    // 1. جلب معلمي المدرسة
+    // 1. جلب جميع المعلمين الذين ينتمون لنفس المدرسة
     const teachersQ = query(collection(db, "users"), where("role", "==", "teacher"), where("schoolName", "==", state.managedSchool));
     const teachersSnap = await getDocs(teachersQ);
     teachersSnap.forEach(d => schoolTeachers.push({ id: d.id, ...d.data() }));
 
-    // 2. جلب طلاب هؤلاء المعلمين
+    // 2. جلب جميع الطلاب (سيقوم النظام بفلترتهم برمجياً بناءً على معلمي المدرسة)
+    const studentsQ = query(collection(db, "users"), where("role", "==", "student"));
+    const studentsSnap = await getDocs(studentsQ);
+    const allStudents = [];
+    studentsSnap.forEach(d => allStudents.push({ id: d.id, ...d.data() }));
+
+    // 3. فلترة الطلاب: نأخذ فقط الطلاب الذين معلمهم موجود في قائمة معلمي المدرسة
     const teacherIds = schoolTeachers.map(t => t.id);
-    if (teacherIds.length > 0) {
-      // جلب جميع الطلاب وفلترتهم محلياً (لتجنب مشاكل فهارس Firebase في الاستعلامات المعقدة)
-      const studentsQ = query(collection(db, "users"), where("role", "==", "student"));
-      const studentsSnap = await getDocs(studentsQ);
-      studentsSnap.forEach(d => {
-        const student = { id: d.id, ...d.data() };
-        if (student.teacherId && teacherIds.includes(student.teacherId)) {
-          schoolStudents.push(student);
-        }
-      });
-    }
+    schoolStudents = allStudents.filter(s => s.teacherId && teacherIds.includes(s.teacherId));
+
   } catch (e) { 
     app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب بيانات المدرسة: ${e.message}</p></div>`; 
     return; 
@@ -6038,18 +6035,23 @@ async function renderSchoolDashboard(app) {
     <h3>🧒 طلاب المدرسة (${schoolStudents.length})</h3>
     <div style="margin-top:10px;" id="schoolStudentsList">
       ${schoolStudents.length === 0 ? '<p class="muted">لا يوجد طلاب مسجلون تحت إشراف معلمي هذه المدرسة.</p>' : ''}
-      ${schoolStudents.map(s => `
+      ${schoolStudents.map(s => {
+        // البحث عن اسم المعلم المشرف على الطالب
+        const teacher = schoolTeachers.find(t => t.id === s.teacherId);
+        const teacherName = teacher ? teacher.fullName : 'غير معروف';
+        
+        return `
         <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:#F8FAFC;">
           <div>
             <strong>${s.fullName || 'بدون اسم'}</strong>
-            <div style="font-size:12px; color:#64748B;">${s.email}</div>
+            <div style="font-size:12px; color:#64748B;">المعلم: ${teacherName}</div>
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-sm btn-primary view-schol-stu-sess" data-id="${s.id}" style="border-radius:50px; padding:4px 12px;">📅 جلساته</button>
             <button class="btn btn-sm btn-success view-schol-stu-achv" data-id="${s.id}" style="border-radius:50px; padding:4px 12px;">🏆 إنجازه</button>
           </div>
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
   `;
   app.appendChild(stuCard);
