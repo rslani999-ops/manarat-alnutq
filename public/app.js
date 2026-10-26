@@ -4191,28 +4191,62 @@ function printSessionsLog() {
 }
 /* ─── [END SEC-44] ─── */
 
-/* ─── [SEC-45] قائمة IEP — IEP Session List ─── */
+/* ─── [SEC-45] قائمة IEP — IEP Session List (v2: دعم تصفح المعلمين) ─── */
 async function renderIEPSession(app) {
-  renderTopbar(app, '📋 الخطط الفردية (IEP)', 'اختر طالباً لعرض خطته', () => {
-    state.view = 'teacher-dashboard';
+  const isViewingOther = state.targetTeacherId && state.targetTeacherId !== state.user.uid;
+  
+  // تحديد زر الرجوع بناءً على من قام بفتح الصفحة
+  const backTarget = isViewingOther 
+    ? 'teacher-achievement' 
+    : ((state.role === 'admin' || state.user.email === 'manarat.alnutq@gmail.com') 
+        ? 'admin-dashboard' 
+        : (state.managedSchool ? 'school-dashboard' : 'teacher-dashboard'));
+
+  renderTopbar(app, '📋 الخطط الفردية (IEP)', isViewingOther ? 'عرض خطط طلاب المعلم' : 'اختر طالباً لعرض خطته', () => {
+    state.view = backTarget;
+    state.targetTeacherId = null;
+    state.targetTeacherName = null;
     render();
   });
 
   const card = document.createElement('div');
   card.className = 'card';
-  card.innerHTML = '<h3>👥 الطلاب</h3>';
+  card.innerHTML = '<h3>👥 الطلاب</h3><div id="iepListContainer"><p class="muted">⏳ جاري تحميل البيانات...</p></div>';
   app.appendChild(card);
 
-  if (!state.myStudents.length) {
-    card.innerHTML += '<p class="muted">لا يوجد طلاب مضافون.</p>';
+  const listContainer = card.querySelector('#iepListContainer');
+  
+  let studentsToShow = [];
+  try {
+    if (state.targetTeacherId) {
+      // جلب طلاب المعلم المستهدف
+      const q = query(
+        collection(db, "users"), 
+        where("teacherId", "==", state.targetTeacherId), 
+        where("role", "==", "student")
+      );
+      const snap = await getDocs(q);
+      snap.forEach(d => studentsToShow.push({ id: d.id, ...d.data() }));
+    } else {
+      // جلب طلابي (إذا كان المستخدم معلماً)
+      studentsToShow = state.myStudents;
+    }
+  } catch(e) {
+    listContainer.innerHTML = `<p class="muted" style="color:red;">⚠️ خطأ في جلب البيانات: ${e.message}</p>`;
     return;
   }
 
+  if (!studentsToShow || studentsToShow.length === 0) {
+    listContainer.innerHTML = '<p class="muted" style="text-align:center; padding:20px;">لا يوجد طلاب مضافون.</p>';
+    return;
+  }
+
+  listContainer.innerHTML = '';
   const list = document.createElement('div');
   list.className = 'iep-student-list';
-  card.appendChild(list);
+  listContainer.appendChild(list);
 
-  state.myStudents.forEach(st => {
+  studentsToShow.forEach(st => {
     const item = document.createElement('div');
     item.className = 'iep-student-item';
     item.innerHTML = `
