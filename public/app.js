@@ -4005,17 +4005,27 @@ async function checkAndSuggestMastery(studentId, letter) {
 /* ─── [END SEC-43] ─── */
 
 
-/* ─── [SEC-44] سجل الجلسات — Sessions Log (جلسات المعلم فقط) ─── */
+/* ─── [SEC-44] سجل الجلسات — Sessions Log (v3: دعم تصفح المعلمين) ─── */
 async function renderSessionsLog(app) {
-  // 🔒 حماية: التأكد من تسجيل الدخول
   if (!state.user) {
     showToast('⚠️ يجب تسجيل الدخول أولاً');
     state.view = 'home';
     return render();
   }
 
-  renderTopbar(app, '📊 جدول سجل الجلسات', 'جلساتك المسجلة مرتبة حسب التاريخ', () => {
-    state.view = 'teacher-dashboard';
+  // تحديد المعلم المستهدف (إما أنا، أو معلم أتصفحه كمدير)
+  const targetTeacherId = state.targetTeacherId || state.user.uid;
+  const isViewingOther = state.targetTeacherId && state.targetTeacherId !== state.user.uid;
+  const titleName = isViewingOther ? (state.targetTeacherName || 'المعلم') : 'جلساتي';
+  
+  const backTarget = (state.role === 'admin' || state.user.email === 'manarat.alnutq@gmail.com') 
+    ? 'admin-dashboard' 
+    : (state.managedSchool ? 'school-dashboard' : 'teacher-dashboard');
+
+  renderTopbar(app, `📊 سجل الجلسات`, isViewingOther ? `عرض جلسات: ${titleName}` : 'جلساتك المسجلة', () => {
+    state.targetTeacherId = null;
+    state.targetTeacherName = null;
+    state.view = backTarget;
     render();
   });
 
@@ -4023,7 +4033,7 @@ async function renderSessionsLog(app) {
   card.className = 'card';
   card.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-      <h3 style="margin:0;">📋 جلساتي</h3>
+      <h3 style="margin:0;">📋 ${isViewingOther ? 'جلسات المعلم: ' + titleName : 'جلساتي'}</h3>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-primary btn-sm" id="printSessionsLogBtn" style="border-radius:50px;padding:6px 16px;">🖨️ طباعة</button>
       </div>
@@ -4048,8 +4058,7 @@ async function renderSessionsLog(app) {
   }
 
   try {
-    // ✅ جلب جلسات المعلم الحالي فقط
-    const q = query(collection(db, "sessions"), where("teacherId", "==", state.user.uid));
+    const q = query(collection(db, "sessions"), where("teacherId", "==", targetTeacherId));
     const snap = await getDocs(q);
     const allSessions = [];
     snap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
@@ -4069,14 +4078,14 @@ async function renderSessionsLog(app) {
         ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
         : 0;
       statsBox.innerHTML = `
-        📊 إجمالي جلساتك: <strong>${totalSessions}</strong> جلسة | 
+        📊 إجمالي الجلسات: <strong>${totalSessions}</strong> | 
         ✅ مقيمة: <strong>${evaluatedSessions.length}</strong> | 
         📈 متوسط النجاح: <strong>${avgSuccess}%</strong>
       `;
     }
 
     if (allSessions.length === 0) {
-      tableContainer.innerHTML = '<p class="muted" style="text-align:center;padding:20px;">لا توجد جلسات مسجلة بعد. ابدأ بإضافة جلسة من قائمة الطلاب.</p>';
+      tableContainer.innerHTML = '<p class="muted" style="text-align:center;padding:20px;">لا توجد جلسات مسجلة.</p>';
     } else {
       const table = document.createElement('table');
       table.className = 'sessions-table';
@@ -4090,7 +4099,7 @@ async function renderSessionsLog(app) {
             <th>نوع الجلسة</th>
             <th>التقييم</th>
             <th>النسبة</th>
-            <th>حذف</th>
+            ${!isViewingOther ? '<th>حذف</th>' : ''}
           </tr>
         </thead>
         <tbody>
@@ -4109,31 +4118,78 @@ async function renderSessionsLog(app) {
                 <td>${typeInfo.icon} ${typeInfo.name}</td>
                 <td>${evalText}</td>
                 <td>${sess.successRate || 0}%</td>
-                <td><button class="btn btn-danger btn-sm delete-session-btn" data-id="${sess.id}">🗑️</button></td>
+                ${!isViewingOther ? `<td><button class="btn btn-danger btn-sm delete-session-btn" data-id="${sess.id}">🗑️</button></td>` : ''}
               </tr>
             `;
           }).join('')}
         </tbody>
       `;
       tableContainer.appendChild(table);
-      tableContainer.querySelectorAll('.delete-session-btn').forEach(btn => {
-        btn.onclick = async () => {
-          if (confirm('حذف هذه الجلسة؟')) {
-            try {
-              await deleteDoc(doc(db, "sessions", btn.dataset.id));
-              showToast('تم حذف الجلسة');
-              renderSessionsLog(app);
-            } catch (e) { showToast('خطأ: ' + e.message); }
-          }
-        };
-      });
+      
+      if (!isViewingOther) {
+        tableContainer.querySelectorAll('.delete-session-btn').forEach(btn => {
+          btn.onclick = async () => {
+            if (confirm('حذف هذه الجلسة؟')) {
+              try {
+                await deleteDoc(doc(db, "sessions", btn.dataset.id));
+                showToast('تم حذف الجلسة');
+                renderSessionsLog(app);
+              } catch (e) { showToast('خطأ: ' + e.message); }
+            }
+          };
+        });
+      }
     }
   } catch (e) {
     tableContainer.innerHTML = `<p class="muted">⚠️ خطأ: ${e.message}</p>`;
   }
 }
-/* ─── [END SEC-44] ─── */
 
+function printSessionsLog() {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+
+  const tableElement = document.querySelector('.sessions-table');
+  const statsHTML = document.getElementById('sessionsStatsBox')?.innerHTML || '';
+  const teacherName = state.user?.displayName || state.user?.email || 'المعلم';
+
+  if (!tableElement) {
+    showToast('⚠️ لا توجد بيانات للطباعة');
+    return;
+  }
+
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:20px;background:white;color:#1E2A47;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 style="font-size:24px;color:#357E74;margin:0;">منارة النطق</h1>
+        <p style="margin:5px 0 0;font-size:14px;color:#555;">جدول سجل الجلسات</p>
+        <hr style="border:1px solid #ddd;margin:10px 0;">
+      </div>
+      <div style="margin-bottom:15px;text-align:center;font-size:13px;">
+        <strong>المعلم:</strong> ${teacherName} | 
+        <strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-SA')}
+      </div>
+      <div style="margin-bottom:15px;padding:10px;background:#f5f5f5;border-radius:8px;text-align:center;font-size:13px;">
+        ${statsHTML}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        ${tableElement.innerHTML}
+      </table>
+      <style>
+        #iep-print-area table th, #iep-print-area table td { border: 1px solid #ddd; padding: 8px 6px; text-align: center; }
+        #iep-print-area table th { background: #EAF6F4; color: #357E74; }
+        #iep-print-area .delete-session-btn, #iep-print-area th:last-child, #iep-print-area td:last-child { display: none !important; }
+      </style>
+    </div>
+  `;
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+/* ─── [END SEC-44] ─── */
 
 /* ─── [SEC-45] قائمة IEP — IEP Session List ─── */
 async function renderIEPSession(app) {
@@ -5008,42 +5064,41 @@ const TEACHER_STANDARDS = [
 /* ─── [END SEC-53] ─── */
 
 
-/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement ─── */
+/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement (v3: تصفح المعلمين) ─── */
 async function renderTeacherAchievement(app) {
-  renderTopbar(app, '📁 ملف إنجاز المعلم', 'المعايير والأدلة والشواهد', () => {
-    state.view = state.isGuest ? 'home' : 'teacher-dashboard';
-    render();
-  });
-  
-  // السماح بالدخول إذا كان المستخدم مسجلاً أو إذا كان في وضع الزائر
-  if (!state.user && !state.isGuest) {
+  if (!state.user) {
     showToast('يجب تسجيل الدخول');
     state.view = 'auth';
     return render();
   }
   
-  // تحديد هوية المعلم المراد عرض ملفه (إما هو نفسه أو المعلم المستهدف من الرابط)
-  const teacherId = state.isGuest ? state.targetTeacherId : state.user.uid;
+  const targetTeacherId = state.targetTeacherId || state.user.uid;
+  const isViewingOther = state.targetTeacherId && state.targetTeacherId !== state.user.uid;
   
-  if (!teacherId) {
-    showToast('⚠️ رابط غير صالح أو ينقصه معرف المعلم');
-    state.view = 'home';
-    return render();
-  }
+  const backTarget = (state.role === 'admin' || state.user.email === 'manarat.alnutq@gmail.com') 
+    ? 'admin-dashboard' 
+    : (state.managedSchool ? 'school-dashboard' : 'teacher-dashboard');
+
+  renderTopbar(app, '📁 ملف إنجاز المعلم', isViewingOther ? `عرض إنجاز المعلم` : 'المعايير والأدلة والشواهد', () => {
+    state.targetTeacherId = null;
+    state.targetTeacherName = null;
+    state.view = backTarget;
+    render();
+  });
 
   let teacherData = {};
   try {
-    const teacherDoc = await getDoc(doc(db, "users", teacherId));
+    const teacherDoc = await getDoc(doc(db, "users", targetTeacherId));
     if (teacherDoc.exists()) teacherData = teacherDoc.data();
   } catch (e) { console.error('خطأ في جلب بيانات المعلم:', e); }
   
-  const teacherName = teacherData.fullName || teacherData.email || 'المعلم';
+  const teacherName = teacherData.fullName || teacherData.email || (isViewingOther ? state.targetTeacherName : 'المعلم');
   const schoolName = teacherData.schoolName || 'مدرسة قتيبة بن مسلم الابتدائية';
   const principalName = teacherData.principalName || '';
 
   let existingFiles = {};
   try {
-    const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", teacherId));
+    const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", targetTeacherId));
     const filesSnap = await getDocs(filesQuery);
     filesSnap.forEach(d => {
       const data = d.data();
@@ -5058,16 +5113,13 @@ async function renderTeacherAchievement(app) {
   headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
   headerCard.style.border = '2px solid var(--mint-deep)';
   
-  // إخفاء زر توليد الشواهد إذا كان زائر
-  const generateBtnHtml = !state.isGuest ? 
-    `<button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">⚡ تحديث وتوليد الشواهد</button>` : '';
+  const generateBtnHtml = (!isViewingOther && state.role !== 'admin') 
+    ? `<button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">⚡ تحديث وتوليد الشواهد</button>` : '';
 
   headerCard.innerHTML = `
     <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
     ${schoolName ? `<p style="margin:3px 0;text-align:center;font-weight:bold;color:#0F766E;">🏫 ${schoolName}</p>` : ''}
     <p class="muted" style="text-align:center;margin-top:2px;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
-    
-    ${state.isGuest ? `<div style="text-align:center; margin-top:10px;"><span class="badge" style="background:#FFF8E1;color:#F57F17;padding:6px 16px;">👁️ وضع العرض للزائر (للقراءة والطباعة فقط)</span></div>` : ''}
     
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
       ${generateBtnHtml}
@@ -5083,7 +5135,7 @@ async function renderTeacherAchievement(app) {
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
   if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, { schoolName, principalName });
 
-  if (!state.isGuest) {
+  if (!isViewingOther && state.role !== 'admin') {
     const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
     if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
   }
@@ -5102,7 +5154,7 @@ async function renderTeacherAchievement(app) {
       
       <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
 
-      ${!state.isGuest ? `
+      ${!isViewingOther ? `
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
         <input type="url" id="driveLinkInput_${standard.id}" placeholder="ضع رابط ملف Google Drive هنا..." style="margin:0; flex-grow:1; min-width:220px; padding:6px 10px; border:1px solid #CBD5E1; border-radius:6px; font-size:12px;">
         <button class="btn btn-soft btn-sm" id="saveDriveBtn_${standard.id}">🔗 إرفاق رابط جوجل درايف</button>
@@ -5117,7 +5169,7 @@ async function renderTeacherAchievement(app) {
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; background:#F8FAFC; padding:6px 12px; border-radius:8px;">
               <span style="font-size:13px;">📄 ${file.name || 'ملف Google Drive'}</span>
               <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563EB;font-weight:bold;margin-right:auto;">معاينة 🔗</a>
-              ${!state.isGuest ? `<button class="btn btn-danger btn-sm delete-link-btn" data-id="${file.id}" style="padding:2px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;">حذف</button>` : ''}
+              ${!isViewingOther ? `<button class="btn btn-danger btn-sm delete-link-btn" data-id="${file.id}" style="padding:2px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;">حذف</button>` : ''}
             </div>
           `;
         }).join('')}
@@ -5125,7 +5177,7 @@ async function renderTeacherAchievement(app) {
     `;
     app.appendChild(card);
 
-    if (!state.isGuest) {
+    if (!isViewingOther) {
       const driveInput = card.querySelector(`#driveLinkInput_${standard.id}`);
       const saveDriveBtn = card.querySelector(`#saveDriveBtn_${standard.id}`);
       const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
@@ -5133,143 +5185,45 @@ async function renderTeacherAchievement(app) {
       if (saveDriveBtn && driveInput) {
         saveDriveBtn.onclick = async () => {
           const linkUrl = driveInput.value.trim();
-          if (!linkUrl) {
-            showToast('❌ يرجى إدخال الرابط أولاً');
-            return;
-          }
-          if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) {
-            showToast('❌ يرجى إدخال رابط صحيح يبدأ بـ https://');
-            return;
-          }
-
+          if (!linkUrl) return showToast('❌ يرجى إدخال الرابط أولاً');
+          if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) return showToast('❌ يرجى إدخال رابط صحيح');
           fileStatus.textContent = '⏳ جاري الحفظ...';
           saveDriveBtn.disabled = true;
-
           try {
             await addDoc(collection(db, "teacher_files"), {
-              teacherId: teacherId,
+              teacherId: targetTeacherId,
               standardId: standard.id,
               name: 'رابط ملف Google Drive',
               url: linkUrl,
               type: 'google_drive_link',
               uploadedAt: new Date().toISOString()
             });
-
-            showToast('✅ تم حفظ رابط Google Drive بنجاح');
+            showToast('✅ تم حفظ الرابط بنجاح');
             renderTeacherAchievement(app);
           } catch (err) {
-            console.error('خطأ في حفظ الرابط بـ Firestore:', err);
-            showToast('❌ تعذر حفظ الرابط بالسجل: ' + err.message);
+            showToast('❌ تعذر الحفظ: ' + err.message);
             saveDriveBtn.disabled = false;
             fileStatus.textContent = '';
           }
         };
       }
 
-      const deleteBtns = card.querySelectorAll('.delete-link-btn');
-      deleteBtns.forEach(btn => {
+      card.querySelectorAll('.delete-link-btn').forEach(btn => {
         btn.onclick = async () => {
           if (!confirm('⚠️ هل أنت متأكد من حذف هذا المرفق؟')) return;
-          const fileDocId = btn.dataset.id;
           try {
-            await deleteDoc(doc(db, "teacher_files", fileDocId));
+            await deleteDoc(doc(db, "teacher_files", btn.dataset.id));
             showToast('🗑️ تم حذف المرفق بنجاح');
             renderTeacherAchievement(app);
-          } catch (err) {
-            console.error('خطأ في حذف الرابط:', err);
-            showToast('❌ تعذر الحذف: ' + err.message);
-          }
+          } catch (err) { showToast('❌ تعذر الحذف: ' + err.message); }
         };
       });
     }
   });
 
   setTimeout(() => {
-    restoreSavedEvidences(teacherId);
+    restoreSavedEvidences(targetTeacherId);
   }, 0);
-}
-
-function restoreSavedEvidences(teacherId) {
-  try {
-    const saved = localStorage.getItem(`teacher_evidences_${teacherId}`);
-    if (!saved) return;
-    const data = JSON.parse(saved);
-
-    const summaryArea = document.getElementById('autoEvidenceSummaryArea');
-    if (summaryArea && data && data.summary) {
-      summaryArea.innerHTML = `
-        <div class="card" style="border:2px solid #0D9488;background:#F0FDFA;margin-bottom:15px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-            <h3 style="color:#0F766E;margin:0;">⚡ تقرير الشواهد الرقمية المعتمدة</h3>
-            <span style="font-size:12px;color:#0F766E;background:#CCFBF1;padding:3px 10px;border-radius:12px;">محفوظ بتاريخ: ${data.savedAt || ''}</span>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center;">
-            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.totalStudents || 0}</strong>
-              <div style="font-size:12px;color:#64748B;">الطلاب المسجلين</div>
-            </div>
-            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.totalSessions || 0}</strong>
-              <div style="font-size:12px;color:#64748B;">الجلسات المنفذة</div>
-            </div>
-            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.averageSuccess || 0}%</strong>
-              <div style="font-size:12px;color:#64748B;">متوسط الإتقان</div>
-            </div>
-            <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
-              <strong style="color:#0F766E;font-size:20px;">${data.summary.evaluatedSessionsCount || 0}</strong>
-              <div style="font-size:12px;color:#64748B;">جلسات مقيمة</div>
-            </div>
-          </div>
-          ${!state.isGuest ? `<p style="margin:10px 0 0;font-size:12px;color:#0F766E;">اضغط على أي زر "عرض وتوثيق الشاهد" للانتقال المباشر للواجهة 👇</p>` : ''}
-        </div>
-      `;
-    }
-
-    if (data && data.evidences) {
-      TEACHER_STANDARDS.forEach(standard => {
-        const box = document.getElementById(`autoEvidenceBox_${standard.id}`);
-        const list = data.evidences[standard.id];
-        if (box) {
-          box.style.display = 'block';
-          if (list && list.length > 0) {
-            box.innerHTML = `
-              <div style="font-weight:bold;color:#0F766E;font-size:13px;margin-bottom:8px;">⚡ الشواهد التلقائية المعتمدة من النظام:</div>
-              ${list.map(item => `
-                <div style="background:white;border:1px solid #99F6E4;padding:10px 12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                  <div>
-                    <div style="font-weight:bold;font-size:13px;color:#134E4A;">${item.title}</div>
-                    <div style="font-size:12px;color:#475569;margin-top:2px;">${item.detail}</div>
-                  </div>
-                  ${!state.isGuest ? `
-                  <button class="btn btn-sm view-evidence-btn" data-view="${item.targetView}" style="background:#0F766E;color:white;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:bold;border:none;cursor:pointer;">
-                    عرض وتوثيق الشاهد 👁️
-                  </button>
-                  ` : ''}
-                </div>
-              `).join('')}
-            `;
-          } else {
-            box.innerHTML = `<span style="font-size:12px;color:#64748B;">يعتمد هذا المعيار على الوثائق والمرفقات اليدوية أدناه.</span>`;
-          }
-        }
-      });
-
-      if (!state.isGuest) {
-        document.querySelectorAll('.view-evidence-btn').forEach(btn => {
-          btn.onclick = () => {
-            const targetView = btn.dataset.view;
-            if (targetView) {
-              state.view = targetView;
-              render();
-            }
-          };
-        });
-      }
-    }
-  } catch (e) {
-    console.warn('تعذر استرجاع الشواهد المحفوظة:', e);
-  }
 }
 /* ─── [END SEC-54] ─── */
            
@@ -5978,7 +5932,7 @@ async function renderAdminDashboard(app) {
 /* ─── [END SEC-61] ─── */
 
 
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v4: مطابقة ذكية جداً) ─── */
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v5: تصفح المعلمين) ─── */
 async function renderSchoolDashboard(app) {
   if (!state.managedSchool) { 
     showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
@@ -5997,48 +5951,28 @@ async function renderSchoolDashboard(app) {
     return; 
   }
 
-  // ✅ دالة مطابقة ذكية جداً: تزيل الكلمات الزائدة وتجعل "ابن" = "بن"
   function normalizeSchoolName(name) {
     if (!name) return '';
-    return name
-      .replace(/مدرسة/g, '')
-      .replace(/الابتدائية/g, '')
-      .replace(/المتوسطة/g, '')
-      .replace(/الثانوية/g, '')
-      .replace(/بن/g, '')  // حذف "بن"
-      .replace(/ابن/g, '') // حذف "ابن"
-      .replace(/\s+/g, ' ') // إزالة المسافات الزائدة
-      .trim();
+    return name.replace(/مدرسة/g, '').replace(/الابتدائية/g, '').replace(/المتوسطة/g, '').replace(/الثانوية/g, '').replace(/بن/g, '').replace(/ابن/g, '').replace(/\s+/g, ' ').trim();
   }
 
   const targetNormalized = normalizeSchoolName(state.managedSchool);
-  const targetWords = targetNormalized.split(' ').filter(w => w.length > 2); // الكلمات الأساسية
+  const targetWords = targetNormalized.split(' ').filter(w => w.length > 2);
 
-  // دالة للتحقق مما إذا كان اسمان لمدرسة متطابقين
   function isSameSchool(name1, name2) {
     if (!name1 || !name2) return false;
     const norm1 = normalizeSchoolName(name1);
     const norm2 = normalizeSchoolName(name2);
-    
-    // إذا كانا متطابقين تماماً بعد التنظيف
     if (norm1 === norm2) return true;
-    
-    // إذا كانا يحتويان على نفس الكلمات الأساسية (مثل: قتيبة، مسلم)
     return targetWords.length > 0 && targetWords.every(word => norm2.includes(word));
   }
 
-  // 1. فلترة المعلمين: نأخذ المعلمين الذين ينتمون لنفس المدرسة أو المدير نفسه
   const schoolTeachers = allUsers.filter(u => {
     if (u.role !== 'teacher' && u.role !== 'admin') return false;
-    
-    // دائماً أضف حساب المدير الحالي إلى القائمة
     if (u.id === state.user.uid) return true;
-    
-    // مطابقة ذكية للمدارس
     return isSameSchool(state.managedSchool, u.schoolName);
   });
 
-  // 2. فلترة الطلاب: نأخذ الطلاب الذين معلمهم موجود في قائمة معلمي المدرسة
   const teacherIds = schoolTeachers.map(t => t.id);
   const schoolStudents = allUsers.filter(u => u.role === 'student' && u.teacherId && teacherIds.includes(u.teacherId));
 
@@ -6049,15 +5983,19 @@ async function renderSchoolDashboard(app) {
     <div style="margin-top:10px;" id="schoolTeachersList">
       ${schoolTeachers.length === 0 ? '<p class="muted">لا يوجد معلمون مسجلون في هذه المدرسة حالياً.</p>' : ''}
       ${schoolTeachers.map(t => `
-        <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:#F8FAFC;">
+        <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; background:#F8FAFC;">
           <div>
             <strong>${t.fullName || 'بدون اسم'} ${t.id === state.user.uid ? '(أنت)' : ''}</strong>
             <div style="font-size:12px; color:#64748B;">${t.email}</div>
             <div style="font-size:11px; color:#0F766E;">🏫 ${t.schoolName || 'لم يسجل مدرسة'}</div>
           </div>
-          <span class="badge" style="background:${t.id === state.user.uid ? '#10B981' : '#DBEAFE'}; color:${t.id === state.user.uid ? 'white' : '#1E40AF'};">
-            ${t.id === state.user.uid ? '👑 مدير المدرسة' : '👨‍🏫 معلم'}
-          </span>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn btn-sm btn-primary view-teacher-sessions" data-id="${t.id}" data-name="${t.fullName}" style="border-radius:50px; padding:4px 12px;">📅 جلساته</button>
+            <button class="btn btn-sm btn-success view-teacher-achv" data-id="${t.id}" data-name="${t.fullName}" style="border-radius:50px; padding:4px 12px;">🏆 إنجازه</button>
+            <span class="badge" style="background:${t.id === state.user.uid ? '#10B981' : '#DBEAFE'}; color:${t.id === state.user.uid ? 'white' : '#1E40AF'}; display:flex; align-items:center;">
+              ${t.id === state.user.uid ? '👑 مدير المدرسة' : '👨‍🏫 معلم'}
+            </span>
+          </div>
         </div>
       `).join('')}
     </div>
@@ -6090,7 +6028,26 @@ async function renderSchoolDashboard(app) {
   `;
   app.appendChild(stuCard);
 
-  // ربط أزرار تصفح الطلاب
+  // ربط أزرار المعلمين
+  card.querySelectorAll('.view-teacher-sessions').forEach(btn => {
+    btn.onclick = () => {
+      state.targetTeacherId = btn.dataset.id;
+      state.targetTeacherName = btn.dataset.name;
+      state.view = 'sessions-log';
+      render();
+    };
+  });
+  
+  card.querySelectorAll('.view-teacher-achv').forEach(btn => {
+    btn.onclick = () => {
+      state.targetTeacherId = btn.dataset.id;
+      state.targetTeacherName = btn.dataset.name;
+      state.view = 'teacher-achievement';
+      render();
+    };
+  });
+
+  // ربط أزرار الطلاب
   stuCard.querySelectorAll('.view-schol-stu-sess').forEach(btn => { 
     btn.onclick = () => { 
       state.currentStudent = schoolStudents.find(u => u.id === btn.dataset.id); 
