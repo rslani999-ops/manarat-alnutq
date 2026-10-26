@@ -919,74 +919,32 @@ function render() {
   if (!app) return;
   app.innerHTML = '';
 
-  // --- تحديث الرابط محمي لتفادي الانهيار في المتصفحات المخفية وواتساب ---
   try {
     const currentUrl = new URL(window.location);
     let urlChanged = false;
-
     if (currentUrl.searchParams.get('view') !== state.view) {
       currentUrl.searchParams.set('view', state.view);
       urlChanged = true;
     }
-
     const needsStudent = ['diagnostic-session', 'speech-sessions', 'single-session', 'iep-single-student', 'achievement'];
     const currentStudentId = state.currentStudent ? state.currentStudent.id : null;
-    
     if (needsStudent.includes(state.view) && currentStudentId) {
       if (currentUrl.searchParams.get('studentId') !== currentStudentId) {
         currentUrl.searchParams.set('studentId', currentStudentId);
         urlChanged = true;
       }
     } else {
-      if (currentUrl.searchParams.has('studentId')) {
-        currentUrl.searchParams.delete('studentId');
-        urlChanged = true;
-      }
+      if (currentUrl.searchParams.has('studentId')) { currentUrl.searchParams.delete('studentId'); urlChanged = true; }
     }
-
-    const currentSessionId = state.currentSession ? state.currentSession.id : null;
-    if (state.view === 'single-session' && currentSessionId) {
-      if (currentUrl.searchParams.get('sessionId') !== currentSessionId) {
-        currentUrl.searchParams.set('sessionId', currentSessionId);
-        urlChanged = true;
-      }
-    } else {
-      if (currentUrl.searchParams.has('sessionId')) {
-        currentUrl.searchParams.delete('sessionId');
-        urlChanged = true;
-      }
-    }
-
-    const currentUserId = state.user ? state.user.uid : null;
-    if (state.view === 'teacher-achievement' && currentUserId && !state.isGuest) {
-      if (currentUrl.searchParams.get('teacherId') !== currentUserId) {
-        currentUrl.searchParams.set('teacherId', currentUserId);
-        urlChanged = true;
-      }
-    } else if (state.view !== 'teacher-achievement') {
-      if (currentUrl.searchParams.has('teacherId')) {
-        currentUrl.searchParams.delete('teacherId');
-        urlChanged = true;
-      }
-    }
-
-    if (urlChanged) {
-      window.history.pushState({ 
-        view: state.view, 
-        studentId: currentStudentId,
-        sessionId: currentSessionId,
-        teacherId: currentUserId
-      }, '', currentUrl.toString());
-    }
-  } catch (e) {
-    console.warn("تم تجاهل تحديث الرابط بسبب قيود المتصفح");
-  }
-  // ------------------------------------------------------------
+    if (urlChanged) window.history.pushState({ view: state.view, studentId: currentStudentId }, '', currentUrl.toString());
+  } catch (e) {}
 
   if (state.view === 'home') return renderHome(app);
   if (state.view === 'auth') return renderAuth(app);
   if (state.view === 'register') return renderRegister(app);
   if (state.view === 'reset-password') return renderResetPassword(app);
+  if (state.view === 'approve-teacher') return renderApproveTeacher(app); // ✅ الصفحة الجديدة
+  
   if (state.view === 'teacher-dashboard') return renderTeacherDashboard(app);
   if (state.view === 'diagnostic-session') return renderDiagnosticSession(app);
   if (state.view === 'student-menu') return renderStudentMenu(app);
@@ -1013,7 +971,6 @@ window.addEventListener('popstate', (event) => {
     render(); 
   }
 });
-
 window.render = render;
 /* ─── [END SEC-25] ─── */
 
@@ -1027,7 +984,7 @@ window.render = render;
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-26] دوال المصادقة — Authentication (v2: موافقة ولي الأمر) ─── */
+/* ─── [SEC-26] دوال المصادقة واعتماد المعلمين — Authentication & Admin Approval ─── */
 function renderAuth(app) {
   renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -1071,7 +1028,7 @@ function renderRegister(app) {
     <input type="password" id="password" placeholder="كلمة المرور">
     <select id="role">
       <option value="student">طالب</option>
-      <option value="teacher">معلم</option>
+      <option value="teacher">معلم (يتطلب اعتماد الإدارة)</option>
     </select>
 
     <!-- قسم ولي الأمر (يظهر للطلاب فقط) -->
@@ -1088,18 +1045,27 @@ function renderRegister(app) {
       </label>
     </div>
 
+    <!-- تنبيه للمعلم -->
+    <div id="teacherNotice" style="display:none; margin-top:10px; padding:15px; background:#FFF7ED; border-radius:12px; border:1px solid #FED7AA;">
+      <p style="margin:0; font-size:13px; color:#9A3412;">
+        ⚠️ <strong>تنبيه:</strong> حساب المعلم يتطلب موافقة المشرف. سيتم إرسال إشعار للإدارة لاعتماد حسابك.
+      </p>
+    </div>
+
     <button class="btn btn-primary btn-block" id="regBtn" style="margin-top:15px;">تسجيل الحساب</button>
   `;
 
   const roleSelect = card.querySelector('#role');
   const parentSection = card.querySelector('#parentSection');
+  const teacherNotice = card.querySelector('#teacherNotice');
   
-  // إخفاء/إظهار قسم ولي الأمر حسب الدور
   roleSelect.onchange = () => {
     if (roleSelect.value === 'teacher') {
       parentSection.style.display = 'none';
+      teacherNotice.style.display = 'block';
     } else {
       parentSection.style.display = 'block';
+      teacherNotice.style.display = 'none';
     }
   };
 
@@ -1110,7 +1076,6 @@ function renderRegister(app) {
     const password = document.getElementById('password').value;
     const role = roleSelect.value;
     
-    // بيانات ولي الأمر (إذا كان طالباً)
     const parentName = role === 'student' ? document.getElementById('parentName').value.trim() : '';
     const parentEmail = role === 'student' ? document.getElementById('parentEmail').value.trim() : '';
     const parentConsentCheck = role === 'student' ? document.getElementById('parentConsentCheck').checked : true;
@@ -1134,10 +1099,11 @@ function renderRegister(app) {
         ageGroup: '',
         parentName: parentName,
         parentEmail: parentEmail,
-        parentPhone: ''
+        parentPhone: '',
+        isApproved: role === 'teacher' ? false : true,
+        createdAt: new Date().toISOString()
       };
 
-      // إضافة حقل الموافقة إذا كان طالباً
       if (role === 'student') {
         userData.parentConsent = {
           granted: true,
@@ -1149,12 +1115,32 @@ function renderRegister(app) {
 
       await setDoc(doc(db, "users", res.user.uid), userData);
       
-      state.user = res.user; 
-      state.role = role;
-      state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
-      showToast('تم إنشاء الحساب بنجاح');
-      if (role === 'teacher') await fetchTeacherStudents();
-      else render();
+      if (role === 'teacher') {
+        // ✅ إرسال إيميل للمدير عبر FormSubmit
+        const approvalLink = `${window.location.origin}/?view=approve-teacher&teacherUid=${res.user.uid}`;
+        
+        fetch("https://formsubmit.co/ajax/manarat.alnutq@gmail.com", {
+          method: "POST",
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            _subject: "🔔 طلب انضمام معلم جديد - منارة النطق",
+            "اسم المعلم": name || email,
+            "البريد الإلكتروني": email,
+            "رابط الاعتماد": approvalLink
+          })
+        }).catch(e => console.error('فشل إرسال الإيميل:', e));
+
+        showToast('✅ تم التسجيل. تم إرسال طلبك للإدارة للاعتماد.');
+        await signOut(auth);
+        state.view = 'auth';
+        render();
+      } else {
+        state.user = res.user; 
+        state.role = role;
+        state.view = 'student-menu';
+        showToast('تم إنشاء الحساب بنجاح');
+        render();
+      }
       
     } catch (e) { showToast('فشل التسجيل: ' + e.message); }
   };
@@ -1187,7 +1173,78 @@ function renderResetPassword(app) {
   if (backBtn) backBtn.onclick = () => { state.view = 'auth'; render(); };
   app.appendChild(card);
 }
-/* ─── [END SEC-26] ─── */
+
+/* ─── [SEC-26-B] صفحة اعتماد المعلم (للمدير) ─── */
+async function renderApproveTeacher(app) {
+  renderTopbar(app, 'اعتماد حساب معلم', 'مراجعة طلب الانضمام للمنصة', () => { state.view = 'teacher-dashboard'; render(); });
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const teacherUid = urlParams.get('teacherUid');
+
+  // التحقق من أن المستخدم الحالي هو المدير (أو بريد الإدارة)
+  const isAdmin = state.role === 'admin' || (state.user && (state.user.email === 'manarat.alnutq@gmail.com' || state.user.email === 't184673@estb.moe.gov.sa'));
+  
+  if (!isAdmin) {
+    app.innerHTML = `<div class="card" style="text-align:center;"><h3 style="color:var(--coral);">⚠️ غير مصرح لك</h3><p>هذه الصفحة مخصصة لإدارة المنصة فقط.</p></div>`;
+    return;
+  }
+
+  if (!teacherUid) {
+    app.innerHTML = `<div class="card" style="text-align:center;"><p>رابط غير صالح.</p></div>`;
+    return;
+  }
+
+  try {
+    const docRef = doc(db, "users", teacherUid);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      app.innerHTML = `<div class="card" style="text-align:center;"><p>لم يتم العثور على المعلم.</p></div>`;
+      return;
+    }
+
+    const teacherData = docSnap.data();
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.textAlign = 'center';
+    card.innerHTML = `
+      <div style="font-size:60px; margin-bottom:10px;">👨‍🏫</div>
+      <h3 style="color:var(--mint-deep);">طلب انضمام معلم جديد</h3>
+      <p style="font-size:16px;"><strong>الاسم:</strong> ${teacherData.fullName || 'غير محدد'}</p>
+      <p style="font-size:16px;"><strong>البريد:</strong> ${teacherData.email || 'غير محدد'}</p>
+      <p style="font-size:14px; color:#6B7A99;">تاريخ الطلب: ${teacherData.createdAt ? new Date(teacherData.createdAt).toLocaleDateString('ar-SA') : 'غير معروف'}</p>
+      
+      <div style="margin-top:20px;">
+        ${teacherData.isApproved 
+          ? '<span class="badge" style="background:#E8F5E9; color:#2E7D32; font-size:16px; padding:10px 20px;">✅ هذا الحساب معتمد مسبقاً</span>' 
+          : '<button class="btn btn-success" id="approveBtn" style="border-radius:50px; padding:12px 40px; font-size:18px; font-weight:bold;">✅ موافقة وتفعيل الحساب</button>'
+        }
+      </div>
+    `;
+    app.appendChild(card);
+
+    const approveBtn = card.querySelector('#approveBtn');
+    if (approveBtn) {
+      approveBtn.onclick = async () => {
+        approveBtn.disabled = true;
+        approveBtn.textContent = '⏳ جاري الاعتماد...';
+        try {
+          await updateDoc(docRef, { isApproved: true });
+          showToast('✅ تم اعتماد المعلم بنجاح');
+          approveBtn.outerHTML = '<span class="badge" style="background:#E8F5E9; color:#2E7D32; font-size:16px; padding:10px 20px;">✅ تم الاعتماد</span>';
+        } catch (e) {
+          showToast('❌ فشل الاعتماد: ' + e.message);
+          approveBtn.disabled = false;
+          approveBtn.textContent = '✅ موافقة وتفعيل الحساب';
+        }
+      };
+    }
+  } catch (e) {
+    app.innerHTML = `<div class="card"><p>حدث خطأ: ${e.message}</p></div>`;
+  }
+}
+/* ─── [END SEC-26] و [END SEC-26-B] ─── */
 
 
 /* ─── [SEC-27] جلب بيانات المستخدم والطلاب — Fetch User & Students Data (v2: محصّن) ─── */
@@ -5432,7 +5489,7 @@ function printAchievement(student, data) {
 /* ─── [END SEC-57] ─── */
      
 
-/* ─── [SEC-58] التهيئة النهائية — Final Init (v2: أمان + تعطيل الزوار) ─── */
+/* ─── [SEC-58] التهيئة النهائية — Final Init (v3: دعم رابط الاعتماد) ─── */
 function initApp() {
   initAccessibility();
 
@@ -5440,58 +5497,49 @@ function initApp() {
   const requestedView = currentUrl.searchParams.get('view');
   const requestedStudentId = currentUrl.searchParams.get('studentId');
   const requestedSessionId = currentUrl.searchParams.get('sessionId');
-  const requestedTeacherId = currentUrl.searchParams.get('teacherId');
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      // ═══ مستخدم مسجل الدخول ═══
       state.user = user;
       state.isGuest = false;
       await fetchUserData(user.uid);
 
-      // معالجة الروابط المباشرة (deep links) للمستخدمين المسجلين
+      // ✅ دعم رابط اعتماد المعلم (حتى لو كان المستخدم مديراً)
+      if (requestedView === 'approve-teacher') {
+        state.view = 'approve-teacher';
+        render();
+        return;
+      }
+
       if (requestedView && requestedView !== 'home' && requestedView !== 'auth') {
         try {
           if (requestedStudentId) {
             const sDoc = await getDoc(doc(db, "users", requestedStudentId));
-            if (sDoc.exists()) {
-              state.currentStudent = { id: sDoc.id, ...sDoc.data() };
-            }
+            if (sDoc.exists()) state.currentStudent = { id: sDoc.id, ...sDoc.data() };
           }
           if (requestedSessionId) {
             const sessDoc = await getDoc(doc(db, "sessions", requestedSessionId));
-            if (sessDoc.exists()) {
-              state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
-            }
+            if (sessDoc.exists()) state.currentSession = { id: sessDoc.id, ...sessDoc.data() };
           }
-        } catch (e) {
-          console.warn('تعذر تحميل بيانات الرابط:', e.code || e.message);
-        }
+        } catch (e) {}
         state.view = requestedView;
-        state.targetTeacherId = requestedTeacherId || null;
         render();
       }
-
     } else {
-      // ═══ زائر (غير مسجل الدخول) ═══
       state.user = null;
       state.role = null;
-      state.isGuest = false;   // ✅ وضع الزائر معطّل — الحماية الأمنية
+      state.isGuest = false;
 
-      // السماح فقط بالصفحات العامة
-      const publicViews = ['home', 'auth', 'register', 'reset-password'];
-      state.view = (requestedView && publicViews.includes(requestedView))
-        ? requestedView
-        : 'home';
-
-      // رسالة إرشادية لمن حاول فتح رابط زائر قديم
-      const guestViews = ['achievement', 'single-session', 'teacher-achievement', 'iep-single-student'];
-      if (requestedView && guestViews.includes(requestedView)) {
-        setTimeout(() => {
-          showToast('⚠️ هذا الرابط يتطلب تسجيل الدخول. اطلب من المعلم إرسال رابط جديد.');
-        }, 500);
+      // إذا فتح رابط الاعتماد بدون تسجيل دخول، اطلب منه تسجيل الدخول
+      if (requestedView === 'approve-teacher') {
+        state.view = 'auth';
+        setTimeout(() => showToast('⚠️ يرجى تسجيل الدخول بصفتك مديراً لاعتماد الطلب.'), 500);
+        render();
+        return;
       }
 
+      const publicViews = ['home', 'auth', 'register', 'reset-password'];
+      state.view = (requestedView && publicViews.includes(requestedView)) ? requestedView : 'home';
       render();
     }
   });
