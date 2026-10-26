@@ -1503,7 +1503,6 @@ async function renderTeacherDashboard(app) {
   } else {
     for (const student of state.myStudents) {
       const studentSessions = allSessionsForTeacher.filter(s => s.studentId === student.id);
-      // ✅ إزالة طلب الشبكة الزائد: نستخدم بيانات الطالب الموجودة في الذاكرة مباشرة
       const suggestions = getAdaptiveSuggestion(student, studentSessions);
       const suggestionDiv = document.createElement('div');
       suggestionDiv.style.marginBottom = '12px';
@@ -1539,7 +1538,6 @@ async function renderTeacherDashboard(app) {
       setTimeout(() => {
         const claimBtn = document.getElementById(`claim_${st.id}`);
         if (claimBtn) {
-          // ✅ تعطيل الزر فوراً لمنع تكرار الطلبات (سبب خطأ AbortError)
           claimBtn.onclick = async () => {
             claimBtn.disabled = true;
             claimBtn.textContent = '⏳ جاري الإضافة...';
@@ -1553,13 +1551,23 @@ async function renderTeacherDashboard(app) {
 }
 
 // ✅ إدارة الموافقات (Modal)
-window.showConsentManagementModal = function() {
+window.showConsentManagementModal = async function() {
+  // ✅ جلب اسم المعلم الحقيقي من Firestore قبل بناء الرسالة
+  let teacherName = state.user?.email || 'المعلم';
+  try {
+    if (state.user?.uid) {
+      const tSnap = await getDoc(doc(db, "users", state.user.uid));
+      if (tSnap.exists() && tSnap.data().fullName) {
+        teacherName = tSnap.data().fullName;
+      }
+    }
+  } catch (e) { console.warn('تعذر جلب اسم المعلم:', e); }
+
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
   
   let rowsHtml = '';
   const students = state.myStudents || [];
-  const teacherName = state.user?.fullName || state.user?.email || 'المعلم';
   
   if (students.length === 0) {
     rowsHtml = '<tr><td colspan="4" style="text-align:center; padding:20px;">لا يوجد طلاب.</td></tr>';
@@ -1654,7 +1662,7 @@ window.showConsentManagementModal = function() {
           parentConsent: {
             granted: true,
             grantedAt: new Date().toISOString(),
-            grantedBy: `المعلم (تأكيد يدوي) - ${state.user.email}`,
+            grantedBy: `المعلم (تأكيد يدوي) - ${teacherName}`,
             version: "1.0"
           }
         });
