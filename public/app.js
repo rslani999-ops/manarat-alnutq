@@ -5976,6 +5976,103 @@ async function renderAdminDashboard(app) {
   });
 }
 /* ─── [END SEC-61] ─── */
+
+
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard ─── */
+async function renderSchoolDashboard(app) {
+  if (!state.managedSchool) { 
+    showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
+    state.view = 'home'; 
+    return render(); 
+  }
+
+  renderTopbar(app, `🏫 إدارة ${state.managedSchool}`, 'لوحة مدير المدرسة', null);
+
+  let schoolTeachers = [], schoolStudents = [];
+  try {
+    // 1. جلب معلمي المدرسة
+    const teachersQ = query(collection(db, "users"), where("role", "==", "teacher"), where("schoolName", "==", state.managedSchool));
+    const teachersSnap = await getDocs(teachersQ);
+    teachersSnap.forEach(d => schoolTeachers.push({ id: d.id, ...d.data() }));
+
+    // 2. جلب طلاب هؤلاء المعلمين
+    const teacherIds = schoolTeachers.map(t => t.id);
+    if (teacherIds.length > 0) {
+      // جلب جميع الطلاب وفلترتهم محلياً (لتجنب مشاكل فهارس Firebase في الاستعلامات المعقدة)
+      const studentsQ = query(collection(db, "users"), where("role", "==", "student"));
+      const studentsSnap = await getDocs(studentsQ);
+      studentsSnap.forEach(d => {
+        const student = { id: d.id, ...d.data() };
+        if (student.teacherId && teacherIds.includes(student.teacherId)) {
+          schoolStudents.push(student);
+        }
+      });
+    }
+  } catch (e) { 
+    app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب بيانات المدرسة: ${e.message}</p></div>`; 
+    return; 
+  }
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <h3>👨‍🏫 معلمو المدرسة (${schoolTeachers.length})</h3>
+    <div style="margin-top:10px;" id="schoolTeachersList">
+      ${schoolTeachers.length === 0 ? '<p class="muted">لا يوجد معلمون مسجلون في هذه المدرسة حالياً.</p>' : ''}
+      ${schoolTeachers.map(t => `
+        <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:#F8FAFC;">
+          <div>
+            <strong>${t.fullName || 'بدون اسم'}</strong>
+            <div style="font-size:12px; color:#64748B;">${t.email}</div>
+          </div>
+          <span class="badge" style="background:#DBEAFE; color:#1E40AF;">👨‍🏫 معلم</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  app.appendChild(card);
+
+  const stuCard = document.createElement('div');
+  stuCard.className = 'card';
+  stuCard.innerHTML = `
+    <h3>🧒 طلاب المدرسة (${schoolStudents.length})</h3>
+    <div style="margin-top:10px;" id="schoolStudentsList">
+      ${schoolStudents.length === 0 ? '<p class="muted">لا يوجد طلاب مسجلون تحت إشراف معلمي هذه المدرسة.</p>' : ''}
+      ${schoolStudents.map(s => `
+        <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:#F8FAFC;">
+          <div>
+            <strong>${s.fullName || 'بدون اسم'}</strong>
+            <div style="font-size:12px; color:#64748B;">${s.email}</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm btn-primary view-schol-stu-sess" data-id="${s.id}" style="border-radius:50px; padding:4px 12px;">📅 جلساته</button>
+            <button class="btn btn-sm btn-success view-schol-stu-achv" data-id="${s.id}" style="border-radius:50px; padding:4px 12px;">🏆 إنجازه</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  app.appendChild(stuCard);
+
+  // ربط أزرار تصفح الطلاب
+  stuCard.querySelectorAll('.view-schol-stu-sess').forEach(btn => { 
+    btn.onclick = () => { 
+      state.currentStudent = schoolStudents.find(u => u.id === btn.dataset.id); 
+      state.view = 'speech-sessions'; 
+      render(); 
+    }; 
+  });
+  
+  stuCard.querySelectorAll('.view-schol-stu-achv').forEach(btn => { 
+    btn.onclick = () => { 
+      state.currentStudent = schoolStudents.find(u => u.id === btn.dataset.id); 
+      state.view = 'achievement'; 
+      render(); 
+    }; 
+  });
+}
+/* ─── [END SEC-62] ─── */
+
 /* ─── [SEC-60] تشغيل التطبيق — Start App ─── */
 initApp();
 /* ─── [END SEC-60] ─── */
