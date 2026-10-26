@@ -1195,7 +1195,7 @@ async function fetchTeacherStudents() {
 /* ─── [END SEC-27] ─── */
 
 
-/* ─── [SEC-28] لوحة المعلم — Teacher Dashboard ─── */
+/* ─── [SEC-28] لوحة المعلم — Teacher Dashboard (v2: زر الموافقة) ─── */
 async function renderTeacherDashboard(app) {
   renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
@@ -1233,6 +1233,7 @@ async function renderTeacherDashboard(app) {
       <button class="btn btn-soft btn-sm" id="btnAchievementList">🏆 ملف إنجاز الطلاب</button>
       <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
       <button class="btn btn-sm" id="btnWeeklyPlan" style="background:linear-gradient(135deg, #0891B2, #06B6D4); color:white;">📅 الخطة الأسبوعية الذكية</button>
+      <button class="btn btn-sm" id="btnRetroactiveConsent" style="background:#EA580C; color:white;">⚠️ إضافة موافقة بأثر رجعي</button>
     </div>
   `;
   app.appendChild(actCard);
@@ -1247,6 +1248,10 @@ async function renderTeacherDashboard(app) {
   if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
   const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
   if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
+  
+  // ✅ ربط زر الموافقة بأثر رجعي
+  const btnRetroactiveConsent = actCard.querySelector('#btnRetroactiveConsent');
+  if (btnRetroactiveConsent) btnRetroactiveConsent.onclick = () => window.addRetroactiveConsent();
 
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
