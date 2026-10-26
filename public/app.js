@@ -5793,7 +5793,9 @@ window.where = where;
 window.getCurrentStudent = function() { return state.currentStudent; };
 window.state = state;   // ✅ تصدير الحالة لـ ai-features.js
 /* ─── [END SEC-59] ─── */
-/* ─── [SEC-61] لوحة تحكم المدير — Admin Dashboard (v3: إصلاح التداخل) ─── */
+
+
+/* ─── [SEC-61] لوحة تحكم المدير — Admin Dashboard (v6: حماية ذكية بالجلسات) ─── */
 async function renderAdminDashboard(app) {
   if (!state.user || (state.role !== 'admin' && state.user.email !== 'manarat.alnutq@gmail.com')) {
     showToast('⚠️ غير مصرح لك بالدخول');
@@ -5807,14 +5809,27 @@ async function renderAdminDashboard(app) {
   renderTopbar(app, '👑 لوحة المدير', 'إدارة شاملة للمنصة', () => { state.view = 'teacher-dashboard'; render(); });
 
   let allUsers = [];
+  let allSessions = [];
   try {
-    const usersSnap = await getDocs(collection(db, "users"));
+    const [usersSnap, sessionsSnap] = await Promise.all([
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "sessions"))
+    ]);
     usersSnap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
+    sessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
   } catch (e) {
-    if (e.code === 'aborted' || (e.message && e.message.includes('aborted'))) return; // ✅ تجاهل خطأ الإلغاء
+    if (e.code === 'aborted' || (e.message && e.message.includes('aborted'))) return;
     app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب البيانات: ${e.message}</p></div>`;
     return;
   }
+
+  // حساب عدد الجلسات لكل معلم
+  const teacherSessionsCount = {};
+  allSessions.forEach(s => {
+    if (s.teacherId) {
+      teacherSessionsCount[s.teacherId] = (teacherSessionsCount[s.teacherId] || 0) + 1;
+    }
+  });
 
   const teachers = allUsers.filter(u => u.role === 'teacher');
   const admins = allUsers.filter(u => u.role === 'admin');
@@ -5849,7 +5864,7 @@ async function renderAdminDashboard(app) {
   controlsCard.querySelectorAll('.admin-tab').forEach(tab => {
     tab.onclick = () => {
       state.adminTab = tab.dataset.tab;
-      render(); // ✅ استخدام render بدلاً من renderAdminDashboard
+      render();
     };
   });
 
@@ -5859,7 +5874,7 @@ async function renderAdminDashboard(app) {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
       state.adminSearch = e.target.value;
-      render(); // ✅ استخدام render
+      render();
     }, 400);
   };
 
@@ -5876,7 +5891,7 @@ async function renderAdminDashboard(app) {
 
     const schoolNames = Object.keys(schoolsMap);
     if (schoolNames.length === 0) {
-      listContainer.innerHTML = '<p class="muted">لا توجد مدارس مسجلة حالياً (يجب أن يضيف المعلمون أسماء مدارسهم في ملفاتهم الشخصية).</p>';
+      listContainer.innerHTML = '<p class="muted">لا توجد مدارس مسجلة حالياً.</p>';
     } else {
       listContainer.innerHTML = '';
       schoolNames.forEach(schoolName => {
@@ -5888,7 +5903,7 @@ async function renderAdminDashboard(app) {
             <strong style="font-size:16px; color:#0F766E;">🏫 ${schoolName}</strong>
             <div style="font-size:13px; color:#64748B; margin-top:4px;">عدد المعلمين: ${schoolTeachers.length}</div>
           </div>
-          <button class="btn btn-danger btn-sm delete-school-btn" data-school="${schoolName}" style="border-radius:50px;">🗑️ حذف المدرسة (إلغاء ربط المعلمين)</button>
+          <button class="btn btn-danger btn-sm delete-school-btn" data-school="${schoolName}" style="border-radius:50px;">🗑️ حذف المدرسة</button>
         `;
         listContainer.appendChild(row);
       });
@@ -5896,14 +5911,14 @@ async function renderAdminDashboard(app) {
       listContainer.querySelectorAll('.delete-school-btn').forEach(btn => {
         btn.onclick = async () => {
           const schoolName = btn.dataset.school;
-          if (!confirm(`⚠️ هل أنت متأكد من حذف مدرسة "${schoolName}"؟\n\nسيتم إزالة اسم المدرسة من جميع المعلمين المرتبطين بها (لن يتم حذف حساباتهم).`)) return;
+          if (!confirm(`⚠️ هل أنت متأكد من حذف مدرسة "${schoolName}"؟`)) return;
           btn.disabled = true;
-          btn.textContent = '⏳ جاري الحذف...';
+          btn.textContent = '⏳';
           try {
             const schoolTeachers = schoolsMap[schoolName];
             await Promise.all(schoolTeachers.map(t => updateDoc(doc(db, "users", t.id), { schoolName: '' })));
-            showToast('✅ تم حذف المدرسة وإلغاء ربط المعلمين');
-            render(); // ✅ استخدام render
+            showToast('✅ تم حذف المدرسة');
+            render();
           } catch (e) {
             showToast('❌ فشل الحذف: ' + e.message);
             btn.disabled = false;
@@ -5945,18 +5960,28 @@ async function renderAdminDashboard(app) {
       ? '<span class="badge" style="background:#FEF3C7; color:#D97706;">⏳ بانتظار الاعتماد</span>' 
       : '';
 
-    const isMainAdmin = u.email === 'manarat.alnutq@gmail.com';
     const isSelf = u.id === state.user.uid;
-    const canDelete = !isMainAdmin && !isSelf;
+    const isMainAdmin = u.email === 'manarat.alnutq@gmail.com';
+    
+    // ✅ الحماية الذكية: لا يمكن الحذف إذا كان الحساب يملك جلسات (حتى لو كان مكرراً)
+    const sessionCount = teacherSessionsCount[u.id] || 0;
+    const hasSessions = sessionCount > 0;
+    const canDelete = !isMainAdmin && !isSelf && !hasSessions;
+    
+    // شارة الحماية
+    const protectedBadge = hasSessions 
+      ? `<span class="badge" style="background:#F59E0B; color:white; font-weight:bold;">🛡️ محمي (${sessionCount} جلسة)</span>` 
+      : (isSelf ? '<span class="badge" style="background:#10B981; color:white; font-weight:bold;">⭐ حسابك الحالي</span>' : '');
 
     const row = document.createElement('div');
-    row.style.cssText = 'padding:12px; border:1px solid #E2E8F0; border-radius:12px; margin-bottom:10px; background:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+    row.style.cssText = `padding:12px; border:${hasSessions || isSelf ? '2px solid #10B981' : '1px solid #E2E8F0'}; border-radius:12px; margin-bottom:10px; background:${hasSessions || isSelf ? '#F0FDF4' : 'white'}; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;`;
     row.innerHTML = `
       <div style="flex:1;">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <strong>${u.fullName || 'بدون اسم'}</strong>
           ${roleBadge}
           ${statusBadge}
+          ${protectedBadge}
         </div>
         <div style="font-size:12px; color:#64748B; margin-top:4px;">📧 ${u.email || 'بدون بريد'}</div>
         ${u.schoolName ? `<div style="font-size:12px; color:#0F766E; margin-top:2px;">🏫 ${u.schoolName}</div>` : ''}
@@ -5976,7 +6001,7 @@ async function renderAdminDashboard(app) {
       try {
         await updateDoc(doc(db, "users", btn.dataset.id), { isApproved: true });
         showToast('✅ تم الاعتماد');
-        render(); // ✅ استخدام render
+        render();
       } catch (e) {
         showToast('❌ ' + e.message);
         btn.disabled = false;
@@ -5992,12 +6017,8 @@ async function renderAdminDashboard(app) {
       const name = btn.dataset.name;
       
       const roleLabel = role === 'teacher' ? 'المعلم' : role === 'student' ? 'الطالب' : 'المدير';
-      const confirmMsg = `⚠️ تحذير خطير!\n\nهل أنت متأكد من حذف ${roleLabel}: "${name}"؟\n\n` +
-        (role === 'teacher' ? '• سيتم فصل جميع طلابه (يصبحون متاحين لمعلم آخر).\n• سيتم حذف جميع جلساته وملفاته.\n' : '') +
-        (role === 'student' ? '• سيتم حذف جميع جلساته وتشخيصاته وملف إنجازه نهائياً.\n' : '') +
-        '\n❌ هذا الإجراء لا يمكن التراجع عنه!';
-
-      if (!confirm(confirmMsg)) return;
+      
+      if (!confirm(`⚠️ تحذير خطير!\n\nهل أنت متأكد من حذف ${roleLabel}: "${name}"؟\n\n❌ هذا الإجراء لا يمكن التراجع عنه!`)) return;
       
       btn.disabled = true;
       btn.textContent = '⏳';
@@ -6027,7 +6048,7 @@ async function renderAdminDashboard(app) {
         await deleteDoc(doc(db, "users", userId));
         
         showToast(`✅ تم حذف ${roleLabel} بنجاح`);
-        render(); // ✅ استخدام render
+        render();
       } catch (e) {
         showToast('❌ فشل الحذف: ' + e.message);
         btn.disabled = false;
@@ -6037,6 +6058,8 @@ async function renderAdminDashboard(app) {
   });
 }
 /* ─── [END SEC-61] ─── */
+
+
 /* ─── [SEC-60] تشغيل التطبيق — Start App ─── */
 initApp();
 /* ─── [END SEC-60] ─── */
