@@ -1022,7 +1022,7 @@ window.render = render;
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-26] دوال المصادقة واعتماد المعلمين — Authentication & Admin Approval (v4: اتفاقية الاستخدام) ─── */
+/* ─── [SEC-26] دوال المصادقة واعتماد المعلمين — Authentication & Admin Approval (v5: معالجة الأخطاء) ─── */
 function renderAuth(app) {
   renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -1046,7 +1046,13 @@ function renderAuth(app) {
       const res = await signInWithEmailAndPassword(auth, email, pass);
       state.user = res.user;
       await fetchUserData(res.user.uid);
-    } catch (e) { showToast('خطأ في بيانات الدخول: ' + e.message); }
+    } catch (e) { 
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found') {
+        showToast('⚠️ خطأ في البريد الإلكتروني أو كلمة المرور.');
+      } else {
+        showToast('خطأ في بيانات الدخول: ' + e.message); 
+      }
+    }
   };
   const toReg = card.querySelector('#toRegister');
   if (toReg) toReg.onclick = () => { state.view = 'register'; render(); };
@@ -1137,6 +1143,9 @@ function renderRegister(app) {
       if (!parentConsentCheck) return showToast('⚠️ يجب الحصول على موافقة ولي الأمر للتسجيل');
     }
 
+    regBtn.disabled = true;
+    regBtn.textContent = '⏳ جاري التسجيل...';
+
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -1151,7 +1160,7 @@ function renderRegister(app) {
         parentEmail: parentEmail,
         parentPhone: '',
         isApproved: role === 'teacher' ? false : true,
-        termsAccepted: true, // ✅ توثيق الموافقة على الشروط
+        termsAccepted: true,
         createdAt: new Date().toISOString()
       };
 
@@ -1192,7 +1201,20 @@ function renderRegister(app) {
         render();
       }
       
-    } catch (e) { showToast('فشل التسجيل: ' + e.message); }
+    } catch (e) {
+      // ✅ معالجة الأخطاء الشائعة باللغة العربية
+      if (e.code === 'auth/email-already-in-use') {
+        showToast('⚠️ هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر.');
+      } else if (e.code === 'auth/weak-password') {
+        showToast('⚠️ كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل.');
+      } else if (e.code === 'auth/invalid-email') {
+        showToast('⚠️ صيغة البريد الإلكتروني غير صحيحة.');
+      } else {
+        showToast('فشل التسجيل: ' + e.message);
+      }
+      regBtn.disabled = false;
+      regBtn.textContent = 'تسجيل الحساب';
+    }
   };
   app.appendChild(card);
 }
