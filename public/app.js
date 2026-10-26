@@ -1556,6 +1556,7 @@ window.showConsentManagementModal = function() {
   
   let rowsHtml = '';
   const students = state.myStudents || [];
+  const teacherName = state.user?.fullName || state.user?.email || 'المعلم';
   
   if (students.length === 0) {
     rowsHtml = '<tr><td colspan="4" style="text-align:center; padding:20px;">لا يوجد طلاب.</td></tr>';
@@ -1570,7 +1571,27 @@ window.showConsentManagementModal = function() {
         : '<span style="color:#DC2626; font-weight:bold;">❌ بانتظار الموافقة</span>';
 
       const parentPhone = st.parentPhone || '';
-      const waMessage = encodeURIComponent(`السلام عليكم ولي أمر الطالب/ة ${st.fullName || st.email}،\n\nنرجو منكم التكرم بالموافقة على تسجيل ابنكم/ابنتكم في منصة "منارة النطق" لتدريب النطق، وإرسال ردكم بالموافقة عبر هذه المحادثة.\n\nشاكرين لكم تعاونكم.\nإدارة منصة منارة النطق.`);
+      
+      // ✅ النص المعتمد الجديد (يحتوي على الموافقة على الصوت والفيديو)
+      const waMessage = encodeURIComponent(`السلام عليكم ورحمة الله وبركاته،
+ولي أمر الطالب/ة: ${st.fullName || st.email}
+
+يطيب لي إبلاغكم بأنه تم تسجيل ابنكم/ابنتكم في منصة "منارة النطق" لمتابعة جلسات وتدريبات النطق الخاصة به.
+
+إيماناً مني بأهمية الشراكة معكم، قمت بتطوير هذه المنصة كاجتهاد شخصي مني كمعلم لتدريبات النطق، لتكون نافذة تطلعون من خلالها على تشخيصات وتقارير تقدم ابنكم أولاً بأول.
+
+ولضمان استمرار التدريب وفق معايير حماية البيانات الشخصية (PDPL)، نرجو منكم التكرم بالرد على هذه الرسالة بكلمة "أوافق"، وذلك لإقراركم بالموافقة على:
+1️⃣ تسجيل صوت وصورة (فيديو) الطفل (قبل وبعد التدريب) لأغراض التقييم وعلاج النطق.
+2️⃣ إضافة البريد الإلكتروني لولي الأمر لمتابعة التقارير.
+
+🔗 رابط المنصة: https://alnutq.com
+🔒 سياسة الخصوصية: https://alnutq.com
+
+شاكرين لكم حسن تعاونكم واهتمامكم.
+
+أ/ ${teacherName}
+معلم تدريبات النطق`);
+
       const waLink = parentPhone 
         ? `<a href="https://wa.me/${parentPhone.replace(/\D/g,'')}?text=${waMessage}" target="_blank" style="background:#25D366; color:white; padding:4px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;">💬 طلب موافقة</a>`
         : `<span style="font-size:11px; color:#999;">لا يوجد رقم</span>`;
@@ -1596,7 +1617,7 @@ window.showConsentManagementModal = function() {
       </div>
       
       <p style="font-size:13px; color:#555; margin-bottom:15px; background:#F0FDF4; padding:10px; border-radius:8px; border-right:4px solid #10B981;">
-        وفقاً لنظام حماية البيانات الشخصية (PDPL)، يجب الحصول على موافقة ولي الأمر قبل معالجة بيانات الطفل. يمكنك إرسال طلب عبر الواتساب، أو تأكيد الموافقة يدوياً إذا حصلت عليها شفهياً أو ورقياً.
+        وفقاً لنظام حماية البيانات الشخصية (PDPL)، يجب الحصول على موافقة ولي الأمر قبل معالجة بيانات الطفل (بما في ذلك الصوت والفيديو). يمكنك إرسال طلب عبر الواتساب، أو تأكيد الموافقة يدوياً إذا حصلت عليها شفهياً.
       </p>
 
       <table style="width:100%; border-collapse:collapse; font-size:14px;">
@@ -1619,6 +1640,7 @@ window.showConsentManagementModal = function() {
   modal.querySelector('#closeConsentModal').onclick = () => modal.remove();
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
+  // ربط أزرار التأكيد اليدوي
   modal.querySelectorAll('.btn-manual-consent').forEach(btn => {
     btn.onclick = async () => {
       if (!confirm('هل أنت متأكد من تأكيد الموافقة يدوياً لهذا الطالب؟')) return;
@@ -1636,6 +1658,7 @@ window.showConsentManagementModal = function() {
         });
         showToast('✅ تم تأكيد الموافقة يدوياً.');
         modal.remove();
+        // تحديث الحالة المحلية
         const st = state.myStudents.find(s => s.id === studentId);
         if (st) st.parentConsent = { granted: true };
         renderTeacherDashboard(document.getElementById('app'));
