@@ -5978,7 +5978,7 @@ async function renderAdminDashboard(app) {
 /* ─── [END SEC-61] ─── */
 
 
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v3: فلترة مرنة) ─── */
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v4: مطابقة ذكية جداً) ─── */
 async function renderSchoolDashboard(app) {
   if (!state.managedSchool) { 
     showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
@@ -5990,7 +5990,6 @@ async function renderSchoolDashboard(app) {
 
   let allUsers = [];
   try {
-    // جلب جميع المستخدمين (مسموح لمدير المدرسة بذلك حسب قواعد الأمان)
     const usersSnap = await getDocs(collection(db, "users"));
     usersSnap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
   } catch (e) { 
@@ -5998,13 +5997,35 @@ async function renderSchoolDashboard(app) {
     return; 
   }
 
-  // دالة مساعدة لتنظيف اسم المدرسة من الكلمات الزائدة للمطابقة الذكية
-  function cleanSchoolName(name) {
+  // ✅ دالة مطابقة ذكية جداً: تزيل الكلمات الزائدة وتجعل "ابن" = "بن"
+  function normalizeSchoolName(name) {
     if (!name) return '';
-    return name.replace(/مدرسة/g, '').replace(/الابتدائية/g, '').replace(/المتوسطة/g, '').replace(/الثانوية/g, '').replace(/بن/g, '').replace(/بنت/g, '').trim();
+    return name
+      .replace(/مدرسة/g, '')
+      .replace(/الابتدائية/g, '')
+      .replace(/المتوسطة/g, '')
+      .replace(/الثانوية/g, '')
+      .replace(/بن/g, '')  // حذف "بن"
+      .replace(/ابن/g, '') // حذف "ابن"
+      .replace(/\s+/g, ' ') // إزالة المسافات الزائدة
+      .trim();
   }
 
-  const targetSchoolClean = cleanSchoolName(state.managedSchool);
+  const targetNormalized = normalizeSchoolName(state.managedSchool);
+  const targetWords = targetNormalized.split(' ').filter(w => w.length > 2); // الكلمات الأساسية
+
+  // دالة للتحقق مما إذا كان اسمان لمدرسة متطابقين
+  function isSameSchool(name1, name2) {
+    if (!name1 || !name2) return false;
+    const norm1 = normalizeSchoolName(name1);
+    const norm2 = normalizeSchoolName(name2);
+    
+    // إذا كانا متطابقين تماماً بعد التنظيف
+    if (norm1 === norm2) return true;
+    
+    // إذا كانا يحتويان على نفس الكلمات الأساسية (مثل: قتيبة، مسلم)
+    return targetWords.length > 0 && targetWords.every(word => norm2.includes(word));
+  }
 
   // 1. فلترة المعلمين: نأخذ المعلمين الذين ينتمون لنفس المدرسة أو المدير نفسه
   const schoolTeachers = allUsers.filter(u => {
@@ -6013,10 +6034,8 @@ async function renderSchoolDashboard(app) {
     // دائماً أضف حساب المدير الحالي إلى القائمة
     if (u.id === state.user.uid) return true;
     
-    // مطابقة ذكية لأسماء المدارس
-    if (!u.schoolName) return false;
-    const userSchoolClean = cleanSchoolName(u.schoolName);
-    return userSchoolClean.includes(targetSchoolClean) || targetSchoolClean.includes(userSchoolClean);
+    // مطابقة ذكية للمدارس
+    return isSameSchool(state.managedSchool, u.schoolName);
   });
 
   // 2. فلترة الطلاب: نأخذ الطلاب الذين معلمهم موجود في قائمة معلمي المدرسة
@@ -6027,7 +6046,6 @@ async function renderSchoolDashboard(app) {
   card.className = 'card';
   card.innerHTML = `
     <h3>👨‍🏫 معلمو المدرسة (${schoolTeachers.length})</h3>
-    <p style="font-size:12px; color:#64748B; margin-bottom:10px;">* يتم عرض المعلمين الذين كتبوا اسم مدرستهم في ملفهم الشخصي بشكل مطابق.</p>
     <div style="margin-top:10px;" id="schoolTeachersList">
       ${schoolTeachers.length === 0 ? '<p class="muted">لا يوجد معلمون مسجلون في هذه المدرسة حالياً.</p>' : ''}
       ${schoolTeachers.map(t => `
