@@ -6009,7 +6009,7 @@ async function renderAdminDashboard(app) {
 /* ─── [END SEC-61] ─── */
 
 
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v5: تصفح المعلمين) ─── */
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v6: مطابقة ذكية جداً) ─── */
 async function renderSchoolDashboard(app) {
   if (!state.managedSchool) { 
     showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
@@ -6028,28 +6028,50 @@ async function renderSchoolDashboard(app) {
     return; 
   }
 
+  // ✅ دالة تنظيف اسم المدرسة (تزيل كل الكلمات غير الضرورية)
   function normalizeSchoolName(name) {
     if (!name) return '';
-    return name.replace(/مدرسة/g, '').replace(/الابتدائية/g, '').replace(/المتوسطة/g, '').replace(/الثانوية/g, '').replace(/بن/g, '').replace(/ابن/g, '').replace(/\s+/g, ' ').trim();
+    return name
+      .replace(/مدرسة/g, '')
+      .replace(/الابتدائية/g, '').replace(/ابتدائية/g, '')
+      .replace(/المتوسطة/g, '').replace(/متوسطة/g, '')
+      .replace(/الثانوية/g, '').replace(/ثانوية/g, '')
+      .replace(/إدارة/g, '')
+      .replace(/بن/g, '')  
+      .replace(/ابن/g, '') 
+      .replace(/\s+/g, ' ') 
+      .trim();
   }
 
   const targetNormalized = normalizeSchoolName(state.managedSchool);
-  const targetWords = targetNormalized.split(' ').filter(w => w.length > 2);
 
+  // ✅ دالة مطابقة مرنة: نتحقق إذا كان اسم المدرسة يحتوي على الكلمات الأساسية
   function isSameSchool(name1, name2) {
     if (!name1 || !name2) return false;
     const norm1 = normalizeSchoolName(name1);
     const norm2 = normalizeSchoolName(name2);
+    
+    // إذا تطابقت الأسماء تماماً بعد التنظيف
     if (norm1 === norm2) return true;
-    return targetWords.length > 0 && targetWords.every(word => norm2.includes(word));
+    
+    // أو إذا كان أحدهما يحتوي على الآخر
+    if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+    
+    return false;
   }
 
+  // 1. فلترة المعلمين
   const schoolTeachers = allUsers.filter(u => {
     if (u.role !== 'teacher' && u.role !== 'admin') return false;
+    
+    // دائماً أضف حساب المدير الحالي إلى القائمة
     if (u.id === state.user.uid) return true;
+    
+    // مطابقة ذكية للمدارس
     return isSameSchool(state.managedSchool, u.schoolName);
   });
 
+  // 2. فلترة الطلاب: نأخذ الطلاب الذين معلمهم موجود في قائمة معلمي المدرسة
   const teacherIds = schoolTeachers.map(t => t.id);
   const schoolStudents = allUsers.filter(u => u.role === 'student' && u.teacherId && teacherIds.includes(u.teacherId));
 
