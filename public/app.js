@@ -5064,7 +5064,7 @@ const TEACHER_STANDARDS = [
 /* ─── [END SEC-53] ─── */
 
 
-/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement (v3: تصفح المعلمين) ─── */
+/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement (v4: توليد تلقائي للشواهد) ─── */
 async function renderTeacherAchievement(app) {
   if (!state.user) {
     showToast('يجب تسجيل الدخول');
@@ -5108,21 +5108,75 @@ async function renderTeacherAchievement(app) {
     });
   } catch (e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
 
+  let teacherSessions = [];
+  try {
+    const qS = query(collection(db, "sessions"), where("teacherId", "==", targetTeacherId));
+    const snapS = await getDocs(qS);
+    snapS.forEach(d => teacherSessions.push({id: d.id, ...d.data()}));
+  } catch (e) { console.warn(e); }
+
+  let studentCount = 0;
+  try {
+    const qSt = query(collection(db, "users"), where("teacherId", "==", targetTeacherId), where("role", "==", "student"));
+    const snapSt = await getDocs(qSt);
+    studentCount = snapSt.size;
+  } catch (e) { console.warn(e); }
+
+  const totalSessions = teacherSessions.length;
+  const evaluatedSessions = teacherSessions.filter(s => s.evaluation && s.evaluation !== 'none');
+  const averageSuccess = evaluatedSessions.length > 0
+    ? Math.round(evaluatedSessions.reduce((sum, s) => sum + (s.successRate || 0), 0) / evaluatedSessions.length)
+    : 0;
+  const totalStudents = studentCount;
+
+  const autoEvidences = {
+    1: [
+      { title: 'سجل الحصص والخطط المعتمدة', detail: `إجمالي الخطط الفردية المسجلة: ${totalStudents} خطة معتمدة`, targetView: 'iep-session' },
+      { title: 'سجل تنفيذ الجلسات اليومية', detail: `توثيق شامل للجلسات المنفذة عبر النظام`, targetView: 'sessions-log' }
+    ],
+    3: [
+      { title: 'تقارير المتابعة والتواصل مع أولياء الأمور', detail: `جلسات مرسلة وموثقة بالتاريخ والتقييمات`, targetView: 'sessions-log' },
+      { title: 'دليل التوجيه الأسري الرقمي', detail: `خطة التوجيهات والإرشادات المنزلية للنطق`, targetView: 'parent-guide' }
+    ],
+    4: [
+      { title: 'تنويع استراتيجيات التدريب وعلاج عيوب النطق', detail: `استخدام التحليل الصوتي المباشر والتدريب التفاعلي`, targetView: 'letter-training' }
+    ],
+    5: [
+      { title: 'مؤشرات قياس نتائج المتعلمين وتحسن النطق', detail: `متوسط إتقان الطلاب العام: ${averageSuccess}% في مختلف مخارج الحروف`, targetView: 'student-achievement-list' }
+    ],
+    6: [
+      { title: 'سجل الخطط الأسبوعية المنفذة', detail: `تم إنجاز وتوثيق ${totalSessions} جلسة كاملة بالأهداف والمخارج`, targetView: 'weekly-plan' }
+    ],
+    7: [
+      { title: 'توظيف تقنيات منصة (منارة النطق)', detail: `الألعاب التفاعلية والتعرف الصوتي المباشر`, targetView: 'games' }
+    ],
+    9: [
+      { title: 'إدارة وتوثيق الجلسات الفردية التخاطبية', detail: `تنظيم الوقت، كشوفات الجلسات المنفذة وحساب نسب الإنجاز`, targetView: 'sessions-log' }
+    ],
+    10: [
+      { title: 'تحليل نتائج قياس أداء المتعلمين والفاقد', detail: `ملفات الإنجاز الفردية ومتابعة تطور الحروف`, targetView: 'student-achievement-list' }
+    ],
+    11: [
+      { title: 'ملفات الإنجاز الرقمية للطلاب (IEP)', detail: `ربط كل طالب بملف إنجاز رقمي تراكمي وتقييمات مستمرة`, targetView: 'iep-session' }
+    ]
+  };
+
+  const summary = {
+    totalStudents, totalSessions, averageSuccess,
+    evaluatedSessionsCount: evaluatedSessions.length
+  };
+
   const headerCard = document.createElement('div');
   headerCard.className = 'card';
   headerCard.style.background = 'linear-gradient(135deg, #E0F7FA, #B2EBF2)';
   headerCard.style.border = '2px solid var(--mint-deep)';
   
-  const generateBtnHtml = (!isViewingOther && state.role !== 'admin') 
-    ? `<button class="btn btn-primary btn-sm" id="generateEvidenceBtn" style="border-radius:50px;padding:9px 24px;font-weight:bold;background:#0F766E;">⚡ تحديث وتوليد الشواهد</button>` : '';
-
   headerCard.innerHTML = `
     <h3 style="margin:0;color:var(--mint-deep);text-align:center;">👨‍🏫 ${teacherName}</h3>
     ${schoolName ? `<p style="margin:3px 0;text-align:center;font-weight:bold;color:#0F766E;">🏫 ${schoolName}</p>` : ''}
     <p class="muted" style="text-align:center;margin-top:2px;">ملف إنجاز المعلم وشواهد الأداء المهني</p>
     
     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
-      ${generateBtnHtml}
       <button class="btn btn-soft btn-sm" id="printTeacherAchievementBtn" style="border-radius:50px;padding:9px 24px;">🖨️ طباعة / تصدير PDF</button>
     </div>
   `;
@@ -5130,21 +5184,45 @@ async function renderTeacherAchievement(app) {
 
   const autoSummaryContainer = document.createElement('div');
   autoSummaryContainer.id = 'autoEvidenceSummaryArea';
+  autoSummaryContainer.innerHTML = `
+    <div class="card" style="border:2px solid #0D9488;background:#F0FDFA;margin-bottom:15px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <h3 style="color:#0F766E;margin:0;">⚡ تقرير الشواهد الرقمية المعتمدة (تلقائي)</h3>
+        <span style="font-size:12px;color:#0F766E;background:#CCFBF1;padding:3px 10px;border-radius:12px;">محدث الآن</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center;">
+        <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+          <strong style="color:#0F766E;font-size:20px;">${summary.totalStudents || 0}</strong>
+          <div style="font-size:12px;color:#64748B;">الطلاب المسجلين</div>
+        </div>
+        <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+          <strong style="color:#0F766E;font-size:20px;">${summary.totalSessions || 0}</strong>
+          <div style="font-size:12px;color:#64748B;">الجلسات المنفذة</div>
+        </div>
+        <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+          <strong style="color:#0F766E;font-size:20px;">${summary.averageSuccess || 0}%</strong>
+          <div style="font-size:12px;color:#64748B;">متوسط الإتقان</div>
+        </div>
+        <div style="background:white;padding:10px;border-radius:8px;border:1px solid #CCFBF1;">
+          <strong style="color:#0F766E;font-size:20px;">${summary.evaluatedSessionsCount || 0}</strong>
+          <div style="font-size:12px;color:#64748B;">جلسات مقيمة</div>
+        </div>
+      </div>
+    </div>
+  `;
   app.appendChild(autoSummaryContainer);
 
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, { schoolName, principalName });
-
-  if (!isViewingOther && state.role !== 'admin') {
-    const generateBtn = headerCard.querySelector('#generateEvidenceBtn');
-    if (generateBtn) generateBtn.onclick = () => generateEvidenceReport(teacherName);
-  }
+    if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, autoEvidences, summary, { schoolName, principalName });
 
   TEACHER_STANDARDS.forEach(standard => {
     const card = document.createElement('div');
     card.className = 'card';
     card.id = `standardCard_${standard.id}`;
     card.style.marginBottom = '14px';
+    
+    const autos = autoEvidences[standard.id] || [];
+    
     card.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
         <h4 style="margin:0;color:var(--mint-deep);font-size:16px;">${standard.id}. ${standard.title}</h4>
@@ -5152,9 +5230,24 @@ async function renderTeacherAchievement(app) {
       </div>
       <p class="muted" style="margin:6px 0 10px 0;font-size:13px;">📋 الشواهد المطلوبة: ${standard.evidences}</p>
       
-      <div id="autoEvidenceBox_${standard.id}" style="display:none;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
+      <div id="autoEvidenceBox_${standard.id}" style="display:block;background:#F0FDFA;border:1.5px dashed #0D9488;border-radius:10px;padding:12px;margin-bottom:12px;">
+        ${autos.length > 0 ? `
+          <div style="font-weight:bold;color:#0F766E;font-size:13px;margin-bottom:8px;">⚡ الشواهد التلقائية المعتمدة من النظام:</div>
+          ${autos.map(item => `
+            <div style="background:white;border:1px solid #99F6E4;padding:10px 12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <div>
+                <div style="font-weight:bold;font-size:13px;color:#134E4A;">${item.title}</div>
+                <div style="font-size:12px;color:#475569;margin-top:2px;">${item.detail}</div>
+              </div>
+              <button class="btn btn-sm view-evidence-btn" data-view="${item.targetView}" data-teacher-id="${targetTeacherId}" style="background:#0F766E;color:white;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:bold;border:none;cursor:pointer;">
+                عرض وتوثيق الشاهد 👁️
+              </button>
+            </div>
+          `).join('')}
+        ` : `<span style="font-size:12px;color:#64748B;">يعتمد هذا المعيار على الوثائق والمرفقات اليدوية أدناه.</span>`}
+      </div>
 
-      ${!isViewingOther ? `
+      ${!isViewingOther && state.role !== 'admin' ? `
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
         <input type="url" id="driveLinkInput_${standard.id}" placeholder="ضع رابط ملف Google Drive هنا..." style="margin:0; flex-grow:1; min-width:220px; padding:6px 10px; border:1px solid #CBD5E1; border-radius:6px; font-size:12px;">
         <button class="btn btn-soft btn-sm" id="saveDriveBtn_${standard.id}">🔗 إرفاق رابط جوجل درايف</button>
@@ -5169,7 +5262,7 @@ async function renderTeacherAchievement(app) {
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; background:#F8FAFC; padding:6px 12px; border-radius:8px;">
               <span style="font-size:13px;">📄 ${file.name || 'ملف Google Drive'}</span>
               <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563EB;font-weight:bold;margin-right:auto;">معاينة 🔗</a>
-              ${!isViewingOther ? `<button class="btn btn-danger btn-sm delete-link-btn" data-id="${file.id}" style="padding:2px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;">حذف</button>` : ''}
+              ${!isViewingOther && state.role !== 'admin' ? `<button class="btn btn-danger btn-sm delete-link-btn" data-id="${file.id}" style="padding:2px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;">حذف</button>` : ''}
             </div>
           `;
         }).join('')}
@@ -5177,7 +5270,7 @@ async function renderTeacherAchievement(app) {
     `;
     app.appendChild(card);
 
-    if (!isViewingOther) {
+    if (!isViewingOther && state.role !== 'admin') {
       const driveInput = card.querySelector(`#driveLinkInput_${standard.id}`);
       const saveDriveBtn = card.querySelector(`#saveDriveBtn_${standard.id}`);
       const fileStatus = card.querySelector(`#fileStatus_${standard.id}`);
@@ -5221,13 +5314,135 @@ async function renderTeacherAchievement(app) {
     }
   });
 
-  setTimeout(() => {
-    restoreSavedEvidences(targetTeacherId);
-  }, 0);
+  app.querySelectorAll('.view-evidence-btn').forEach(btn => {
+    btn.onclick = () => {
+      const targetView = btn.dataset.view;
+      const teacherId = btn.dataset.teacherId;
+      if (targetView) {
+        if (teacherId) state.targetTeacherId = teacherId;
+        state.view = targetView;
+        render();
+      }
+    };
+  });
 }
-/* ─── [END SEC-54] ─── */
-           
-             
+
+function printTeacherAchievement(teacherName, existingFiles, autoEvidences, summary, extraData = {}) {
+  let printArea = document.getElementById('iep-print-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'iep-print-area';
+    document.body.appendChild(printArea);
+  }
+
+  const schoolName = extraData.schoolName || 'مدرسة قتيبة بن مسلم الابتدائية';
+  const principalName = extraData.principalName || '';
+
+  printArea.innerHTML = `
+    <div style="font-family:'Tajawal',sans-serif;direction:rtl;padding:30px;background:white;color:#1E2A47;box-sizing:border-box;">
+      <div style="border-bottom:2.5px solid #0D9488;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h1 style="font-size:22px;color:#0F766E;margin:0 0 4px 0;font-weight:900;">${schoolName}</h1>
+          <div style="font-size:14px;color:#475569;font-weight:bold;">ملف إنجاز وشواهد الأداء الوظيفي والمهني</div>
+        </div>
+        <div style="text-align:left;font-size:12px;color:#64748B;line-height:1.6;">
+          <div><strong>المعلم:</strong> ${teacherName}</div>
+          <div><strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-SA')}</div>
+        </div>
+      </div>
+
+      ${summary ? `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;text-align:center;">
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.totalStudents || 0}</div>
+            <div style="font-size:11px;color:#64748B;">الطلاب المسجلين</div>
+          </div>
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.totalSessions || 0}</div>
+            <div style="font-size:11px;color:#64748B;">الجلسات المنفذة</div>
+          </div>
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.averageSuccess || 0}%</div>
+            <div style="font-size:11px;color:#64748B;">متوسط الإتقان</div>
+          </div>
+          <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px;">
+            <div style="font-size:18px;font-weight:bold;color:#0F766E;">${summary.evaluatedSessionsCount || 0}</div>
+            <div style="font-size:11px;color:#64748B;">جلسات مقيمة</div>
+          </div>
+        </div>
+      ` : ''}
+
+      <div style="margin-top:10px;">
+        ${TEACHER_STANDARDS.map(standard => {
+          const files = existingFiles[standard.id] || [];
+          const autos = autoEvidences[standard.id] || [];
+          return `
+            <div style="margin-bottom:14px;border:1px solid #E2E8F0;border-radius:8px;padding:12px;page-break-inside:avoid;background:#FFFFFF;">
+              <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F1F5F9;padding-bottom:6px;margin-bottom:8px;">
+                <strong style="color:#0F766E;font-size:14px;">${standard.id}.${standard.title}</strong>
+                <span style="font-size:11px;color:#64748B;">معيار مهني معتمد</span>
+              </div>
+              <div style="font-size:11px;color:#64748B;margin-bottom:8px;">📋 الشواهد المستهدفة: ${standard.evidences}</div>
+              
+              ${autos.length > 0 ? `
+                <div style="background:#F8FAFC;border-right:3px solid #0D9488;padding:6px 10px;border-radius:4px;margin-bottom:8px;">
+                  <div style="font-size:12px;font-weight:bold;color:#134E4A;margin-bottom:4px;">⚡ الشواهد الرقمية المحققة:</div>
+                  ${autos.map(a => `
+                    <div style="font-size:11.5px;color:#334155;margin-bottom:3px;">
+                      • <strong>${a.title}:</strong>${a.detail}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              ${files.length > 0 ? `
+                <div style="margin-top:6px;padding-top:6px;border-top:1px dashed #E2E8F0;">
+                  <div style="font-size:11.5px;font-weight:bold;color:#475569;margin-bottom:4px;">📎 الوثائق والمستندات المرفقة:</div>
+                  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+                    ${files.map(file => {
+                      const fileUrl = file.url || file.fileUrl || '';
+                      const isImage = (file.type && file.type.startsWith('image/')) || (fileUrl.match(/\.(jpeg|jpg|gif|png|webp)/i));
+                      return `
+                        <div style="font-size:11px;color:#334155;background:#F1F5F9;padding:6px 10px;border-radius:6px;display:flex;flex-direction:column;gap:4px;">
+                          <span>📄 ${file.name || 'مستند مرفق'}</span>
+                          ${isImage && fileUrl ? `
+                            <img src="${fileUrl}" alt="مرفق" style="max-width:140px;max-height:90px;object-fit:cover;border-radius:4px;border:1px solid #CBD5E1;" />
+                          ` : ''}
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              ` : (autos.length === 0 ? '<div style="font-size:11px;color:#94A3B8;">لا توجد وثائق مرفقة يدوياً</div>' : '')}
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <div style="margin-top:35px;padding-top:20px;border-top:2px solid #E2E8F0;display:flex;justify-content:space-between;page-break-inside:avoid;">
+        <div style="text-align:right;width:220px;">
+          <div style="font-size:13px;font-weight:bold;color:#1E2A47;">معلم تدريبات النطق:</div>
+          <div style="font-size:13px;color:#0F766E;margin:4px 0 25px 0;">أ / ${teacherName}</div>
+          <div style="font-size:12px;color:#64748B;">التوقيع: ...................................</div>
+        </div>
+
+        <div style="text-align:left;width:220px;">
+          <div style="font-size:13px;font-weight:bold;color:#1E2A47;">مدير المدرسة:</div>
+          <div style="font-size:13px;color:#0F766E;margin:4px 0 25px 0;">${principalName ? 'أ / ' + principalName : '...................................'}</div>
+          <div style="font-size:12px;color:#64748B;">التوقيع والختم: ...................................</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;font-size:10px;color:#94A3B8;text-align:center;">
+        تم استخراج هذا التقرير بتاريخ: ${new Date().toLocaleDateString('ar-SA')}
+      </div>
+    </div>
+  `;
+
+  window.print();
+  setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
+}
+/* ─── [END SEC-54] ─── */           
 
 /* ─── [SEC-55] توليد وحفظ وتحديث الشواهد (v2: يدعم قواعد الأمان) ─── */
 async function generateEvidenceReport(teacherName) {
