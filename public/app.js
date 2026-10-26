@@ -5770,7 +5770,7 @@ window.state = state;   // ✅ تصدير الحالة لـ ai-features.js
 /* ─── [END SEC-59] ─── */
 
 
-/* ─── [SEC-61] لوحة تحكم المدير العام — Super Admin Dashboard (v10: حذف آمن + إدارة المدارس) ─── */
+/* ─── [SEC-61] لوحة تحكم المدير العام — Super Admin Dashboard (v11: إعادة تبويب المدارس) ─── */
 async function renderAdminDashboard(app) {
   if (!state.user || state.user.email !== 'manarat.alnutq@gmail.com') {
     showToast('⚠️ غير مصرح لك بالدخول');
@@ -5820,8 +5820,9 @@ async function renderAdminDashboard(app) {
       <button class="admin-tab ${state.adminTab === 'all' ? 'active' : ''}" data-tab="all" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'all' ? '#0891B2' : 'white'}; color:${state.adminTab === 'all' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">الكل (${allUsers.length})</button>
       <button class="admin-tab ${state.adminTab === 'teachers' ? 'active' : ''}" data-tab="teachers" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'teachers' ? '#0891B2' : 'white'}; color:${state.adminTab === 'teachers' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">المعلمون (${teachers.length})</button>
       <button class="admin-tab ${state.adminTab === 'students' ? 'active' : ''}" data-tab="students" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'students' ? '#0891B2' : 'white'}; color:${state.adminTab === 'students' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">الطلاب (${students.length})</button>
+      <button class="admin-tab ${state.adminTab === 'schools' ? 'active' : ''}" data-tab="schools" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'schools' ? '#0891B2' : 'white'}; color:${state.adminTab === 'schools' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">🏫 المدارس</button>
     </div>
-    <input type="text" id="adminSearchInput" placeholder="🔍 ابحث بالاسم أو البريد..." value="${state.adminSearch}" style="width:100%; padding:10px 15px; border-radius:50px; border:1px solid #CBD5E1; font-family:'Tajawal'; margin-bottom:15px;">
+    <input type="text" id="adminSearchInput" placeholder="🔍 ابحث بالاسم أو البريد..." value="${state.adminSearch}" style="width:100%; padding:10px 15px; border-radius:50px; border:1px solid #CBD5E1; font-family:'Tajawal'; margin-bottom:15px; display:${state.adminTab === 'schools' ? 'none' : 'block'};">
     <div id="adminListContainer"></div>
   `;
   app.appendChild(controlsCard);
@@ -5835,9 +5836,68 @@ async function renderAdminDashboard(app) {
   searchInput.oninput = (e) => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.adminSearch = e.target.value; render(); }, 400); };
 
   const listContainer = controlsCard.querySelector('#adminListContainer');
+
+  // ✅ تبويب المدارس
+  if (state.adminTab === 'schools') {
+    const schoolsMap = {};
+    teachers.forEach(t => {
+      if (t.schoolName && t.schoolName.trim() !== '') {
+        if (!schoolsMap[t.schoolName]) schoolsMap[t.schoolName] = [];
+        schoolsMap[t.schoolName].push(t);
+      }
+    });
+
+    const schoolNames = Object.keys(schoolsMap);
+    if (schoolNames.length === 0) {
+      listContainer.innerHTML = '<p class="muted" style="text-align:center; padding:20px;">لا توجد مدارس مسجلة حالياً (يجب أن يضيف المعلمون أسماء مدارسهم في ملفاتهم الشخصية).</p>';
+    } else {
+      listContainer.innerHTML = '';
+      schoolNames.forEach(schoolName => {
+        const schoolTeachers = schoolsMap[schoolName];
+        const manager = schoolTeachers.find(t => t.managedSchool === schoolName);
+        const managerName = manager ? manager.fullName : 'لم يعين مدير';
+
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:15px; border:1px solid #E2E8F0; border-radius:12px; margin-bottom:10px; background:#F8FAFC; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+        row.innerHTML = `
+          <div>
+            <strong style="font-size:16px; color:#0F766E;">🏫 ${schoolName}</strong>
+            <div style="font-size:13px; color:#64748B; margin-top:4px;">عدد المعلمين: ${schoolTeachers.length} | المدير: ${managerName}</div>
+          </div>
+          <button class="btn btn-danger btn-sm delete-school-btn" data-school="${schoolName}" style="border-radius:50px;">🗑️ حذف المدرسة (إلغاء ربط المعلمين)</button>
+        `;
+        listContainer.appendChild(row);
+      });
+
+      listContainer.querySelectorAll('.delete-school-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const schoolName = btn.dataset.school;
+          if (!confirm(`⚠️ هل أنت متأكد من حذف مدرسة "${schoolName}"؟\n\nسيتم إزالة اسم المدرسة من جميع المعلمين المرتبطين بها (لن يتم حذف حساباتهم).`)) return;
+          btn.disabled = true;
+          btn.textContent = '⏳ جاري الحذف...';
+          try {
+            const schoolTeachers = schoolsMap[schoolName];
+            for (const t of schoolTeachers) {
+              await updateDoc(doc(db, "users", t.id), { schoolName: '', managedSchool: null });
+            }
+            showToast('✅ تم حذف المدرسة وإلغاء ربط المعلمين');
+            render();
+          } catch (e) {
+            showToast('❌ فشل الحذف: ' + e.message);
+            btn.disabled = false;
+            btn.textContent = '🗑️ حذف المدرسة';
+          }
+        };
+      });
+    }
+    return;
+  }
+
+  // تبويبات المستخدمين
   let filtered = allUsers;
   if (state.adminTab === 'teachers') filtered = teachers;
   else if (state.adminTab === 'students') filtered = students;
+  else if (state.adminTab === 'admins') filtered = admins;
 
   if (state.adminSearch) {
     const q = state.adminSearch.toLowerCase();
@@ -5905,7 +5965,7 @@ async function renderAdminDashboard(app) {
     listContainer.appendChild(row);
   });
 
-  // اعتماد المعلمين
+  // ربط الأزرار
   listContainer.querySelectorAll('.approve-btn').forEach(btn => {
     btn.onclick = async () => {
       btn.disabled = true; btn.textContent = '⏳';
@@ -5913,7 +5973,6 @@ async function renderAdminDashboard(app) {
     };
   });
 
-  // تعيين مدير مدرسة
   listContainer.querySelectorAll('.appoint-school-admin').forEach(btn => {
     btn.onclick = async () => {
       const school = prompt(`أدخل اسم المدرسة التي سيديرها المعلم (${btn.dataset.name}):\n(مثال: مدرسة قتيبة بن مسلم الابتدائية)`);
@@ -5927,7 +5986,6 @@ async function renderAdminDashboard(app) {
     };
   });
 
-  // إلغاء إدارة مدرسة
   listContainer.querySelectorAll('.remove-school-admin').forEach(btn => {
     btn.onclick = async () => {
       if (!confirm('هل أنت متأكد من إلغاء صلاحية إدارة المدرسة لهذا المعلم؟')) return;
@@ -5940,13 +5998,11 @@ async function renderAdminDashboard(app) {
     };
   });
 
-  // تصفح المعلمين والطلاب
   listContainer.querySelectorAll('.view-teacher-sessions').forEach(btn => { btn.onclick = () => { state.view = 'sessions-log'; state.targetTeacherId = btn.dataset.id; render(); }; });
   listContainer.querySelectorAll('.view-teacher-achv').forEach(btn => { btn.onclick = () => { state.view = 'teacher-achievement'; state.targetTeacherId = btn.dataset.id; render(); }; });
   listContainer.querySelectorAll('.view-sess-btn').forEach(btn => { btn.onclick = () => { state.currentStudent = allUsers.find(u => u.id === btn.dataset.id); state.view = 'speech-sessions'; render(); }; });
   listContainer.querySelectorAll('.view-achv-btn').forEach(btn => { btn.onclick = () => { state.currentStudent = allUsers.find(u => u.id === btn.dataset.id); state.view = 'achievement'; render(); }; });
 
-  // ✅ الحذف الآمن (تسلسلي لتفادي فشل الطلبات)
   listContainer.querySelectorAll('.delete-btn').forEach(btn => {
     btn.onclick = async () => {
       const userId = btn.dataset.id;
@@ -5955,48 +6011,34 @@ async function renderAdminDashboard(app) {
       
       if (!confirm(`⚠️ تحذير: هل أنت متأكد من حذف "${name}"؟\n\n❌ لا يمكن التراجع!`)) return;
       
-      btn.disabled = true; 
-      btn.textContent = '⏳ جاري الحذف...';
+      btn.disabled = true; btn.textContent = '⏳ جاري الحذف...';
       
       try {
         if (role === 'student') {
-          // 1. حذف الجلسات
           const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", userId));
           const sessionsSnap = await getDocs(sessionsQuery);
-          for (const sessionDoc of sessionsSnap.docs) {
-            await deleteDoc(doc(db, "sessions", sessionDoc.id));
-          }
-          // 2. حذف IEP
+          for (const sessionDoc of sessionsSnap.docs) { await deleteDoc(doc(db, "sessions", sessionDoc.id)); }
           const iepRef = doc(db, "iep", userId);
           const iepSnap = await getDoc(iepRef);
           if (iepSnap.exists()) await deleteDoc(iepRef);
 
         } else if (role === 'teacher' || role === 'admin') {
-          // 1. فصل الطلاب
           const studentsQuery = query(collection(db, "users"), where("teacherId", "==", userId));
           const studentsSnap = await getDocs(studentsQuery);
-          for (const studentDoc of studentsSnap.docs) {
-            await updateDoc(doc(db, "users", studentDoc.id), { teacherId: null });
-          }
-          // 2. حذف الجلسات
+          for (const studentDoc of studentsSnap.docs) { await updateDoc(doc(db, "users", studentDoc.id), { teacherId: null }); }
+          
           const sessionsQuery = query(collection(db, "sessions"), where("teacherId", "==", userId));
           const sessionsSnap = await getDocs(sessionsQuery);
-          for (const sessionDoc of sessionsSnap.docs) {
-            await deleteDoc(doc(db, "sessions", sessionDoc.id));
-          }
-          // 3. حذف ملفات المعلم
+          for (const sessionDoc of sessionsSnap.docs) { await deleteDoc(doc(db, "sessions", sessionDoc.id)); }
+          
           const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", userId));
           const filesSnap = await getDocs(filesQuery);
-          for (const fileDoc of filesSnap.docs) {
-            await deleteDoc(doc(db, "teacher_files", fileDoc.id));
-          }
+          for (const fileDoc of filesSnap.docs) { await deleteDoc(doc(db, "teacher_files", fileDoc.id)); }
         }
 
-        // أخيراً: حذف حساب المستخدم نفسه
         await deleteDoc(doc(db, "users", userId));
-        showToast(`✅ تم حذف ${role === 'student' ? 'الطالب' : 'المعلم'} بنجاح`);
+        showToast(`✅ تم الحذف بنجاح`);
         render();
-
       } catch (e) {
         console.error('فشل الحذف:', e);
         showToast('❌ فشل الحذف: ' + e.message);
