@@ -782,7 +782,7 @@ window.getDisorderFeedback = getDisorderFeedback;
 /* ─── [END SEC-22] ─── */
 
 
-/* ─── [SEC-23] الشريط العلوي — Topbar Renderer ─── */
+/* ─── [SEC-23] الشريط العلوي — Topbar Renderer (v2: توجيه لوحة المدير) ─── */
 function renderTopbar(appContainer, title, sub, onBack) {
   const bar = document.createElement('div');
   bar.className = 'topbar';
@@ -827,11 +827,12 @@ function renderTopbar(appContainer, title, sub, onBack) {
     btnProfile.onclick = () => { state.view = 'student-profile'; render(); };
     actions.appendChild(btnProfile);
 
-    if (state.role === 'admin') {
+    // ✅ توجيه زر المدير للوحة الجديدة داخل التطبيق
+    if (state.role === 'admin' || state.user.email === 'manarat.alnutq@gmail.com') {
       const btnAdmin = document.createElement('button');
       btnAdmin.className = 'btn-nav';
       btnAdmin.textContent = 'لوحة المدير';
-      btnAdmin.onclick = () => { window.location.href = 'admin.html'; };
+      btnAdmin.onclick = () => { state.view = 'admin-dashboard'; render(); };
       actions.appendChild(btnAdmin);
     }
     const btnLogout = document.createElement('button');
@@ -868,7 +869,6 @@ function renderTopbar(appContainer, title, sub, onBack) {
   updateAccessibilityButtons();
 }
 /* ─── [END SEC-23] ─── */
-
 
 /* ─── [SEC-24] سياسة الخصوصية — Privacy Policy ─── */
 document.addEventListener('click', (e) => {
@@ -960,6 +960,7 @@ function _actualRender() {
   if (state.view === 'approve-teacher') return renderApproveTeacher(app);
   
   if (state.view === 'teacher-dashboard') return renderTeacherDashboard(app);
+  if (state.view === 'admin-dashboard') return renderAdminDashboard(app);
   if (state.view === 'diagnostic-session') return renderDiagnosticSession(app);
   if (state.view === 'student-menu') return renderStudentMenu(app);
   if (state.view === 'speech-sessions') return renderSpeechSessions(app);
@@ -1300,14 +1301,26 @@ async function renderApproveTeacher(app) {
 /* ─── [END SEC-26] و [END SEC-26-B] ─── */
 
 
-/* ─── [SEC-27] جلب بيانات المستخدم والطلاب — Fetch User & Students Data (v2: محصّن) ─── */
+/* ─── [SEC-27] جلب بيانات المستخدم والطلاب (v4: حماية الحسابات المحذوفة) ─── */
 async function fetchUserData(uid) {
   try {
     const uDoc = await getDoc(doc(db, "users", uid));
     if (uDoc.exists()) {
       const uData = uDoc.data();
+      
+      if (uData.role === 'teacher' && uData.isApproved === false) {
+        showToast('⚠️ حسابك كمعلم قيد المراجعة. يرجى التواصل مع إدارة المنصة.');
+        await signOut(auth);
+        state.user = null;
+        state.role = null;
+        state.view = 'home';
+        render();
+        return;
+      }
+
       state.role = uData.role;
       if (uData.comprehensive) state.comprehensive = uData.comprehensive;
+      
       if (state.role === 'teacher' || state.role === 'admin') {
         state.view = 'teacher-dashboard';
         await fetchTeacherStudents();
@@ -1316,6 +1329,14 @@ async function fetchUserData(uid) {
         state.view = 'student-menu';
         render();
       }
+    } else {
+      // ✅ الحساب غير موجود (تم حذفه بواسطة المدير)
+      showToast('⚠️ هذا الحساب تم حذفه من النظام. يرجى التواصل مع الإدارة.');
+      await signOut(auth);
+      state.user = null;
+      state.role = null;
+      state.view = 'home';
+      render();
     }
   } catch (e) {
     console.error('خطأ في جلب بيانات المستخدم:', e);
@@ -1326,11 +1347,9 @@ async function fetchUserData(uid) {
 async function fetchTeacherStudents() {
   if (!state.user) return;
   try {
-    // ✅ مصفوفات محلية (تمنع التكرار عند التزامن/الاستدعاء المزدوج)
     const myStudents = [];
     const freeStudents = [];
 
-    // ✅ استعلام 1: طلابي المباشرون
     const qMine = query(
       collection(db, "users"),
       where("role", "==", "student"),
@@ -1339,7 +1358,6 @@ async function fetchTeacherStudents() {
     const snapMine = await getDocs(qMine);
     snapMine.forEach(d => myStudents.push({ id: d.id, ...d.data() }));
 
-    // ✅ استعلام 2: الطلاب المتاحون (بدون معلم)
     const qFree = query(
       collection(db, "users"),
       where("role", "==", "student"),
@@ -1348,7 +1366,6 @@ async function fetchTeacherStudents() {
     const snapFree = await getDocs(qFree);
     snapFree.forEach(d => freeStudents.push({ id: d.id, ...d.data() }));
 
-    // ✅ إسناد نهائي (بعد اكتمال كل شيء)
     state.myStudents = myStudents;
     state.freeStudents = freeStudents;
 
@@ -5778,7 +5795,262 @@ window.where = where;
 window.getCurrentStudent = function() { return state.currentStudent; };
 window.state = state;   // ✅ تصدير الحالة لـ ai-features.js
 /* ─── [END SEC-59] ─── */
+/* ─── [SEC-61] لوحة تحكم المدير — Admin Dashboard (v2: إدارة وحذف كامل) ─── */
+async function renderAdminDashboard(app) {
+  if (!state.user || (state.role !== 'admin' && state.user.email !== 'manarat.alnutq@gmail.com')) {
+    showToast('⚠️ غير مصرح لك بالدخول');
+    state.view = 'home';
+    return render();
+  }
 
+  if (!state.adminTab) state.adminTab = 'all';
+  if (!state.adminSearch) state.adminSearch = '';
+
+  renderTopbar(app, '👑 لوحة المدير', 'إدارة شاملة للمنصة', () => { state.view = 'teacher-dashboard'; render(); });
+
+  // جلب جميع المستخدمين
+  let allUsers = [];
+  try {
+    const usersSnap = await getDocs(collection(db, "users"));
+    usersSnap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
+  } catch (e) {
+    app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب البيانات: ${e.message}</p></div>`;
+    return;
+  }
+
+  const teachers = allUsers.filter(u => u.role === 'teacher');
+  const admins = allUsers.filter(u => u.role === 'admin');
+  const students = allUsers.filter(u => u.role === 'student');
+  const pending = teachers.filter(t => t.isApproved === false);
+
+  // الإحصائيات
+  const summary = document.createElement('div');
+  summary.className = 'summary-dashboard';
+  summary.innerHTML = `
+    <div class="summary-item"><div class="number">${allUsers.length}</div><div class="label">إجمالي الحسابات</div></div>
+    <div class="summary-item"><div class="number">${teachers.length}</div><div class="label">المعلمون</div></div>
+    <div class="summary-item"><div class="number">${students.length}</div><div class="label">الطلاب</div></div>
+    <div class="summary-item"><div class="number" style="color:#EA580C;">${pending.length}</div><div class="label">بانتظار الاعتماد</div></div>
+  `;
+  app.appendChild(summary);
+
+  // التبويبات والبحث
+  const controlsCard = document.createElement('div');
+  controlsCard.className = 'card';
+  controlsCard.innerHTML = `
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <button class="admin-tab ${state.adminTab === 'all' ? 'active' : ''}" data-tab="all" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'all' ? '#0891B2' : 'white'}; color:${state.adminTab === 'all' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">الكل (${allUsers.length})</button>
+      <button class="admin-tab ${state.adminTab === 'teachers' ? 'active' : ''}" data-tab="teachers" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'teachers' ? '#0891B2' : 'white'}; color:${state.adminTab === 'teachers' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">المعلمون (${teachers.length})</button>
+      <button class="admin-tab ${state.adminTab === 'students' ? 'active' : ''}" data-tab="students" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'students' ? '#0891B2' : 'white'}; color:${state.adminTab === 'students' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">الطلاب (${students.length})</button>
+      <button class="admin-tab ${state.adminTab === 'admins' ? 'active' : ''}" data-tab="admins" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'admins' ? '#0891B2' : 'white'}; color:${state.adminTab === 'admins' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">الإداريون (${admins.length})</button>
+      <button class="admin-tab ${state.adminTab === 'schools' ? 'active' : ''}" data-tab="schools" style="padding:8px 20px; border-radius:50px; border:1px solid #CBD5E1; background:${state.adminTab === 'schools' ? '#0891B2' : 'white'}; color:${state.adminTab === 'schools' ? 'white' : '#334155'}; cursor:pointer; font-weight:bold;">المدارس</button>
+    </div>
+    <input type="text" id="adminSearchInput" placeholder="🔍 ابحث بالاسم أو البريد الإلكتروني..." value="${state.adminSearch}" style="width:100%; padding:10px 15px; border-radius:50px; border:1px solid #CBD5E1; font-family:'Tajawal'; margin-bottom:15px;">
+    <div id="adminListContainer"></div>
+  `;
+  app.appendChild(controlsCard);
+
+  // ربط التبويبات والبحث
+  controlsCard.querySelectorAll('.admin-tab').forEach(tab => {
+    tab.onclick = () => {
+      state.adminTab = tab.dataset.tab;
+      renderAdminDashboard(app);
+    };
+  });
+
+  const searchInput = controlsCard.querySelector('#adminSearchInput');
+  let searchTimer;
+  searchInput.oninput = (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.adminSearch = e.target.value;
+      renderAdminDashboard(app);
+    }, 400);
+  };
+
+  const listContainer = controlsCard.querySelector('#adminListContainer');
+
+  // ==== تبويب المدارس ====
+  if (state.adminTab === 'schools') {
+    const schoolsMap = {};
+    teachers.forEach(t => {
+      if (t.schoolName) {
+        if (!schoolsMap[t.schoolName]) schoolsMap[t.schoolName] = [];
+        schoolsMap[t.schoolName].push(t);
+      }
+    });
+
+    const schoolNames = Object.keys(schoolsMap);
+    if (schoolNames.length === 0) {
+      listContainer.innerHTML = '<p class="muted">لا توجد مدارس مسجلة حالياً (يجب أن يضيف المعلمون أسماء مدارسهم في ملفاتهم الشخصية).</p>';
+    } else {
+      listContainer.innerHTML = '';
+      schoolNames.forEach(schoolName => {
+        const schoolTeachers = schoolsMap[schoolName];
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:15px; border:1px solid #E2E8F0; border-radius:12px; margin-bottom:10px; background:#F8FAFC; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+        row.innerHTML = `
+          <div>
+            <strong style="font-size:16px; color:#0F766E;">🏫 ${schoolName}</strong>
+            <div style="font-size:13px; color:#64748B; margin-top:4px;">عدد المعلمين: ${schoolTeachers.length}</div>
+          </div>
+          <button class="btn btn-danger btn-sm delete-school-btn" data-school="${schoolName}" style="border-radius:50px;">🗑️ حذف المدرسة (إلغاء ربط المعلمين)</button>
+        `;
+        listContainer.appendChild(row);
+      });
+
+      listContainer.querySelectorAll('.delete-school-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const schoolName = btn.dataset.school;
+          if (!confirm(`⚠️ هل أنت متأكد من حذف مدرسة "${schoolName}"؟\n\nسيتم إزالة اسم المدرسة من جميع المعلمين المرتبطين بها (لن يتم حذف حساباتهم).`)) return;
+          btn.disabled = true;
+          btn.textContent = '⏳ جاري الحذف...';
+          try {
+            const schoolTeachers = schoolsMap[schoolName];
+            await Promise.all(schoolTeachers.map(t => updateDoc(doc(db, "users", t.id), { schoolName: '' })));
+            showToast('✅ تم حذف المدرسة وإلغاء ربط المعلمين');
+            renderAdminDashboard(app);
+          } catch (e) {
+            showToast('❌ فشل الحذف: ' + e.message);
+            btn.disabled = false;
+            btn.textContent = '🗑️ حذف المدرسة';
+          }
+        };
+      });
+    }
+    return;
+  }
+
+  // ==== تبويبات المستخدمين ====
+  let filtered = allUsers;
+  if (state.adminTab === 'teachers') filtered = teachers;
+  else if (state.adminTab === 'students') filtered = students;
+  else if (state.adminTab === 'admins') filtered = admins;
+
+  if (state.adminSearch) {
+    const q = state.adminSearch.toLowerCase();
+    filtered = filtered.filter(u => 
+      (u.fullName || '').toLowerCase().includes(q) || 
+      (u.email || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (filtered.length === 0) {
+    listContainer.innerHTML = '<p class="muted" style="text-align:center; padding:20px;">لا توجد نتائج مطابقة.</p>';
+    return;
+  }
+
+  filtered.forEach(u => {
+    const isPending = u.role === 'teacher' && u.isApproved === false;
+    const roleBadge = u.role === 'admin' 
+      ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">👑 مدير</span>' 
+      : u.role === 'teacher' 
+      ? '<span class="badge" style="background:#DBEAFE; color:#1E40AF;">👨‍🏫 معلم</span>' 
+      : '<span class="badge" style="background:#D1FAE5; color:#065F46;">🧒 طالب</span>';
+    
+    const statusBadge = isPending 
+      ? '<span class="badge" style="background:#FEF3C7; color:#D97706;">⏳ بانتظار الاعتماد</span>' 
+      : '';
+
+    const isMainAdmin = u.email === 'manarat.alnutq@gmail.com';
+    const isSelf = u.id === state.user.uid;
+    const canDelete = !isMainAdmin && !isSelf;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:12px; border:1px solid #E2E8F0; border-radius:12px; margin-bottom:10px; background:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+    row.innerHTML = `
+      <div style="flex:1;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <strong>${u.fullName || 'بدون اسم'}</strong>
+          ${roleBadge}
+          ${statusBadge}
+        </div>
+        <div style="font-size:12px; color:#64748B; margin-top:4px;">📧 ${u.email || 'بدون بريد'}</div>
+        ${u.schoolName ? `<div style="font-size:12px; color:#0F766E; margin-top:2px;">🏫 ${u.schoolName}</div>` : ''}
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        ${isPending ? `<button class="btn btn-success btn-sm approve-btn" data-id="${u.id}" style="border-radius:50px;">✅ اعتماد</button>` : ''}
+        ${canDelete ? `<button class="btn btn-danger btn-sm delete-btn" data-id="${u.id}" data-role="${u.role}" data-name="${u.fullName || u.email}" style="border-radius:50px;">🗑️ حذف</button>` : '<span style="font-size:11px; color:#94A3B8;">(محمي)</span>'}
+      </div>
+    `;
+    listContainer.appendChild(row);
+  });
+
+  // ربط أزرار الاعتماد
+  listContainer.querySelectorAll('.approve-btn').forEach(btn => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = '⏳';
+      try {
+        await updateDoc(doc(db, "users", btn.dataset.id), { isApproved: true });
+        showToast('✅ تم الاعتماد');
+        renderAdminDashboard(app);
+      } catch (e) {
+        showToast('❌ ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '✅ اعتماد';
+      }
+    };
+  });
+
+  // ربط أزرار الحذف
+  listContainer.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const userId = btn.dataset.id;
+      const role = btn.dataset.role;
+      const name = btn.dataset.name;
+      
+      const roleLabel = role === 'teacher' ? 'المعلم' : role === 'student' ? 'الطالب' : 'المدير';
+      const confirmMsg = `⚠️ تحذير خطير!\n\nهل أنت متأكد من حذف ${roleLabel}: "${name}"؟\n\n` +
+        (role === 'teacher' ? '• سيتم فصل جميع طلابه (يصبحون متاحين لمعلم آخر).\n• سيتم حذف جميع جلساته وملفاته.\n' : '') +
+        (role === 'student' ? '• سيتم حذف جميع جلساته وتشخيصاته وملف إنجازه نهائياً.\n' : '') +
+        '\n❌ هذا الإجراء لا يمكن التراجع عنه!';
+
+      if (!confirm(confirmMsg)) return;
+      
+      btn.disabled = true;
+      btn.textContent = '⏳';
+      
+      try {
+        // 1. إذا كان معلم: فصل الطلاب
+        if (role === 'teacher') {
+          const studentsQuery = query(collection(db, "users"), where("teacherId", "==", userId));
+          const studentsSnap = await getDocs(studentsQuery);
+          await Promise.all(studentsSnap.docs.map(d => updateDoc(doc(db, "users", d.id), { teacherId: null })));
+        }
+
+        // 2. حذف الجلسات
+        const sessionField = role === 'student' ? 'studentId' : 'teacherId';
+        const sessionsQuery = query(collection(db, "sessions"), where(sessionField, "==", userId));
+        const sessionsSnap = await getDocs(sessionsQuery);
+        await Promise.all(sessionsSnap.docs.map(d => deleteDoc(doc(db, "sessions", d.id))));
+
+        // 3. حذف IEP للطالب
+        if (role === 'student') {
+          try { await deleteDoc(doc(db, "iep", userId)); } catch (e) {}
+        }
+
+        // 4. حذف ملفات المعلم
+        if (role === 'teacher' || role === 'admin') {
+          const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", userId));
+          const filesSnap = await getDocs(filesQuery);
+          await Promise.all(filesSnap.docs.map(d => deleteDoc(doc(db, "teacher_files", d.id))));
+        }
+
+        // 5. حذف المستخدم نفسه
+        await deleteDoc(doc(db, "users", userId));
+        
+        showToast(`✅ تم حذف ${roleLabel} بنجاح`);
+        renderAdminDashboard(app);
+      } catch (e) {
+        showToast('❌ فشل الحذف: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '🗑️ حذف';
+      }
+    };
+  });
+}
+/* ─── [END SEC-61] ─── */
 
 /* ─── [SEC-60] تشغيل التطبيق — Start App ─── */
 initApp();
