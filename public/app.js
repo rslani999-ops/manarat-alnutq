@@ -54,6 +54,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+// ✅ إجبار Firebase على إرسال جميع الرسائل (تأكيد الإيميل، استعادة المرور) باللغة العربية
+auth.languageCode = 'ar';
 /* ─── [END SEC-02] ─── */
 
 
