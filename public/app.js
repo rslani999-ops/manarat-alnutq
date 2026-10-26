@@ -5717,7 +5717,7 @@ window.state = state;   // ✅ تصدير الحالة لـ ai-features.js
 /* ─── [END SEC-59] ─── */
 
 
-/* ─── [SEC-61] لوحة تحكم المدير العام — Super Admin Dashboard ─── */
+/* ─── [SEC-61] لوحة تحكم المدير العام — Super Admin Dashboard (v10: حذف آمن + إدارة المدارس) ─── */
 async function renderAdminDashboard(app) {
   if (!state.user || state.user.email !== 'manarat.alnutq@gmail.com') {
     showToast('⚠️ غير مصرح لك بالدخول');
@@ -5734,7 +5734,10 @@ async function renderAdminDashboard(app) {
     const [usersSnap, sessionsSnap] = await Promise.all([getDocs(collection(db, "users")), getDocs(collection(db, "sessions"))]);
     usersSnap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
     sessionsSnap.forEach(d => allSessions.push({ id: d.id, ...d.data() }));
-  } catch (e) { app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ: ${e.message}</p></div>`; return; }
+  } catch (e) { 
+    app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب البيانات: ${e.message}</p></div>`; 
+    return; 
+  }
 
   const teacherSessionsCount = {}, studentSessionsCount = {};
   allSessions.forEach(s => {
@@ -5792,7 +5795,7 @@ async function renderAdminDashboard(app) {
 
   filtered.forEach(u => {
     const isPending = u.role === 'teacher' && u.isApproved === false;
-    const roleBadge = u.role === 'admin' ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">👑 مدير</span>' : u.role === 'teacher' ? '<span class="badge" style="background:#DBEAFE; color:#1E40AF;">👨‍🏫 معلم</span>' : '<span class="badge" style="background:#D1FAE5; color:#065F46;">🧒 طالب</span>';
+    const roleBadge = u.role === 'admin' ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">👑 مدير عام</span>' : u.role === 'teacher' ? '<span class="badge" style="background:#DBEAFE; color:#1E40AF;">👨‍🏫 معلم</span>' : '<span class="badge" style="background:#D1FAE5; color:#065F46;">🧒 طالب</span>';
     
     const isSelf = u.id === state.user.uid;
     const isMainAdmin = u.email === 'manarat.alnutq@gmail.com';
@@ -5812,8 +5815,14 @@ async function renderAdminDashboard(app) {
     
     let actionButtons = '';
     if (u.role === 'teacher') {
+      const schoolAdminBtn = u.managedSchool 
+        ? `<span class="badge" style="background:#0891B2; color:white;">🏫 يدير: ${u.managedSchool}</span>
+           <button class="btn btn-sm btn-danger remove-school-admin" data-id="${u.id}" style="border-radius:50px; padding:4px 12px;">إلغاء الإدارة</button>`
+        : `<button class="btn btn-sm btn-warning appoint-school-admin" data-id="${u.id}" data-name="${u.fullName}" style="border-radius:50px; padding:4px 12px; color:#333;">👑 تعيين كمدير مدرسة</button>`;
+
       actionButtons = `
-        <button class="btn btn-sm btn-primary view-teacher-sessions" data-id="${u.id}" style="border-radius:50px; padding:4px 12px;">📅 جلسات المعلم</button>
+        ${schoolAdminBtn}
+        <button class="btn btn-sm btn-primary view-teacher-sessions" data-id="${u.id}" style="border-radius:50px; padding:4px 12px;">📅 جلساته</button>
         <button class="btn btn-sm btn-success view-teacher-achv" data-id="${u.id}" style="border-radius:50px; padding:4px 12px;">🏆 إنجازه</button>
       `;
     } else if (u.role === 'student') {
@@ -5843,10 +5852,38 @@ async function renderAdminDashboard(app) {
     listContainer.appendChild(row);
   });
 
+  // اعتماد المعلمين
   listContainer.querySelectorAll('.approve-btn').forEach(btn => {
     btn.onclick = async () => {
       btn.disabled = true; btn.textContent = '⏳';
       try { await updateDoc(doc(db, "users", btn.dataset.id), { isApproved: true }); showToast('✅ تم الاعتماد'); render(); } catch (e) { showToast('❌ ' + e.message); btn.disabled = false; btn.textContent = '✅ اعتماد'; }
+    };
+  });
+
+  // تعيين مدير مدرسة
+  listContainer.querySelectorAll('.appoint-school-admin').forEach(btn => {
+    btn.onclick = async () => {
+      const school = prompt(`أدخل اسم المدرسة التي سيديرها المعلم (${btn.dataset.name}):\n(مثال: مدرسة قتيبة بن مسلم الابتدائية)`);
+      if (!school || school.trim() === '') return;
+      btn.disabled = true; btn.textContent = '⏳';
+      try {
+        await updateDoc(doc(db, "users", btn.dataset.id), { managedSchool: school.trim(), schoolName: school.trim() });
+        showToast(`✅ تم تعيينه مديراً لـ: ${school.trim()}`);
+        render();
+      } catch (e) { showToast('❌ ' + e.message); btn.disabled = false; btn.textContent = '👑 تعيين كمدير مدرسة'; }
+    };
+  });
+
+  // إلغاء إدارة مدرسة
+  listContainer.querySelectorAll('.remove-school-admin').forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm('هل أنت متأكد من إلغاء صلاحية إدارة المدرسة لهذا المعلم؟')) return;
+      btn.disabled = true; btn.textContent = '⏳';
+      try {
+        await updateDoc(doc(db, "users", btn.dataset.id), { managedSchool: null });
+        showToast('✅ تم إلغاء صلاحية الإدارة');
+        render();
+      } catch (e) { showToast('❌ ' + e.message); btn.disabled = false; btn.textContent = 'إلغاء الإدارة'; }
     };
   });
 
@@ -5856,67 +5893,67 @@ async function renderAdminDashboard(app) {
   listContainer.querySelectorAll('.view-sess-btn').forEach(btn => { btn.onclick = () => { state.currentStudent = allUsers.find(u => u.id === btn.dataset.id); state.view = 'speech-sessions'; render(); }; });
   listContainer.querySelectorAll('.view-achv-btn').forEach(btn => { btn.onclick = () => { state.currentStudent = allUsers.find(u => u.id === btn.dataset.id); state.view = 'achievement'; render(); }; });
 
-  // الحذف
-  listContainer.querySelectorAll('.delete-btn').forEach(btn => { btn.onclick = async () => { /* كود الحذف المتسلسل السابق نفسه */ }; });
+  // ✅ الحذف الآمن (تسلسلي لتفادي فشل الطلبات)
+  listContainer.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const userId = btn.dataset.id;
+      const role = btn.dataset.role;
+      const name = btn.dataset.name;
+      
+      if (!confirm(`⚠️ تحذير: هل أنت متأكد من حذف "${name}"؟\n\n❌ لا يمكن التراجع!`)) return;
+      
+      btn.disabled = true; 
+      btn.textContent = '⏳ جاري الحذف...';
+      
+      try {
+        if (role === 'student') {
+          // 1. حذف الجلسات
+          const sessionsQuery = query(collection(db, "sessions"), where("studentId", "==", userId));
+          const sessionsSnap = await getDocs(sessionsQuery);
+          for (const sessionDoc of sessionsSnap.docs) {
+            await deleteDoc(doc(db, "sessions", sessionDoc.id));
+          }
+          // 2. حذف IEP
+          const iepRef = doc(db, "iep", userId);
+          const iepSnap = await getDoc(iepRef);
+          if (iepSnap.exists()) await deleteDoc(iepRef);
+
+        } else if (role === 'teacher' || role === 'admin') {
+          // 1. فصل الطلاب
+          const studentsQuery = query(collection(db, "users"), where("teacherId", "==", userId));
+          const studentsSnap = await getDocs(studentsQuery);
+          for (const studentDoc of studentsSnap.docs) {
+            await updateDoc(doc(db, "users", studentDoc.id), { teacherId: null });
+          }
+          // 2. حذف الجلسات
+          const sessionsQuery = query(collection(db, "sessions"), where("teacherId", "==", userId));
+          const sessionsSnap = await getDocs(sessionsQuery);
+          for (const sessionDoc of sessionsSnap.docs) {
+            await deleteDoc(doc(db, "sessions", sessionDoc.id));
+          }
+          // 3. حذف ملفات المعلم
+          const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", userId));
+          const filesSnap = await getDocs(filesQuery);
+          for (const fileDoc of filesSnap.docs) {
+            await deleteDoc(doc(db, "teacher_files", fileDoc.id));
+          }
+        }
+
+        // أخيراً: حذف حساب المستخدم نفسه
+        await deleteDoc(doc(db, "users", userId));
+        showToast(`✅ تم حذف ${role === 'student' ? 'الطالب' : 'المعلم'} بنجاح`);
+        render();
+
+      } catch (e) {
+        console.error('فشل الحذف:', e);
+        showToast('❌ فشل الحذف: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '🗑️ حذف';
+      }
+    };
+  });
 }
-
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard ─── */
-async function renderSchoolDashboard(app) {
-  if (!state.managedSchool) { showToast('⚠️ غير مصرح'); state.view = 'home'; return render(); }
-
-  renderTopbar(app, `🏫 إدارة ${state.managedSchool}`, 'لوحة مدير المدرسة', null);
-
-  let schoolTeachers = [], schoolStudents = [];
-  try {
-    const teachersQ = query(collection(db, "users"), where("role", "==", "teacher"), where("schoolName", "==", state.managedSchool));
-    const teachersSnap = await getDocs(teachersQ);
-    teachersSnap.forEach(d => schoolTeachers.push({ id: d.id, ...d.data() }));
-
-    const teacherIds = schoolTeachers.map(t => t.id);
-    if (teacherIds.length > 0) {
-      const studentsQ = query(collection(db, "users"), where("role", "==", "student"), where("teacherId", "in", teacherIds));
-      const studentsSnap = await getDocs(studentsQ);
-      studentsSnap.forEach(d => schoolStudents.push({ id: d.id, ...d.data() }));
-    }
-  } catch (e) { app.innerHTML = `<div class="card"><p>خطأ: ${e.message}</p></div>`; return; }
-
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `
-    <h3>👨‍🏫 معلمو المدرسة (${schoolTeachers.length})</h3>
-    <div style="margin-top:10px;" id="schoolTeachersList">
-      ${schoolTeachers.map(t => `
-        <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between;">
-          <strong>${t.fullName}</strong>
-          <span>${t.email}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  app.appendChild(card);
-
-  const stuCard = document.createElement('div');
-  stuCard.className = 'card';
-  stuCard.innerHTML = `
-    <h3>🧒 طلاب المدرسة (${schoolStudents.length})</h3>
-    <div style="margin-top:10px;" id="schoolStudentsList">
-      ${schoolStudents.map(s => `
-        <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-          <div><strong>${s.fullName}</strong></div>
-          <div>
-            <button class="btn btn-sm btn-soft view-schol-stu-sess" data-id="${s.id}">الجلسات</button>
-            <button class="btn btn-sm btn-success view-schol-stu-achv" data-id="${s.id}">الإنجاز</button>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  app.appendChild(stuCard);
-
-  stuCard.querySelectorAll('.view-schol-stu-sess').forEach(btn => { btn.onclick = () => { state.currentStudent = schoolStudents.find(u => u.id === btn.dataset.id); state.view = 'speech-sessions'; render(); }; });
-  stuCard.querySelectorAll('.view-schol-stu-achv').forEach(btn => { btn.onclick = () => { state.currentStudent = schoolStudents.find(u => u.id === btn.dataset.id); state.view = 'achievement'; render(); }; });
-       }
-
+/* ─── [END SEC-61] ─── */
 /* ─── [SEC-60] تشغيل التطبيق — Start App ─── */
 initApp();
 /* ─── [END SEC-60] ─── */
