@@ -1661,7 +1661,7 @@ async function renderFilteredStudents(letterFilter, ageFilter) {
 /* ─── [END SEC-31] ─── */
 
 
-/* ─── [SEC-32] إضافة/إزالة الطلاب — Claim & Remove ─── */
+/* ─── [SEC-32] إضافة/إزالة الطلاب + الموافقة بأثر رجعي ─── */
 window.claimStudent = async function(studentId) {
   try {
     const ref = doc(db, "users", studentId);
@@ -1685,6 +1685,64 @@ window.removeStudent = async function(studentId) {
     await fetchTeacherStudents();
   } catch (e) { showToast('فشل في إزالة الطالب'); }
 };
+
+// ✅ دالة إضافة الموافقة بأثر رجعي (حماية البيانات الحالية)
+async function addRetroactiveConsent() {
+  if (!state.user) {
+    showToast('⚠️ يجب تسجيل الدخول أولاً.');
+    return;
+  }
+  if (state.role !== 'teacher' && state.role !== 'admin') {
+    showToast('⚠️ هذه الميزة متاحة للمعلمين فقط.');
+    return;
+  }
+
+  const students = state.myStudents;
+  if (!students || students.length === 0) {
+    showToast('⚠️ لا يوجد طلاب في قائمتك لتحديث بياناتهم.');
+    return;
+  }
+
+  const confirmMsg = `هل أنت متأكد من إضافة الموافقة بأثر رجعي لـ (${students.length}) طالب؟\n\n✅ سيتم إضافة حقل "الموافقة" فقط.\n🛡️ لن يتم المساس بأي تشخيصات أو جلسات أو درجات.`;
+  if (!confirm(confirmMsg)) return;
+
+  showToast('⏳ جاري تحديث بيانات الطلاب...');
+  let successCount = 0;
+  let failCount = 0;
+  let alreadyHasConsent = 0;
+
+  for (const student of students) {
+    try {
+      if (student.parentConsent && student.parentConsent.granted) {
+        alreadyHasConsent++;
+        continue;
+      }
+
+      await updateDoc(doc(db, "users", student.id), {
+        parentConsent: {
+          granted: true,
+          grantedAt: new Date().toISOString(),
+          grantedBy: `المعلم: ${state.user.email || state.user.uid}`,
+          version: "1.0"
+        }
+      });
+      
+      student.parentConsent = { granted: true };
+      successCount++;
+      
+    } catch (e) {
+      console.error(`❌ فشل التحديث للطالب ${student.fullName}:`, e);
+      failCount++;
+    }
+  }
+
+  showToast(`✅ تم التحديث بنجاح لـ (${successCount}) طالب.`);
+  if (alreadyHasConsent > 0) showToast(`ℹ️ (${alreadyHasConsent}) طالب كان لديهم موافقة مسبقاً.`);
+  if (failCount > 0) showToast(`⚠️ فشل تحديث (${failCount}) طالب. راجع Console.`);
+  
+  render();
+}
+window.addRetroactiveConsent = addRetroactiveConsent;
 /* ─── [END SEC-32] ─── */
 
 
