@@ -1027,7 +1027,7 @@ window.render = render;
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-26] دوال المصادقة — Authentication ─── */
+/* ─── [SEC-26] دوال المصادقة — Authentication (v2: موافقة ولي الأمر) ─── */
 function renderAuth(app) {
   renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -1073,33 +1073,89 @@ function renderRegister(app) {
       <option value="student">طالب</option>
       <option value="teacher">معلم</option>
     </select>
-    <button class="btn btn-primary btn-block" id="regBtn">تسجيل الحساب</button>
+
+    <!-- قسم ولي الأمر (يظهر للطلاب فقط) -->
+    <div id="parentSection" style="display:block; margin-top:10px; padding:15px; background:#F0F9FF; border-radius:12px; border:1px solid #BAE6FD;">
+      <h4 style="margin:0 0 10px 0; color:#0284C7; font-size:14px;">👨‍👩‍👦 بيانات ولي الأمر والموافقة</h4>
+      <input type="text" id="parentName" placeholder="اسم ولي الأمر" style="margin-bottom:8px;">
+      <input type="email" id="parentEmail" placeholder="البريد الإلكتروني لولي الأمر" style="margin-bottom:12px;">
+      
+      <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="parentConsentCheck" required style="margin-top:4px; width:18px; height:18px;">
+        <span style="font-size:12px; line-height:1.5; color:#334155;">
+          أوافق بصفتي ولي الأمر على جمع ومعالجة بيانات طفلي (بما في ذلك التسجيلات الصوتية) لأغراض التدريب والتشخيص، وفقاً لسياسة الخصوصية.
+        </span>
+      </label>
+    </div>
+
+    <button class="btn btn-primary btn-block" id="regBtn" style="margin-top:15px;">تسجيل الحساب</button>
   `;
+
+  const roleSelect = card.querySelector('#role');
+  const parentSection = card.querySelector('#parentSection');
+  
+  // إخفاء/إظهار قسم ولي الأمر حسب الدور
+  roleSelect.onchange = () => {
+    if (roleSelect.value === 'teacher') {
+      parentSection.style.display = 'none';
+    } else {
+      parentSection.style.display = 'block';
+    }
+  };
+
   const regBtn = card.querySelector('#regBtn');
   if (regBtn) regBtn.onclick = async () => {
     const name = document.getElementById('fullName').value.trim();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
+    const role = roleSelect.value;
+    
+    // بيانات ولي الأمر (إذا كان طالباً)
+    const parentName = role === 'student' ? document.getElementById('parentName').value.trim() : '';
+    const parentEmail = role === 'student' ? document.getElementById('parentEmail').value.trim() : '';
+    const parentConsentCheck = role === 'student' ? document.getElementById('parentConsentCheck').checked : true;
+
     if (!email || !password) return showToast('يرجى ملء جميع الحقول المطلوبة');
+    
+    if (role === 'student') {
+      if (!parentName || !parentEmail) return showToast('⚠️ يرجى إدخال بيانات ولي الأمر');
+      if (!parentConsentCheck) return showToast('⚠️ يجب الحصول على موافقة ولي الأمر للتسجيل');
+    }
+
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, "users", res.user.uid), {
+      
+      const userData = {
         fullName: name || email,
         email: email,
         role: role,
         teacherId: null,
         diagnostic: {},
         ageGroup: '',
-        parentName: '',
-        parentEmail: '',
+        parentName: parentName,
+        parentEmail: parentEmail,
         parentPhone: ''
-      });
-      state.user = res.user; state.role = role;
+      };
+
+      // إضافة حقل الموافقة إذا كان طالباً
+      if (role === 'student') {
+        userData.parentConsent = {
+          granted: true,
+          grantedAt: new Date().toISOString(),
+          grantedBy: 'التسجيل الذاتي (ولي الأمر)',
+          version: '1.0'
+        };
+      }
+
+      await setDoc(doc(db, "users", res.user.uid), userData);
+      
+      state.user = res.user; 
+      state.role = role;
       state.view = role === 'teacher' ? 'teacher-dashboard' : 'student-menu';
       showToast('تم إنشاء الحساب بنجاح');
       if (role === 'teacher') await fetchTeacherStudents();
       else render();
+      
     } catch (e) { showToast('فشل التسجيل: ' + e.message); }
   };
   app.appendChild(card);
