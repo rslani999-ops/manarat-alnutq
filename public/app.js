@@ -1181,11 +1181,14 @@ async function renderApproveTeacher(app) {
   const urlParams = new URLSearchParams(window.location.search);
   const teacherUid = urlParams.get('teacherUid');
 
-  // التحقق من أن المستخدم الحالي هو المدير (أو بريد الإدارة)
-  const isAdmin = state.role === 'admin' || (state.user && (state.user.email === 'manarat.alnutq@gmail.com' || state.user.email === 't184673@estb.moe.gov.sa'));
+  // ✅ التحقق الصارم: فقط إيميل منارة النطق أو من يملك دور admin
+  const isAdmin = state.role === 'admin' || (state.user && state.user.email === 'manarat.alnutq@gmail.com');
   
   if (!isAdmin) {
-    app.innerHTML = `<div class="card" style="text-align:center;"><h3 style="color:var(--coral);">⚠️ غير مصرح لك</h3><p>هذه الصفحة مخصصة لإدارة المنصة فقط.</p></div>`;
+    app.innerHTML = `<div class="card" style="text-align:center; padding:30px;">
+      <h3 style="color:var(--coral);">⚠️ غير مصرح لك</h3>
+      <p>هذه الصفحة مخصصة لإدارة المنصة فقط. يرجى تسجيل الدخول بحساب الإدارة المعتمد.</p>
+    </div>`;
     return;
   }
 
