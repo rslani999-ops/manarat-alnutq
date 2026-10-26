@@ -1316,7 +1316,7 @@ async function fetchTeacherStudents() {
 /* ─── [END SEC-27] ─── */
 
 
-/* ─── [SEC-28] لوحة المعلم — Teacher Dashboard (v2: زر الموافقة) ─── */
+/* ─── [SEC-28] لوحة المعلم وإدارة الموافقات — Teacher Dashboard & Consent Management ─── */
 async function renderTeacherDashboard(app) {
   renderTopbar(app, 'لوحة المعلم الخاصة', 'إدارة الطلاب والتشخيص والجلسات');
 
@@ -1354,6 +1354,7 @@ async function renderTeacherDashboard(app) {
       <button class="btn btn-soft btn-sm" id="btnAchievementList">🏆 ملف إنجاز الطلاب</button>
       <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
       <button class="btn btn-sm" id="btnWeeklyPlan" style="background:linear-gradient(135deg, #0891B2, #06B6D4); color:white;">📅 الخطة الأسبوعية الذكية</button>
+      <button class="btn btn-sm" id="btnConsentManagement" style="background:linear-gradient(135deg, #10B981, #059669); color:white;">🛡️ إدارة الموافقات</button>
       <button class="btn btn-sm" id="btnRetroactiveConsent" style="background:#EA580C; color:white;">⚠️ إضافة موافقة بأثر رجعي</button>
     </div>
   `;
@@ -1369,8 +1370,8 @@ async function renderTeacherDashboard(app) {
   if (btnTeacherAchievement) btnTeacherAchievement.onclick = () => { state.view = 'teacher-achievement'; render(); };
   const btnWeeklyPlan = actCard.querySelector('#btnWeeklyPlan');
   if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
-  
-  // ✅ ربط زر الموافقة بأثر رجعي
+  const btnConsentManagement = actCard.querySelector('#btnConsentManagement');
+  if (btnConsentManagement) btnConsentManagement.onclick = () => window.showConsentManagementModal();
   const btnRetroactiveConsent = actCard.querySelector('#btnRetroactiveConsent');
   if (btnRetroactiveConsent) btnRetroactiveConsent.onclick = () => window.addRetroactiveConsent();
 
@@ -1547,6 +1548,105 @@ async function renderTeacherDashboard(app) {
   }
   app.appendChild(freeCard);
 }
+
+// ✅ إدارة الموافقات (Modal)
+window.showConsentManagementModal = function() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  
+  let rowsHtml = '';
+  const students = state.myStudents || [];
+  
+  if (students.length === 0) {
+    rowsHtml = '<tr><td colspan="4" style="text-align:center; padding:20px;">لا يوجد طلاب.</td></tr>';
+  } else {
+    students.forEach((st, idx) => {
+      const consent = st.parentConsent || {};
+      const isGranted = consent.granted === true;
+      const dateStr = consent.grantedAt ? new Date(consent.grantedAt).toLocaleDateString('ar-SA') : '';
+      
+      const statusBadge = isGranted 
+        ? `<span style="color:#16A34A; font-weight:bold;">✅ موافق (${dateStr})</span>` 
+        : '<span style="color:#DC2626; font-weight:bold;">❌ بانتظار الموافقة</span>';
+
+      const parentPhone = st.parentPhone || '';
+      const waMessage = encodeURIComponent(`السلام عليكم ولي أمر الطالب/ة ${st.fullName || st.email}،\n\nنرجو منكم التكرم بالموافقة على تسجيل ابنكم/ابنتكم في منصة "منارة النطق" لتدريب النطق، وإرسال ردكم بالموافقة عبر هذه المحادثة.\n\nشاكرين لكم تعاونكم.\nإدارة منصة منارة النطق.`);
+      const waLink = parentPhone 
+        ? `<a href="https://wa.me/${parentPhone.replace(/\D/g,'')}?text=${waMessage}" target="_blank" style="background:#25D366; color:white; padding:4px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;">💬 طلب موافقة</a>`
+        : `<span style="font-size:11px; color:#999;">لا يوجد رقم</span>`;
+
+      rowsHtml += `
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:10px; text-align:right; font-weight:bold;">${st.fullName || st.email}</td>
+          <td style="padding:10px; text-align:center;">${statusBadge}</td>
+          <td style="padding:10px; text-align:center;">${waLink}</td>
+          <td style="padding:10px; text-align:center;">
+            ${!isGranted ? `<button class="btn-manual-consent" data-id="${st.id}" style="background:#F0FDF4; color:#16A34A; border:1px solid #16A34A; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:12px; font-weight:bold;">✅ تأكيد يدوي</button>` : '<span style="color:#999; font-size:12px;">-</span>'}
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;color:#059669;">🛡️ إدارة موافقات أولياء الأمور</h3>
+        <button id="closeConsentModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+      </div>
+      
+      <p style="font-size:13px; color:#555; margin-bottom:15px; background:#F0FDF4; padding:10px; border-radius:8px; border-right:4px solid #10B981;">
+        وفقاً لنظام حماية البيانات الشخصية (PDPL)، يجب الحصول على موافقة ولي الأمر قبل معالجة بيانات الطفل. يمكنك إرسال طلب عبر الواتساب، أو تأكيد الموافقة يدوياً إذا حصلت عليها شفهياً أو ورقياً.
+      </p>
+
+      <table style="width:100%; border-collapse:collapse; font-size:14px;">
+        <thead>
+          <tr style="background:#F8FAFC; color:#334155;">
+            <th style="padding:10px; text-align:right;">اسم الطالب</th>
+            <th style="padding:10px; text-align:center;">حالة الموافقة</th>
+            <th style="padding:10px; text-align:center;">التواصل</th>
+            <th style="padding:10px; text-align:center;">إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelector('#closeConsentModal').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+  modal.querySelectorAll('.btn-manual-consent').forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm('هل أنت متأكد من تأكيد الموافقة يدوياً لهذا الطالب؟')) return;
+      const studentId = btn.dataset.id;
+      btn.disabled = true;
+      btn.textContent = '⏳';
+      try {
+        await updateDoc(doc(db, "users", studentId), {
+          parentConsent: {
+            granted: true,
+            grantedAt: new Date().toISOString(),
+            grantedBy: `المعلم (تأكيد يدوي) - ${state.user.email}`,
+            version: "1.0"
+          }
+        });
+        showToast('✅ تم تأكيد الموافقة يدوياً.');
+        modal.remove();
+        const st = state.myStudents.find(s => s.id === studentId);
+        if (st) st.parentConsent = { granted: true };
+        renderTeacherDashboard(document.getElementById('app'));
+      } catch (e) {
+        showToast('❌ فشل التأكيد: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '✅ تأكيد يدوي';
+      }
+    };
+  });
+};
 /* ─── [END SEC-28] ─── */
 
 
