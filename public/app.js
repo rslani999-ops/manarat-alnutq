@@ -6051,7 +6051,7 @@ async function renderAdminDashboard(app) {
 /* ─── [END SEC-61] ─── */
 
 
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v6: مطابقة ذكية جداً) ─── */
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v7: مطابقة نصية مطلقة) ─── */
 async function renderSchoolDashboard(app) {
   if (!state.managedSchool) { 
     showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
@@ -6070,50 +6070,39 @@ async function renderSchoolDashboard(app) {
     return; 
   }
 
-  // ✅ دالة تنظيف اسم المدرسة (تزيل كل الكلمات غير الضرورية)
-  function normalizeSchoolName(name) {
-    if (!name) return '';
-    return name
+  // ✅ دالة مطابقة قوية جداً تتجاوز أخطاء الإملاء (ة/ه، أ/ا، المسافات)
+  function cleanStr(str) {
+    if (!str) return '';
+    return str
+      .replace(/[\u064B-\u0652]/g, '') // إزالة التشكيل
+      .replace(/[أإآ]/g, 'ا')          // توحيد الألف
+      .replace(/ة/g, 'ه')             // توحيد التاء المربوطة
+      .replace(/ى/g, 'ي')             // توحيد الألف المقصورة
       .replace(/مدرسة/g, '')
-      .replace(/الابتدائية/g, '').replace(/ابتدائية/g, '')
-      .replace(/المتوسطة/g, '').replace(/متوسطة/g, '')
-      .replace(/الثانوية/g, '').replace(/ثانوية/g, '')
-      .replace(/إدارة/g, '')
+      .replace(/ابتدائيه/g, '').replace(/ابتدائية/g, '')
+      .replace(/متوسطه/g, '').replace(/متوسطة/g, '')
+      .replace(/ثانويه/g, '').replace(/ثانوية/g, '')
+      .replace(/اداره/g, '').replace(/إدارة/g, '')
       .replace(/بن/g, '')  
       .replace(/ابن/g, '') 
-      .replace(/\s+/g, ' ') 
+      .replace(/\s+/g, '') // إزالة جميع المسافات
       .trim();
   }
 
-  const targetNormalized = normalizeSchoolName(state.managedSchool);
+  const targetClean = cleanStr(state.managedSchool);
 
-  // ✅ دالة مطابقة مرنة: نتحقق إذا كان اسم المدرسة يحتوي على الكلمات الأساسية
-  function isSameSchool(name1, name2) {
-    if (!name1 || !name2) return false;
-    const norm1 = normalizeSchoolName(name1);
-    const norm2 = normalizeSchoolName(name2);
-    
-    // إذا تطابقت الأسماء تماماً بعد التنظيف
-    if (norm1 === norm2) return true;
-    
-    // أو إذا كان أحدهما يحتوي على الآخر
-    if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
-    
-    return false;
-  }
-
-  // 1. فلترة المعلمين
+  // 1. جلب جميع المعلمين (مع تجاهل فروقات الإملاء في اسم المدرسة)
   const schoolTeachers = allUsers.filter(u => {
     if (u.role !== 'teacher' && u.role !== 'admin') return false;
     
-    // دائماً أضف حساب المدير الحالي إلى القائمة
+    // دائماً أضف حساب المدير الحالي
     if (u.id === state.user.uid) return true;
     
-    // مطابقة ذكية للمدارس
-    return isSameSchool(state.managedSchool, u.schoolName);
+    const userSchoolClean = cleanStr(u.schoolName);
+    return userSchoolClean === targetClean || userSchoolClean.includes(targetClean) || targetClean.includes(userSchoolClean);
   });
 
-  // 2. فلترة الطلاب: نأخذ الطلاب الذين معلمهم موجود في قائمة معلمي المدرسة
+  // 2. جلب طلاب هؤلاء المعلمين
   const teacherIds = schoolTeachers.map(t => t.id);
   const schoolStudents = allUsers.filter(u => u.role === 'student' && u.teacherId && teacherIds.includes(u.teacherId));
 
