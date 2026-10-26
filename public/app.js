@@ -5978,7 +5978,7 @@ async function renderAdminDashboard(app) {
 /* ─── [END SEC-61] ─── */
 
 
-/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v2: متوافق مع الصلاحيات) ─── */
+/* ─── [SEC-62] لوحة تحكم مدير المدرسة — School Admin Dashboard (v3: فلترة مرنة) ─── */
 async function renderSchoolDashboard(app) {
   if (!state.managedSchool) { 
     showToast('⚠️ غير مصرح لك بدخول لوحة المدرسة'); 
@@ -5988,41 +5988,58 @@ async function renderSchoolDashboard(app) {
 
   renderTopbar(app, `🏫 إدارة ${state.managedSchool}`, 'لوحة مدير المدرسة', null);
 
-  let schoolTeachers = [], schoolStudents = [];
+  let allUsers = [];
   try {
-    // 1. جلب جميع المعلمين الذين ينتمون لنفس المدرسة
-    const teachersQ = query(collection(db, "users"), where("role", "==", "teacher"), where("schoolName", "==", state.managedSchool));
-    const teachersSnap = await getDocs(teachersQ);
-    teachersSnap.forEach(d => schoolTeachers.push({ id: d.id, ...d.data() }));
-
-    // 2. جلب جميع الطلاب (سيقوم النظام بفلترتهم برمجياً بناءً على معلمي المدرسة)
-    const studentsQ = query(collection(db, "users"), where("role", "==", "student"));
-    const studentsSnap = await getDocs(studentsQ);
-    const allStudents = [];
-    studentsSnap.forEach(d => allStudents.push({ id: d.id, ...d.data() }));
-
-    // 3. فلترة الطلاب: نأخذ فقط الطلاب الذين معلمهم موجود في قائمة معلمي المدرسة
-    const teacherIds = schoolTeachers.map(t => t.id);
-    schoolStudents = allStudents.filter(s => s.teacherId && teacherIds.includes(s.teacherId));
-
+    // جلب جميع المستخدمين (مسموح لمدير المدرسة بذلك حسب قواعد الأمان)
+    const usersSnap = await getDocs(collection(db, "users"));
+    usersSnap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
   } catch (e) { 
-    app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب بيانات المدرسة: ${e.message}</p></div>`; 
+    app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب البيانات: ${e.message}</p></div>`; 
     return; 
   }
+
+  // دالة مساعدة لتنظيف اسم المدرسة من الكلمات الزائدة للمطابقة الذكية
+  function cleanSchoolName(name) {
+    if (!name) return '';
+    return name.replace(/مدرسة/g, '').replace(/الابتدائية/g, '').replace(/المتوسطة/g, '').replace(/الثانوية/g, '').replace(/بن/g, '').replace(/بنت/g, '').trim();
+  }
+
+  const targetSchoolClean = cleanSchoolName(state.managedSchool);
+
+  // 1. فلترة المعلمين: نأخذ المعلمين الذين ينتمون لنفس المدرسة أو المدير نفسه
+  const schoolTeachers = allUsers.filter(u => {
+    if (u.role !== 'teacher' && u.role !== 'admin') return false;
+    
+    // دائماً أضف حساب المدير الحالي إلى القائمة
+    if (u.id === state.user.uid) return true;
+    
+    // مطابقة ذكية لأسماء المدارس
+    if (!u.schoolName) return false;
+    const userSchoolClean = cleanSchoolName(u.schoolName);
+    return userSchoolClean.includes(targetSchoolClean) || targetSchoolClean.includes(userSchoolClean);
+  });
+
+  // 2. فلترة الطلاب: نأخذ الطلاب الذين معلمهم موجود في قائمة معلمي المدرسة
+  const teacherIds = schoolTeachers.map(t => t.id);
+  const schoolStudents = allUsers.filter(u => u.role === 'student' && u.teacherId && teacherIds.includes(u.teacherId));
 
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
     <h3>👨‍🏫 معلمو المدرسة (${schoolTeachers.length})</h3>
+    <p style="font-size:12px; color:#64748B; margin-bottom:10px;">* يتم عرض المعلمين الذين كتبوا اسم مدرستهم في ملفهم الشخصي بشكل مطابق.</p>
     <div style="margin-top:10px;" id="schoolTeachersList">
       ${schoolTeachers.length === 0 ? '<p class="muted">لا يوجد معلمون مسجلون في هذه المدرسة حالياً.</p>' : ''}
       ${schoolTeachers.map(t => `
         <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:#F8FAFC;">
           <div>
-            <strong>${t.fullName || 'بدون اسم'}</strong>
+            <strong>${t.fullName || 'بدون اسم'} ${t.id === state.user.uid ? '(أنت)' : ''}</strong>
             <div style="font-size:12px; color:#64748B;">${t.email}</div>
+            <div style="font-size:11px; color:#0F766E;">🏫 ${t.schoolName || 'لم يسجل مدرسة'}</div>
           </div>
-          <span class="badge" style="background:#DBEAFE; color:#1E40AF;">👨‍🏫 معلم</span>
+          <span class="badge" style="background:${t.id === state.user.uid ? '#10B981' : '#DBEAFE'}; color:${t.id === state.user.uid ? 'white' : '#1E40AF'};">
+            ${t.id === state.user.uid ? '👑 مدير المدرسة' : '👨‍🏫 معلم'}
+          </span>
         </div>
       `).join('')}
     </div>
@@ -6036,7 +6053,6 @@ async function renderSchoolDashboard(app) {
     <div style="margin-top:10px;" id="schoolStudentsList">
       ${schoolStudents.length === 0 ? '<p class="muted">لا يوجد طلاب مسجلون تحت إشراف معلمي هذه المدرسة.</p>' : ''}
       ${schoolStudents.map(s => {
-        // البحث عن اسم المعلم المشرف على الطالب
         const teacher = schoolTeachers.find(t => t.id === s.teacherId);
         const teacherName = teacher ? teacher.fullName : 'غير معروف';
         
@@ -6044,7 +6060,7 @@ async function renderSchoolDashboard(app) {
         <div style="padding:10px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:#F8FAFC;">
           <div>
             <strong>${s.fullName || 'بدون اسم'}</strong>
-            <div style="font-size:12px; color:#64748B;">المعلم: ${teacherName}</div>
+            <div style="font-size:12px; color:#64748B;">المعلم المشرف: ${teacherName}</div>
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-sm btn-primary view-schol-stu-sess" data-id="${s.id}" style="border-radius:50px; padding:4px 12px;">📅 جلساته</button>
