@@ -1301,7 +1301,7 @@ async function renderApproveTeacher(app) {
 /* ─── [END SEC-26] و [END SEC-26-B] ─── */
 
 
-/* ─── [SEC-27] جلب بيانات المستخدم والطلاب (v4: حماية الحسابات المحذوفة) ─── */
+/* ─── [SEC-27] جلب بيانات المستخدم والطلاب (v5: إصلاح التداخل) ─── */
 async function fetchUserData(uid) {
   try {
     const uDoc = await getDoc(doc(db, "users", uid));
@@ -1323,14 +1323,13 @@ async function fetchUserData(uid) {
       
       if (state.role === 'teacher' || state.role === 'admin') {
         state.view = 'teacher-dashboard';
-        await fetchTeacherStudents();
+        await fetchTeacherStudents(); // فقط جلب البيانات، بدون رسم
       } else {
         state.currentStudent = { id: uid, ...uData };
         state.view = 'student-menu';
-        render();
+        // ✅ تم إزالة render() من هنا
       }
     } else {
-      // ✅ الحساب غير موجود (تم حذفه بواسطة المدير)
       showToast('⚠️ هذا الحساب تم حذفه من النظام. يرجى التواصل مع الإدارة.');
       await signOut(auth);
       state.user = null;
@@ -1369,7 +1368,7 @@ async function fetchTeacherStudents() {
     state.myStudents = myStudents;
     state.freeStudents = freeStudents;
 
-    render();
+    // ✅ تم إزالة render() من هنا، ليتم الرسم في المكان المطلوب فقط
   } catch (e) {
     console.error('خطأ في تحميل الطلاب:', e);
     showToast('❌ خطأ في تحميل بيانات الطلاب: ' + (e.message || e.code));
@@ -5723,7 +5722,7 @@ function printAchievement(student, data) {
 /* ─── [END SEC-57] ─── */
      
 
-/* ─── [SEC-58] التهيئة النهائية — Final Init (v4: رسم مرة واحدة) ─── */
+/* ─── [SEC-58] التهيئة النهائية — Final Init (v5: رسم مرة واحدة) ─── */
 function initApp() {
   initAccessibility();
 
@@ -5737,12 +5736,12 @@ function initApp() {
       state.user = user;
       state.isGuest = false;
       
-      // جلب البيانات (بدون رسم)
       await fetchUserData(user.uid);
       
-      // معالجة الروابط المباشرة
       if (requestedView === 'approve-teacher') {
         state.view = 'approve-teacher';
+      } else if (requestedView === 'admin-dashboard') {
+        state.view = 'admin-dashboard'; // ✅ إضافة توجيه لوحة المدير
       } else if (requestedView && requestedView !== 'home' && requestedView !== 'auth') {
         try {
           if (requestedStudentId) {
@@ -5757,8 +5756,7 @@ function initApp() {
         state.view = requestedView;
       }
       
-      // ✅ رسم واحد فقط في النهاية
-      render();
+      render(); // ✅ رسم واحد فقط في النهاية
       
     } else {
       state.user = null;
@@ -5795,7 +5793,7 @@ window.where = where;
 window.getCurrentStudent = function() { return state.currentStudent; };
 window.state = state;   // ✅ تصدير الحالة لـ ai-features.js
 /* ─── [END SEC-59] ─── */
-/* ─── [SEC-61] لوحة تحكم المدير — Admin Dashboard (v2: إدارة وحذف كامل) ─── */
+/* ─── [SEC-61] لوحة تحكم المدير — Admin Dashboard (v3: إصلاح التداخل) ─── */
 async function renderAdminDashboard(app) {
   if (!state.user || (state.role !== 'admin' && state.user.email !== 'manarat.alnutq@gmail.com')) {
     showToast('⚠️ غير مصرح لك بالدخول');
@@ -5808,12 +5806,12 @@ async function renderAdminDashboard(app) {
 
   renderTopbar(app, '👑 لوحة المدير', 'إدارة شاملة للمنصة', () => { state.view = 'teacher-dashboard'; render(); });
 
-  // جلب جميع المستخدمين
   let allUsers = [];
   try {
     const usersSnap = await getDocs(collection(db, "users"));
     usersSnap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
   } catch (e) {
+    if (e.code === 'aborted' || (e.message && e.message.includes('aborted'))) return; // ✅ تجاهل خطأ الإلغاء
     app.innerHTML = `<div class="card"><p style="color:red;">⚠️ خطأ في جلب البيانات: ${e.message}</p></div>`;
     return;
   }
@@ -5823,7 +5821,6 @@ async function renderAdminDashboard(app) {
   const students = allUsers.filter(u => u.role === 'student');
   const pending = teachers.filter(t => t.isApproved === false);
 
-  // الإحصائيات
   const summary = document.createElement('div');
   summary.className = 'summary-dashboard';
   summary.innerHTML = `
@@ -5834,7 +5831,6 @@ async function renderAdminDashboard(app) {
   `;
   app.appendChild(summary);
 
-  // التبويبات والبحث
   const controlsCard = document.createElement('div');
   controlsCard.className = 'card';
   controlsCard.innerHTML = `
@@ -5850,11 +5846,10 @@ async function renderAdminDashboard(app) {
   `;
   app.appendChild(controlsCard);
 
-  // ربط التبويبات والبحث
   controlsCard.querySelectorAll('.admin-tab').forEach(tab => {
     tab.onclick = () => {
       state.adminTab = tab.dataset.tab;
-      renderAdminDashboard(app);
+      render(); // ✅ استخدام render بدلاً من renderAdminDashboard
     };
   });
 
@@ -5864,13 +5859,12 @@ async function renderAdminDashboard(app) {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
       state.adminSearch = e.target.value;
-      renderAdminDashboard(app);
+      render(); // ✅ استخدام render
     }, 400);
   };
 
   const listContainer = controlsCard.querySelector('#adminListContainer');
 
-  // ==== تبويب المدارس ====
   if (state.adminTab === 'schools') {
     const schoolsMap = {};
     teachers.forEach(t => {
@@ -5909,7 +5903,7 @@ async function renderAdminDashboard(app) {
             const schoolTeachers = schoolsMap[schoolName];
             await Promise.all(schoolTeachers.map(t => updateDoc(doc(db, "users", t.id), { schoolName: '' })));
             showToast('✅ تم حذف المدرسة وإلغاء ربط المعلمين');
-            renderAdminDashboard(app);
+            render(); // ✅ استخدام render
           } catch (e) {
             showToast('❌ فشل الحذف: ' + e.message);
             btn.disabled = false;
@@ -5921,7 +5915,6 @@ async function renderAdminDashboard(app) {
     return;
   }
 
-  // ==== تبويبات المستخدمين ====
   let filtered = allUsers;
   if (state.adminTab === 'teachers') filtered = teachers;
   else if (state.adminTab === 'students') filtered = students;
@@ -5976,7 +5969,6 @@ async function renderAdminDashboard(app) {
     listContainer.appendChild(row);
   });
 
-  // ربط أزرار الاعتماد
   listContainer.querySelectorAll('.approve-btn').forEach(btn => {
     btn.onclick = async () => {
       btn.disabled = true;
@@ -5984,7 +5976,7 @@ async function renderAdminDashboard(app) {
       try {
         await updateDoc(doc(db, "users", btn.dataset.id), { isApproved: true });
         showToast('✅ تم الاعتماد');
-        renderAdminDashboard(app);
+        render(); // ✅ استخدام render
       } catch (e) {
         showToast('❌ ' + e.message);
         btn.disabled = false;
@@ -5993,7 +5985,6 @@ async function renderAdminDashboard(app) {
     };
   });
 
-  // ربط أزرار الحذف
   listContainer.querySelectorAll('.delete-btn').forEach(btn => {
     btn.onclick = async () => {
       const userId = btn.dataset.id;
@@ -6012,36 +6003,31 @@ async function renderAdminDashboard(app) {
       btn.textContent = '⏳';
       
       try {
-        // 1. إذا كان معلم: فصل الطلاب
         if (role === 'teacher') {
           const studentsQuery = query(collection(db, "users"), where("teacherId", "==", userId));
           const studentsSnap = await getDocs(studentsQuery);
           await Promise.all(studentsSnap.docs.map(d => updateDoc(doc(db, "users", d.id), { teacherId: null })));
         }
 
-        // 2. حذف الجلسات
         const sessionField = role === 'student' ? 'studentId' : 'teacherId';
         const sessionsQuery = query(collection(db, "sessions"), where(sessionField, "==", userId));
         const sessionsSnap = await getDocs(sessionsQuery);
         await Promise.all(sessionsSnap.docs.map(d => deleteDoc(doc(db, "sessions", d.id))));
 
-        // 3. حذف IEP للطالب
         if (role === 'student') {
           try { await deleteDoc(doc(db, "iep", userId)); } catch (e) {}
         }
 
-        // 4. حذف ملفات المعلم
         if (role === 'teacher' || role === 'admin') {
           const filesQuery = query(collection(db, "teacher_files"), where("teacherId", "==", userId));
           const filesSnap = await getDocs(filesQuery);
           await Promise.all(filesSnap.docs.map(d => deleteDoc(doc(db, "teacher_files", d.id))));
         }
 
-        // 5. حذف المستخدم نفسه
         await deleteDoc(doc(db, "users", userId));
         
         showToast(`✅ تم حذف ${roleLabel} بنجاح`);
-        renderAdminDashboard(app);
+        render(); // ✅ استخدام render
       } catch (e) {
         showToast('❌ فشل الحذف: ' + e.message);
         btn.disabled = false;
@@ -6051,7 +6037,6 @@ async function renderAdminDashboard(app) {
   });
 }
 /* ─── [END SEC-61] ─── */
-
 /* ─── [SEC-60] تشغيل التطبيق — Start App ─── */
 initApp();
 /* ─── [END SEC-60] ─── */
