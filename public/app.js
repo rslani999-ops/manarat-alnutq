@@ -5064,7 +5064,7 @@ const TEACHER_STANDARDS = [
 /* ─── [END SEC-53] ─── */
 
 
-/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement (v4: توليد تلقائي للشواهد) ─── */
+/* ─── [SEC-54] ملف إنجاز المعلم — Teacher Achievement (v4) ─── */
 async function renderTeacherAchievement(app) {
   if (!state.user) {
     showToast('يجب تسجيل الدخول');
@@ -5106,7 +5106,7 @@ async function renderTeacherAchievement(app) {
       if (!existingFiles[standardId]) existingFiles[standardId] = [];
       existingFiles[standardId].push({ id: d.id, ...data });
     });
-  } catch (e) { console.warn('تعذر جلب المرفقات الحالية:', e); }
+  } catch (e) { console.warn('تعذر جلب المرفقات:', e); }
 
   let teacherSessions = [];
   try {
@@ -5213,9 +5213,7 @@ async function renderTeacherAchievement(app) {
   app.appendChild(autoSummaryContainer);
 
   const printBtn = headerCard.querySelector('#printTeacherAchievementBtn');
-    if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, autoEvidences, summary, { schoolName, principalName });
-
-  TEACHER_STANDARDS.forEach(standard => {
+  if (printBtn) printBtn.onclick = () => printTeacherAchievement(teacherName, existingFiles, autoEvidences, summary, { schoolName, principalName });  TEACHER_STANDARDS.forEach(standard => {
     const card = document.createElement('div');
     card.className = 'card';
     card.id = `standardCard_${standard.id}`;
@@ -5312,9 +5310,7 @@ async function renderTeacherAchievement(app) {
         };
       });
     }
-  });
-
-  app.querySelectorAll('.view-evidence-btn').forEach(btn => {
+  });  app.querySelectorAll('.view-evidence-btn').forEach(btn => {
     btn.onclick = () => {
       const targetView = btn.dataset.view;
       const teacherId = btn.dataset.teacherId;
@@ -5442,7 +5438,7 @@ function printTeacherAchievement(teacherName, existingFiles, autoEvidences, summ
   window.print();
   setTimeout(() => { if (printArea) printArea.remove(); }, 1000);
 }
-/* ─── [END SEC-54] ─── */           
+/* ─── [END SEC-54] ─── */       
 
 /* ─── [SEC-55] توليد وحفظ وتحديث الشواهد (v2: يدعم قواعد الأمان) ─── */
 async function generateEvidenceReport(teacherName) {
