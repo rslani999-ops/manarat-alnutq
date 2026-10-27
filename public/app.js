@@ -891,7 +891,11 @@ function renderTopbar(appContainer, title, sub, onBack) {
   updateAccessibilityButtons();
 }
 /* ─── [END SEC-23] ─── */
-/* ─── [SEC-24] سياسة الخصوصية — Privacy Policy ─── */
+
+
+/* ─── [SEC-24] سياسة الخصوصية — Privacy Policy (v2.0 — متوافقة مع PDPL) ─── */
+
+// مستمع للرابط في أي مكان بالموقع
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'privacyPolicyLink') {
     e.preventDefault();
@@ -900,41 +904,90 @@ document.addEventListener('click', (e) => {
 });
 
 function showPrivacyPolicy() {
+  const existing = document.getElementById('privacyPolicyModal');
+  if (existing) existing.remove();
+
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.id = 'privacyPolicyModal';
+  modal.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.65);
+    display:flex;align-items:center;justify-content:center;
+    z-index:99999;padding:10px;
+    backdrop-filter:blur(2px);
+  `;
+
   modal.innerHTML = `
-    <div style="background:white;padding:25px;border-radius:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
-      <h3 style="margin-bottom:16px;color:var(--mint-deep);">سياسة الخصوصية</h3>
-      <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
-        نحن في منصة <strong>منارة النطق</strong> نلتزم بحماية بيانات المستخدمين (المعلمين والطلاب) ونستخدمها فقط لتقديم خدمات المنصة.
-      </p>
-      <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
-        <strong>البيانات التي نجمعها:</strong><br>
-        - الاسم والبريد الإلكتروني<br>
-        - نتائج التشخيص والجلسات<br>
-        - الملفات المرفوعة (شواهد الإنجاز)<br>
-        - التسجيلات الصوتية (إن استُخدمت)
-      </p>
-      <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
-        <strong>كيف نستخدم البيانات:</strong><br>
-        - لتقديم خدمات التشخيص والتدريب<br>
-        - لإعداد التقارير والخطط الفردية<br>
-        - لتحسين المنصة وتجربة المستخدم
-      </p>
-      <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
-        <strong>حماية البيانات:</strong><br>
-        نستخدم تشفير SSL ونخزن البيانات في خوادم آمنة (Firebase)، ولا نشاركها مع أي طرف ثالث.
-      </p>
-      <p style="font-size:14px;line-height:1.8;margin-bottom:10px;">
-        يمكنك التواصل معنا عبر البريد الإلكتروني rslani999@gmail.com لأي استفسار أو طلب حذف البيانات.
-      </p>
-      <button class="btn btn-primary btn-block" id="closePrivacyBtn">إغلاق</button>
+    <div style="background:#fff;border-radius:20px;max-width:820px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;" dir="rtl">
+      
+      <div style="padding:20px 24px;background:linear-gradient(135deg,var(--mint-deep) 0%,#0891B2 100%);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+        <div>
+          <h2 style="margin:0;font-size:20px;">🔒 سياسة الخصوصية</h2>
+          <p style="margin:4px 0 0;font-size:12px;opacity:0.9;">آخر تحديث: 2026-10-27 &nbsp;|&nbsp; الإصدار 2.0</p>
+        </div>
+        <button id="closePrivacyBtnTop" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="إغلاق">×</button>
+      </div>
+
+      <div style="padding:24px 28px;overflow-y:auto;flex:1;font-size:14px;line-height:1.85;color:#222;">
+        
+        <p style="background:#f0f7fa;padding:14px 16px;border-right:4px solid #0891B2;border-radius:6px;margin:0 0 20px;">
+          نلتزم في منصة <strong>منارة النطق</strong> بحماية خصوصية مستخدمينا — خاصة الأطفال — ونلتزم بأحكام <strong>نظام حماية البيانات الشخصية السعودي (PDPL)</strong> ولوائحه التنفيذية.
+        </p>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">1. المسؤول عن معالجة البيانات</h3>
+        <p>المسؤول عن معالجة بياناتكم هو القائم على منصة "منارة النطق". للتواصل بشأن الخصوصية:</p>
+        <ul style="padding-right:20px;">
+          <li>البريد للخصوصية: <strong>privacy@alnutq.com</strong></li>
+          <li>البريد العام: <strong>support@alnutq.com</strong></li>
+        </ul>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">2. البيانات التي نجمعها</h3>
+        <p><strong>2.1 بيانات الهوية:</strong> الاسم، البريد الإلكتروني، الدور (معلم/طالب)، المدرسة.</p>
+        <p><strong>2.2 بيانات الأطفال:</strong> لا تُجمع إلا <strong>بموافقة صريحة من ولي الأمر</strong> (parentConsent) موثقة بالنظام.</p>
+        <p><strong>2.3 البيانات الصوتية (حساسة):</strong> تُسجل الأصوات بموافقة أبوية، وتُستخدم حصراً لقياس التقدم (مقارنة قبل/بعد)، ومراجعة المعلم، وإعداد التقارير.</p>
+        <p><strong>2.4 البيانات التقنية:</strong> سجل الدخول وعنوان IP (لأغراض الأمان فقط).</p>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">3. الأساس القانوني للمعالجة</h3>
+        <ul style="padding-right:20px;">
+          <li><strong>الموافقة الصريحة:</strong> لبيانات الأطفال والتسجيلات الصوتية.</li>
+          <li><strong>تنفيذ الخدمة:</strong> لتقديم خدمات التدريب والتشخيص.</li>
+          <li><strong>المصلحة المشروعة:</strong> لتحسين المنصة وأمانها.</li>
+        </ul>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">4. مشاركة البيانات مع أطراف ثالثة</h3>
+        <p>نستخدم مزودي خدمات تقنية (معالجين) ملتزمين بحماية البيانات: <strong>Google Firebase</strong> (قاعدة البيانات)، <strong>Vercel</strong> (الاستضافة)، <strong>Cloudflare</strong> (الأمان).</p>
+        <p><strong>لا نبيع بياناتكم، ولا نشاركها مع معلنين، ولا نستخدمها لتدريب نماذج AI عامة.</strong></p>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">5. مدة الاحتفاظ بالبيانات</h3>
+        <ul style="padding-right:20px;">
+          <li>بيانات الحساب: طالما الحساب نشط.</li>
+          <li>التسجيلات الصوتية: سنة دراسية، تُحذف تلقائياً بعدها.</li>
+          <li>بعد إغلاق الحساب: تُحذف البيانات خلال 90 يوماً.</li>
+        </ul>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">6. حقوقكم (وفق PDPL)</h3>
+        <p>يحق لكم: الوصول لبياناتكم، تصحيحها، طلب حذفها، الاعتراض على معالجتها، وسحب الموافقة في أي وقت. للتواصل: <strong>privacy@alnutq.com</strong> (خلال 30 يوماً كحد أقصى).</p>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">7. خصوصية الأطفال</h3>
+        <p>لا يُسمح لأي طفل دون 18 عاماً بإنشاء حساب بنفسه؛ الحساب يُنشأ عبر المعلم/المدرسة. يمكن لولي الأمر في أي وقت طلب حذف التسجيلات والبيانات.</p>
+
+        <h3 style="color:var(--mint-deep);margin-top:20px;">8. الشكاوى</h3>
+        <p>يمكنكم تقديم شكوى إلى <strong>الهيئة السعودية للبيانات والذكاء الاصطناعي (SDAIA)</strong> عبر sdaia.gov.sa.</p>
+
+        <p style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px;">© 2026 منصة منارة النطق — جميع الحقوق محفوظة.</p>
+      </div>
+
+      <div style="padding:14px 24px;border-top:1px solid #eee;background:#fafafa;display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;">
+        <button id="closePrivacyBtn" class="btn btn-primary" style="font-size:13px;">إغلاق</button>
+      </div>
     </div>
   `;
+
   document.body.appendChild(modal);
-  const closeBtn = modal.querySelector('#closePrivacyBtn');
-  if (closeBtn) closeBtn.onclick = () => modal.remove();
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  const closeFn = () => modal.remove();
+  modal.querySelector('#closePrivacyBtnTop').onclick = closeFn;
+  modal.querySelector('#closePrivacyBtn').onclick = closeFn;
+  modal.onclick = (e) => { if (e.target === modal) closeFn(); };
 }
 /* ─── [END SEC-24] ─── */
 
