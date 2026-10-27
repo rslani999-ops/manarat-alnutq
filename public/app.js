@@ -3344,7 +3344,7 @@ async function renderStudentMenu(app) {
 /* ─── [END SEC-40] ─── */
 
 
-/* ─── [SEC-41] إدارة جلسات التدريب (v5: إصلاح خطأ الصلاحيات) ─── */
+/* ─── [SEC-41] إدارة جلسات التدريب (v6: إصلاح العد والصلاحيات) ─── */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
@@ -3363,7 +3363,6 @@ async function renderSpeechSessions(app) {
     return status === 'need' || status === 'unclear';
   });
 
-  // المدير يرى جلسات الطالب بغض النظر عن المعلم، المعلم يرى جلساته فقط
   const targetTeacherId = state.currentStudent.teacherId || 'none';
 
   let existingSessions = [];
@@ -3417,21 +3416,26 @@ async function renderSpeechSessions(app) {
     const letter = addCard.querySelector('#sessLetter').value;
     const sessionType = parseInt(addCard.querySelector('#sessType').value);
     
-    // ✅ التعديل الجوهري: تحديد معرف المعلم بشكل آمن يتوافق مع قواعد Firebase
     let sessionTeacherId = state.user.uid; 
     if (state.role === 'admin' || state.managedSchool) {
-      // إذا كان مديراً أو مدير مدرسة، نسمح بحفظ الجلسة باسم معلم الطالب الأصلي
       sessionTeacherId = (targetTeacherId && targetTeacherId !== 'none') ? targetTeacherId : state.user.uid;
     }
 
     try {
-      const qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+      // ✅ التعديل الجوهري: إضافة شرط teacherId في طلب العد ليتوافق مع قواعد الخصوصية
+      let qCount;
+      if (state.role === 'admin' || state.managedSchool) {
+        qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
+      } else {
+        qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id), where("teacherId", "==", state.user.uid));
+      }
+      
       const snapCount = await getDocs(qCount);
       const sessionNumber = snapCount.size + 1;
 
       await addDoc(collection(db, "sessions"), {
         studentId: state.currentStudent.id,
-        teacherId: sessionTeacherId, // 👈 استخدام المعرف الآمن
+        teacherId: sessionTeacherId,
         studentName: state.currentStudent.fullName || state.currentStudent.email || 'غير محدد',
         studentEmail: state.currentStudent.email || '',
         letter, sessionType, sessionNumber, 
