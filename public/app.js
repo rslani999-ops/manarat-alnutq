@@ -1022,7 +1022,7 @@ window.render = render;
    ═══════════════════════════════════════════════════════════ */
 
 
-/* ─── [SEC-26] دوال المصادقة واعتماد المعلمين — Authentication & Admin Approval (v5: معالجة الأخطاء) ─── */
+/* ─── [SEC-26] دوال المصادقة واعتماد المعلمين — Authentication & Admin Approval (v6: إصلاح التوجيه) ─── */
 function renderAuth(app) {
   renderTopbar(app, 'تسجيل الدخول', '', () => { state.view = 'home'; render(); });
   const card = document.createElement('div');
@@ -1043,9 +1043,14 @@ function renderAuth(app) {
       const email = document.getElementById('email').value.trim();
       const pass = document.getElementById('password').value;
       if (!email || !pass) return showToast('يرجى إدخال البريد وكلمة المرور');
+      
       const res = await signInWithEmailAndPassword(auth, email, pass);
       state.user = res.user;
       await fetchUserData(res.user.uid);
+      
+      // ✅ التعديل: إعادة رسم الشاشة فوراً بعد جلب البيانات لتوجيه المعلم للوحته
+      render(); 
+      
     } catch (e) { 
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found') {
         showToast('⚠️ خطأ في البريد الإلكتروني أو كلمة المرور.');
@@ -1202,7 +1207,6 @@ function renderRegister(app) {
       }
       
     } catch (e) {
-      // ✅ معالجة الأخطاء الشائعة باللغة العربية
       if (e.code === 'auth/email-already-in-use') {
         showToast('⚠️ هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر.');
       } else if (e.code === 'auth/weak-password') {
