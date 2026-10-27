@@ -3340,7 +3340,7 @@ async function renderStudentMenu(app) {
 /* ─── [END SEC-40] ─── */
 
 
-/* ─── [SEC-41] إدارة جلسات التدريب (v4: دعم المدير العام والمدرسة) ─── */
+/* ─── [SEC-41] إدارة جلسات التدريب (v5: إصلاح خطأ الصلاحيات) ─── */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
@@ -3374,7 +3374,6 @@ async function renderSpeechSessions(app) {
     snap.forEach(d => existingSessions.push({ id: d.id, ...d.data() }));
   } catch (e) { console.error('خطأ في جلب الجلسات:', e); }
 
-  // بقية كود واجهة الجلسات (إضافة وعرض) يبقى كما هو تقريباً
   function getSuggestedSessionType(letter) {
     const letterSessions = existingSessions.filter(s => s.letter === letter).sort((a, b) => (a.sessionType || 0) - (b.sessionType || 0));
     if (letterSessions.length === 0) return 1;
@@ -3414,6 +3413,13 @@ async function renderSpeechSessions(app) {
     const letter = addCard.querySelector('#sessLetter').value;
     const sessionType = parseInt(addCard.querySelector('#sessType').value);
     
+    // ✅ التعديل الجوهري: تحديد معرف المعلم بشكل آمن يتوافق مع قواعد Firebase
+    let sessionTeacherId = state.user.uid; 
+    if (state.role === 'admin' || state.managedSchool) {
+      // إذا كان مديراً أو مدير مدرسة، نسمح بحفظ الجلسة باسم معلم الطالب الأصلي
+      sessionTeacherId = (targetTeacherId && targetTeacherId !== 'none') ? targetTeacherId : state.user.uid;
+    }
+
     try {
       const qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
       const snapCount = await getDocs(qCount);
@@ -3421,7 +3427,7 @@ async function renderSpeechSessions(app) {
 
       await addDoc(collection(db, "sessions"), {
         studentId: state.currentStudent.id,
-        teacherId: targetTeacherId !== 'none' ? targetTeacherId : state.user.uid, // إذا لم يكن له معلم، المدير ينشئها
+        teacherId: sessionTeacherId, // 👈 استخدام المعرف الآمن
         studentName: state.currentStudent.fullName || state.currentStudent.email || 'غير محدد',
         studentEmail: state.currentStudent.email || '',
         letter, sessionType, sessionNumber, 
@@ -3437,7 +3443,10 @@ async function renderSpeechSessions(app) {
       });
       showToast(`✅ تمت إضافة الجلسة رقم (${sessionNumber}) بنجاح!`);
       render();
-    } catch (e) { showToast('❌ فشل في إضافة الجلسة: ' + e.message); }
+    } catch (e) { 
+      console.error(e);
+      showToast('❌ فشل في إضافة الجلسة: ' + e.message); 
+    }
   };
 
   const listCard = document.createElement('div');
