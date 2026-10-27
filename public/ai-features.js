@@ -1,4 +1,16 @@
 /* ========================================
+   🛡️ اعتراض أخطاء الإلغاء (AbortError) لمنع إغراق الكونسول
+   ======================================== */
+window.addEventListener('unhandledrejection', event => {
+  if (event.reason && event.reason.name === 'AbortError') {
+    event.preventDefault(); // يمنع ظهور الخطأ الأحمر
+    console.warn('⚠️ تم إلغاء طلب غير مكتمل (AbortError) - تم تجاهله بنجاح.');
+  }
+});
+
+
+
+/* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
    v13.0 — النسخة النهائية الكاملة الموحدة
