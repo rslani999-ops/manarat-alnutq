@@ -8,15 +8,13 @@ window.addEventListener('unhandledrejection', event => {
   }
 });
 
-
-
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
    Manarat Al-Nutq - AI Features
-   v13.0 — النسخة النهائية الكاملة الموحدة
+   v15.0 — النسخة الكاملة (بعد إصلاح توليد الحروف)
    ======================================== */
 
-console.log('🚀 Starting ai-features.js v13.0 (final merged)...');
+console.log('🚀 Starting ai-features.js v15.0 (full version)...');
 
 /* ========================================
    🔑 الثوابت
@@ -72,15 +70,12 @@ async function getTeacherInfo() {
   const roleLabel = role === 'admin' ? 'مدير المدرسة' : 'معلم تدريبات النطق';
   const user = window.state?.user || {};
   const email = user.email || '';
-
   let fullName = 'المعلم';
   let schoolName = '';
-
   try {
     const fbDb = window.db;
     const fbDoc = window.doc;
     const fbGetDoc = window.getDoc;
-
     if (fbDb && fbDoc && fbGetDoc && user.uid) {
       const ref = fbDoc(fbDb, "users", user.uid);
       const snap = await fbGetDoc(ref);
@@ -91,10 +86,8 @@ async function getTeacherInfo() {
       }
     }
   } catch (e) {
-    console.warn('تعذر جلب بيانات المعلم:', e);
     fullName = user.displayName || email || 'المعلم';
   }
-
   return { fullName, roleLabel, schoolName };
 }
 
@@ -118,8 +111,6 @@ function getSessionDetails(sessionData) {
     'unclear': '❌ غير واضح',
     'none': '⏳ قيد التقييم'
   };
-  const evalText = evalLabels[sessionData.evaluation] || '⏳ قيد التقييم';
-
   return {
     student: sessionData.studentName || 'الطالب',
     letter: sessionData.letter || '',
@@ -127,7 +118,7 @@ function getSessionDetails(sessionData) {
     date: sessionData.date || new Date().toISOString().split('T')[0],
     duration: sessionData.duration || '15 دقيقة',
     goal: sessionData.goal || 'تدريب نطق الحرف',
-    evaluation: evalText,
+    evaluation: evalLabels[sessionData.evaluation] || '⏳ قيد التقييم',
     successRate: sessionData.successRate || 0
   };
 }
@@ -155,7 +146,6 @@ ${details.goal}
 `;
 
   const body = `\n${content}\n`;
-
   const schoolLine = teacher.schoolName ? ` - ${teacher.schoolName}` : '';
 
   const footer = `━━━━━━━━━━━━━━━━━━━━
@@ -164,6 +154,7 @@ ${details.goal}
 
   return `${header}${body}${footer}`;
 }
+
 /* ========================================
    📖 Firebase — بيانات الحروف والصور
    ======================================== */
@@ -173,21 +164,16 @@ async function getLetterData(letter) {
     const fbDb = window.db;
     const fbDoc = window.doc;
     const fbGetDoc = window.getDoc;
-
     if (!fbDb || !fbDoc || !fbGetDoc) {
       return window.LETTER_DATABASE?.[letter] || null;
     }
-
     const ref = fbDoc(fbDb, "letters_data", letter);
     const snap = await fbGetDoc(ref);
-
     if (snap.exists()) {
-      console.log(`✅ تم جلب بيانات حرف (${letter})`);
       return snap.data();
     }
     return window.LETTER_DATABASE?.[letter] || null;
   } catch (e) {
-    console.warn('خطأ في جلب بيانات الحرف:', e);
     return window.LETTER_DATABASE?.[letter] || null;
   }
 }
@@ -197,14 +183,10 @@ async function saveLetterData(letter, data) {
     const fbDb = window.db;
     const fbDoc = window.doc;
     const fbSetDoc = window.setDoc;
-
     if (!fbDb || !fbDoc || !fbSetDoc) throw new Error('Firebase غير جاهز');
-
     await fbSetDoc(fbDoc(fbDb, "letters_data", letter), data);
-    console.log(`💾 تم حفظ بيانات حرف (${letter})`);
     return true;
   } catch (e) {
-    console.error('خطأ في حفظ بيانات الحرف:', e);
     throw e;
   }
 }
@@ -212,7 +194,6 @@ async function saveLetterData(letter, data) {
 async function generateWordImage(word) {
   if (!word) throw new Error('الكلمة مطلوبة');
   try {
-    console.log(`🎨 جاري توليد صورة: ${word}`);
     const response = await fetch(`${VERCEL_API_BASE}/api/ai-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -221,10 +202,8 @@ async function generateWordImage(word) {
     if (!response.ok) throw new Error(`فشل الاتصال: ${response.status}`);
     const data = await response.json();
     if (!data.success || !data.image) throw new Error(data.message || 'لم يتم توليد صورة');
-    console.log(`✅ تم توليد: ${word}`);
     return data.image;
   } catch (error) {
-    console.error('❌ خطأ:', error);
     throw error;
   }
 }
@@ -234,13 +213,10 @@ async function getCachedImage(word) {
     const fbDb = window.db;
     const fbDoc = window.doc;
     const fbGetDoc = window.getDoc;
-
     if (!fbDb || !fbDoc || !fbGetDoc) return null;
-
     const cacheKey = encodeURIComponent(word);
     const ref = fbDoc(fbDb, "images_cache", cacheKey);
     const snap = await fbGetDoc(ref);
-
     if (snap.exists()) {
       return snap.data().imageUrl || null;
     }
@@ -255,12 +231,9 @@ async function saveImageToCache(word, imageData) {
     const fbDb = window.db;
     const fbDoc = window.doc;
     const fbSetDoc = window.setDoc;
-
     if (!fbDb || !fbDoc || !fbSetDoc) return false;
-
     const cacheKey = encodeURIComponent(word);
     const ref = fbDoc(fbDb, "images_cache", cacheKey);
-
     await fbSetDoc(ref, {
       word: word,
       imageUrl: imageData,
@@ -276,7 +249,6 @@ async function getOrGenerateImage(word) {
   if (!word) throw new Error('الكلمة مطلوبة');
   const cachedImage = await getCachedImage(word);
   if (cachedImage) return { image: cachedImage, fromCache: true };
-
   const newImage = await generateWordImage(word);
   saveImageToCache(word, newImage).catch(() => {});
   return { image: newImage, fromCache: false };
@@ -342,33 +314,32 @@ function createImageButton(word) {
   };
   return btn;
 }
+/* ========================================
+   📚 توليد الحروف (تم إصلاحه وربطه بـ Worker)
+   ======================================== */
 
 async function generateLetterContent(letter, letterTitle) {
-  const prompt = `أنت أخصائي نطق تعليمي. قم بتوليد محتوى تفصيلي لحرف (${letter}):
-1. مخرج الحرف (شرح مبسط لمخرج الحرف).
-2. الحركات الأربع: الفتحة، الضمة، الكسرة، والسكون مع أمثلة.
-3. 9 كلمات تعليمية مقسمة كالتالي:
-   - 3 كلمات يبدأ فيها الحرف (أول الكلمة).
-   - 3 كلمات يكون الحرف فيها في وسط الكلمة.
-   - 3 كلمات يكون الحرف فيها في آخر الكلمة.
-4. 3 جمل قصيرة واضحة ومفيدة تحتوي على الحرف.`;
-
-  const response = await fetch(`${WORKER_BASE}/api/ai`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: prompt, type: 'letter-content', role: 'teacher' })
-  });
-  if (!response.ok) throw new Error(`فشل الاتصال: ${response.status}`);
-  const data = await response.json();
-  if (!data.ok || !data.recommendation) throw new Error('لم يتم توليد محتوى الحرف');
-  
-  // هيكلة الرد لضمان التوافق مع العرض
-  return {
-    makhraj: data.recommendation,
-    harakat: { fatha: `${letter}َ`, damma: `${letter}ُ`, kasra: `${letter}ِ`, sukoon: `${letter}ْ` },
-    words: { start: [], middle: [], end: [] },
-    sentences: []
-  };
+  try {
+    // ✅ استخدام المسار الصحيح في الـ Worker
+    const response = await fetch(`${WORKER_BASE}/api/ai-letter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ letter: letter, letterTitle: letterTitle })
+    });
+    
+    if (!response.ok) throw new Error(`فشل الاتصال: ${response.status}`);
+    
+    const data = await response.json();
+    
+    if (!data.success || !data.data) {
+      throw new Error(data.message || 'لم يتم توليد محتوى الحرف');
+    }
+    
+    return data.data;
+  } catch (error) {
+    console.error('❌ خطأ في توليد الحرف:', error);
+    throw error;
+  }
 }
 
 async function generateSingleLetterData(letter) {
@@ -454,6 +425,7 @@ function createGenerateLetterButton(letter, onSuccess) {
 }
 
 const createGenerateLetterButtonForSession = createGenerateLetterButton;
+
 /* ========================================
    🤖 الاتصال بـ Worker والتوصيات والتمارين
    ======================================== */
@@ -465,16 +437,12 @@ async function callAI(prompt, type = 'general') {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt, type: type, role: 'teacher' })
     });
-
     if (!response.ok) throw new Error(`فشل الاتصال: ${response.status}`);
     const data = await response.json();
     if (!data.ok || !data.recommendation) throw new Error('لم يتم استلام رد من الذكاء الاصطناعي');
-
     const rec = data.recommendation;
     if (typeof rec === 'string') return rec;
-    if (rec && typeof rec === 'object') {
-      return rec.response || rec.text || JSON.stringify(rec);
-    }
+    if (rec && typeof rec === 'object') return rec.response || rec.text || JSON.stringify(rec);
     return String(rec);
   } catch (error) {
     console.error('AI Error:', error);
@@ -676,6 +644,9 @@ function createHomeworkButton(sessionData, studentData) {
   };
   return btn;
 }
+/* ========================================
+   📖 القصص القصيرة
+   ======================================== */
 
 async function generateShortStory(sessionData, studentData) {
   const prompt = `قصة قصيرة تعليمية لحرف (${sessionData.letter}) مناسبة للأطفال.`;
@@ -752,8 +723,9 @@ function createShortStoryButton(sessionData, studentData) {
   };
   return btn;
 }
+
 /* ========================================
-   📊 تحليل التقدم والخطة المخصصة والتصدير
+   📊 تحليل التقدم والخطة المخصصة
    ======================================== */
 
 async function generateProgressAnalysis(studentData, sessionsData) {
@@ -772,7 +744,6 @@ function showProgressAnalysisModal(analysisText, studentData, stats) {
         <button id="closeProgModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
       <textarea id="progTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#F0F9FF;resize:vertical;margin-bottom:12px;">${analysisText}</textarea>
-
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
         <button id="copyProgBtn" style="border-radius:50px;padding:10px 24px;background:#0891B2;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
         <button id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
@@ -804,14 +775,12 @@ function createProgressAnalysisButton(studentData) {
       const fbQuery = window.query;
       const fbWhere = window.where;
       const fbGetDocs = window.getDocs;
-
       let sessionsData = [];
       if (fbDb && fbCollection && fbQuery && fbWhere && fbGetDocs) {
         const q = fbQuery(fbCollection(fbDb, "sessions"), fbWhere("studentId", "==", studentData.id));
         const snap = await fbGetDocs(q);
         snap.forEach(d => sessionsData.push({ id: d.id, ...d.data() }));
       }
-
       const stats = { totalSessions: sessionsData.length, passedCount: 0, trainedCount: 0, avgSuccess: 85 };
       const analysis = await generateProgressAnalysis(studentData, sessionsData);
       showProgressAnalysisModal(analysis, studentData, stats);
@@ -840,7 +809,6 @@ function showCustomPlanModal(planText, studentData) {
         <button id="closePlanModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
       </div>
       <textarea id="planTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#FAF5FF;resize:vertical;margin-bottom:12px;">${planText}</textarea>
-
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
         <button id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
         <button id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
@@ -879,6 +847,10 @@ function createCustomPlanButton(studentData) {
   };
   return btn;
 }
+
+/* ========================================
+   💾 دوال الحفظ والإرسال (مكملة)
+   ======================================== */
 
 async function saveAIToSession(sessionId, recommendations) {
   try {
@@ -932,7 +904,6 @@ async function sendSessionToParent(sessionData, studentData) {
 async function showSendToParentOptionsModal(sessionData, studentData) {
   const parentEmail = studentData.parentEmail || '';
   const parentPhone = studentData.parentPhone || '';
-  const parentName = studentData.parentName || 'ولي الأمر';
   const studentName = studentData.fullName || 'الطالب';
   const reportText = await buildParentMessage(sessionData, sessionData.recommendations || '', 'report');
 
@@ -948,8 +919,8 @@ async function showSendToParentOptionsModal(sessionData, studentData) {
 
       <div style="display:flex;flex-direction:column;gap:10px;">
         ${parentEmail ? `<button id="sendViaEmailBtn" style="background:linear-gradient(135deg, #0891B2, #06B6D4);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;cursor:pointer;">📧 إرسال بالبريد الإلكتروني</button>` : ''}
-        ${parentPhone ? `<button id="sendViaWhatsappBtn" style="background:linear-gradient(135deg, #25D366, #128C7E);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;">💬 إرسال عبر واتساب</button>` : ''}
-        <button id="copyReportBtn" style="background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;">📋 نسخ النص</button>
+        ${parentPhone ? `<button id="sendViaWhatsappBtn" style="background:linear-gradient(135deg, #25D366, #128C7E);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;cursor:pointer;">💬 إرسال عبر واتساب</button>` : ''}
+        <button id="copyReportBtn" style="background:linear-gradient(135deg, #7C3AED, #A855F7);color:white;border:none;border-radius:50px;padding:12px 24px;font-weight:bold;cursor:pointer;">📋 نسخ النص</button>
       </div>
     </div>
   `;
@@ -989,8 +960,10 @@ async function showSendToParentOptionsModal(sessionData, studentData) {
 async function generateParentReportText(sessionData, studentData) {
   return await buildParentMessage(sessionData, sessionData.recommendations || '', 'report');
 }
+/* ========================================
+   🌐 التصدير النهائي للنطاق العام (window)
+   ======================================== */
 
-// ——— التصدير الكامل للنطاق العام ———
 window.callAI = callAI;
 window.callGeminiAI = callAI;
 window.getLetterData = getLetterData;
@@ -1037,4 +1010,4 @@ window.getSessionTypes = getSessionTypes;
 window.getAllLetters = getAllLetters;
 window.getLetterTitle = getLetterTitle;
 
-console.log('✅ AI Features loaded — v13.0 (final fully corrected)');
+console.log('✅ AI Features loaded — v15.0 (full version with all features)');
