@@ -1,13 +1,11 @@
 /* ========================================
    Manarat Al-Nutq - Vercel Function
    توليد الصور عبر Fanar
-   v2.0 — مع Worker الجديد (manarat-api-v3)
+   v2.1 — الإصدار الآمن (بدون مفاتيح مكشوفة)
    ======================================== */
 
-const FANAR_API_KEY = process.env.FANAR_API_KEY || "6kUl68R2x4degWtI2eKeilDdyM3hLmUu";
+const FANAR_API_KEY = process.env.FANAR_API_KEY;
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "https://pub-8f83fb6338db4c5aac3fd512bef2610f.r2.dev";
-
-/* ⚠️ مهم: Worker الجديد */
 const R2_UPLOAD_URL = process.env.R2_UPLOAD_URL || "https://manarat-api-v3.rslani999.workers.dev/api/r2-upload";
 
 function wordToFileName(word) {
@@ -23,8 +21,15 @@ function wordToFileName(word) {
 }
 
 export default async function handler(req, res) {
-  /* CORS */
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS محمي
+  const allowedOrigins = ['https://www.alnutq.com', 'https://manarat-alnutq.vercel.app', 'http://localhost:3000'];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -36,14 +41,25 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'استخدم POST' });
   }
 
+  // ✅ التحقق من وجود المفتاح في البيئة
+  if (!FANAR_API_KEY) {
+    return res.status(500).json({ 
+      success: false, 
+      message: 'مفتاح Fanar غير مُعدّ في إعدادات Vercel (FANAR_API_KEY)' 
+    });
+  }
+
   const word = req.body?.word || 'apple';
+  
+  // ✅ حماية: منع الكلمات الطويلة جداً لتجنب إغراق الخدمة
+  if (word.length > 50) {
+    return res.status(400).json({ success: false, message: 'الكلمة طويلة جداً' });
+  }
+
   const fileName = wordToFileName(word);
   const publicUrl = `${R2_PUBLIC_URL}/${fileName}`;
 
-  console.log(`🎨 توليد صورة: ${word}`);
-
   try {
-    /* 1. استدعاء Fanar */
     const fanarResponse = await fetch('https://api.fanar.qa/v1/images/generations', {
       method: 'POST',
       headers: {
@@ -63,7 +79,6 @@ export default async function handler(req, res) {
 
     if (!fanarResponse.ok) {
       const errorText = await fanarResponse.text();
-      console.error('Fanar error:', errorText.substring(0, 300));
       return res.status(500).json({
         success: false,
         message: 'فشل توليد الصورة من Fanar',
@@ -73,74 +88,55 @@ export default async function handler(req, res) {
 
     const fanarData = await fanarResponse.json();
     let base64Image = null;
-    let revisedPrompt = null;
 
     if (fanarData.data && fanarData.data[0]) {
       base64Image = fanarData.data[0].b64_json || fanarData.data[0].url;
-      revisedPrompt = fanarData.data[0].revised_prompt || null;
     }
 
     if (!base64Image) {
-      return res.status(500).json({
-        success: false,
-        message: 'لم يتم استلام صورة من Fanar'
-      });
+      return res.status(500).json({ success: false, message: 'لم يتم استلام صورة من Fanar' });
     }
 
-    /* 2. رفع الصورة إلى R2 */
+    // رفع الصورة إلى R2
     if (!base64Image.startsWith('http')) {
       try {
         const uploadResponse = await fetch(R2_UPLOAD_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileName: fileName,
-            base64: base64Image
-          })
+          body: JSON.stringify({ fileName: fileName, base64: base64Image })
         });
 
         const uploadData = await uploadResponse.json();
 
         if (uploadResponse.ok && uploadData.success) {
-          console.log(`✅ تم حفظ الصورة في R2: ${fileName}`);
           return res.status(200).json({
             success: true,
             image: publicUrl,
             word: word,
-            revisedPrompt: revisedPrompt,
-            source: 'fanar-new',
-            model: 'fanar-oryx-ig-2'
+            source: 'fanar-new'
           });
-        } else {
-          console.warn('فشل رفع الصورة إلى R2:', uploadData);
         }
       } catch (r2Error) {
         console.error('خطأ R2:', r2Error.message);
       }
 
-      /* إذا فشل R2، أرجع base64 */
+      // احتياطي: إرجاع base64
       return res.status(200).json({
         success: true,
         image: 'data:image/png;base64,' + base64Image,
         word: word,
-        revisedPrompt: revisedPrompt,
-        source: 'fanar-fallback',
-        model: 'fanar-oryx-ig-2'
+        source: 'fanar-fallback'
       });
     }
 
-    /* إذا كانت الصورة URL مباشر */
     return res.status(200).json({
       success: true,
       image: base64Image,
       word: word,
-      revisedPrompt: revisedPrompt,
-      source: 'fanar-direct',
-      model: 'fanar-oryx-ig-2'
+      source: 'fanar-direct'
     });
 
   } catch (error) {
-    console.error('خطأ عام:', error);
     return res.status(500).json({
       success: false,
       message: 'خطأ في الخدمة',

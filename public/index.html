@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>منارة النطق - التشخيص المتقدم</title>
-  <meta name="description" content="منصة تشخيص وتدريب النطق للأطفال - منارة النطق">
+  <title>منارة النطق - منصة التشخيص والتدريب</title>
+  <meta name="description" content="منصة متكاملة لتشخيص وتدريب النطق للأطفال في المرحلة الابتدائية، مع نظام إدارة الجلسات والخطط الفردية (IEP).">
   <meta name="theme-color" content="#357E74">
   
-  <!-- Google Fonts -->
+  <!-- Google Fonts (تمت إضافة Cairo كخط احتياطي) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
   
   <!-- Styles -->
   <link rel="stylesheet" href="style.css">
@@ -40,7 +40,19 @@
   <!-- JavaScript الرئيسي -->
   <script type="module" src="app.js"></script>
   <script type="module" src="ai-features.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
+
+  <!-- أداة التطوير (مخفية عن المستخدمين العاديين) -->
+  <script>
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isDebug = window.location.search.includes('debug=true');
+    
+    if (isLocalhost || isDebug) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      script.onload = () => eruda.init();
+      document.head.appendChild(script);
+      console.log('🛠️ Eruda DevTools is enabled (Debug Mode)');
+    }
+  </script>
 </body>
 </html>

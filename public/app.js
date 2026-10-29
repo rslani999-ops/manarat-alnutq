@@ -641,15 +641,29 @@ let diagnosticAudio = { letters: {}, words: {} };
 /* ─── [END SEC-17] ─── */
 
 
-
 /* ─── [SEC-18] التنبيهات — Toast + Notification ─── */
 function showToast(msg) {
+  const oldToast = document.querySelector('.toast');
+  if (oldToast) oldToast.remove();
+
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
+  
+  t.style.cssText = `
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #1E2A47; color: white; padding: 14px 28px; border-radius: 50px;
+    font-weight: 600; font-size: 15px; z-index: 99999;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease;
+    max-width: 90%; text-align: center;
+  `;
+
   document.body.appendChild(t);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.remove(), 3000);
+  toastTimer = setTimeout(() => {
+    t.style.opacity = '0'; t.style.transition = 'opacity 0.5s';
+    setTimeout(() => t.remove(), 500);
+  }, 3000);
 }
 window.showToast = showToast;
 
@@ -672,8 +686,28 @@ function showNotification(message, type = 'info') {
   }, 4000);
 }
 window.showNotification = showNotification;
-/* ─── [END SEC-18] ─── */
 
+// ✅ دالة التأكيد المخصصة (بدلاً من confirm المزعجة)
+window.customConfirm = function(title, message, onConfirm, onCancel) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:400px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:50px;margin-bottom:15px;">⚠️</div>
+      <h3 style="margin:0 0 10px 0;color:#1E2A47;font-size:18px;">${title}</h3>
+      <p style="margin:0 0 20px 0;color:#6B7A99;font-size:14px;">${message}</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button id="customConfirmBtn" style="background:#EF6F5B;color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;">تأكيد</button>
+        <button id="customCancelBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;">إلغاء</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector('#customConfirmBtn').onclick = () => { modal.remove(); if (onConfirm) onConfirm(); };
+  modal.querySelector('#customCancelBtn').onclick = () => { modal.remove(); if (onCancel) onCancel(); };
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+};
+/* ─── [END SEC-18] ─── */
 
 /* ─── [SEC-19] إمكانية الوصول — Accessibility ─── */
 function toggleHighContrast() {
@@ -2928,16 +2962,14 @@ function renderComprehensiveDiagnosis(container) {
 /* ─── [END SEC-37] ─── */
 
 
-/* ─── [SEC-38] التشخيص المتقدم — Advanced Diagnostic (v2: محمي من مسح البيانات) ─── */
+/* ─── [SEC-38] التشخيص المتقدم — Advanced Diagnostic (v3: إخفاء الحروف المتقنة) ─── */
 function renderDiagnosticSession(app) {
-  // 🔒 حماية: التأكد من وجود طالب
   if (!state.currentStudent) {
     showToast('⚠️ اختر طالباً أولاً');
     state.view = 'teacher-dashboard';
     return render();
   }
 
-  // 🔄 تهيئة ذكية: تحميل بيانات الطالب الحقيقي فقط عند تغيّر الطالب
   if (state._diagLoadedFor !== state.currentStudent.id) {
     state.diagEval = { ...(state.currentStudent.diagnostic || {}) };
     state.comprehensive = {
@@ -2990,7 +3022,7 @@ function renderDiagnosticSession(app) {
   if (resetDiagBtn) resetDiagBtn.onclick = async () => {
     if (confirm('هل أنت متأكد؟ سيتم مسح تشخيص الحروف بالكامل.')) {
       state.diagEval = {};
-      state.currentStudent.diagnostic = {};   // ✅ مزامنة الحالة المحلية
+      state.currentStudent.diagnostic = {}; 
       diagnosticAudio = { letters: {}, words: {} };
       try {
         await updateDoc(doc(db, "users", state.currentStudent.id), { diagnostic: {} });
@@ -3009,7 +3041,6 @@ function renderDiagnosticSession(app) {
         comprehensive: state.comprehensive
       });
 
-      // ✅ مزامنة الحالة المحلية (ليعرفها النظام عند التنقل بين الطلاب)
       state.currentStudent.diagnostic = { ...state.diagEval };
       state.currentStudent.comprehensive = { ...state.comprehensive };
 
@@ -3041,6 +3072,14 @@ function renderDiagnosticSession(app) {
   }
 
   LETTER_GROUPS.forEach(group => {
+    // ✅ فلترة الحروف: نعرض فقط الحروف التي لم تصل لمرحلة "أتقن"
+    const filteredLetters = group.letters.filter(letter => {
+      const status = state.diagEval[letter]?.status || 'none';
+      return status !== 'passed'; // إخفاء الحروف المتقنة
+    });
+
+    if (filteredLetters.length === 0) return; // إذا كانت كل حروف المجموعة متقنة، لا نعرض المجموعة
+
     const title = document.createElement('div');
     title.className = 'group-title';
     title.textContent = group.name;
@@ -3049,7 +3088,7 @@ function renderDiagnosticSession(app) {
     const grid = document.createElement('div');
     grid.className = 'diag-grid';
 
-    group.letters.forEach(letter => {
+    filteredLetters.forEach(letter => {
       const letterData = state.diagEval[letter] || {};
       const status = letterData.status || 'none';
       const titleStr = letterTitleMap[letter] || '';
@@ -3135,7 +3174,6 @@ function renderDiagnosticSession(app) {
         };
       });
 
-      /* ═══ تسجيل الحرف — MediaRecorder ═══ */
       const recordLetterBtn = card.querySelector(`#recordLetterBtn_${letter}`);
       if (recordLetterBtn) {
         recordLetterBtn.onclick = function() {
@@ -3148,10 +3186,8 @@ function renderDiagnosticSession(app) {
               if (feedbackEl) feedbackEl.innerHTML = '❌ تعذر التسجيل. تأكد من صلاحية الميكروفون ثم حاول مجدداً.';
               return;
             }
-
             let msg = '🎉 أحسنت! استمع لتسجيلك ثم اختر التقييم المناسب.';
             let msgColor = '#0a7a0a';
-
             if (transcript && analysis) {
               if (!state.diagEval[l]) state.diagEval[l] = {};
               state.diagEval[l].disorderType = analysis.disorderType;
@@ -3162,9 +3198,7 @@ function renderDiagnosticSession(app) {
                 msgColor = '#7a5c0a';
               }
             }
-
-            const html =
-              '<div style="margin-top:8px;padding:10px;background:#E8F5E9;border:2px solid #4CAF50;border-radius:10px;">' +
+            const html = '<div style="margin-top:8px;padding:10px;background:#E8F5E9;border:2px solid #4CAF50;border-radius:10px;">' +
               `<audio controls src="${audioUrl}" style="width:100%;margin-bottom:6px;"></audio>` +
               `<div style="color:${msgColor};font-weight:bold;text-align:center;font-size:13px;">${msg}</div>` +
               '</div>';
@@ -3397,7 +3431,7 @@ async function renderStudentMenu(app) {
 /* ─── [END SEC-40] ─── */
 
 
-/* ─── [SEC-41] إدارة جلسات التدريب (v6: إصلاح العد والصلاحيات) ─── */
+/* ─── [SEC-41] إدارة جلسات التدريب (v7: اقتراح الجلسة التالية تلقائياً) ─── */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
@@ -3411,6 +3445,8 @@ async function renderSpeechSessions(app) {
   });
 
   const diag = (state.currentStudent && state.currentStudent.diagnostic) ? state.currentStudent.diagnostic : (state.diagEval || {});
+  
+  // ✅ فلترة الحروف: نعرض فقط الحروف التي تحتاج تدريباً (need أو unclear)
   const needLetters = ALL_LETTERS.filter(letter => {
     const status = diag[letter]?.status || diag[letter];
     return status === 'need' || status === 'unclear';
@@ -3430,11 +3466,17 @@ async function renderSpeechSessions(app) {
     snap.forEach(d => existingSessions.push({ id: d.id, ...d.data() }));
   } catch (e) { console.error('خطأ في جلب الجلسات:', e); }
 
+  // ✅ دالة اقتراح الجلسة التالية
   function getSuggestedSessionType(letter) {
-    const letterSessions = existingSessions.filter(s => s.letter === letter).sort((a, b) => (a.sessionType || 0) - (b.sessionType || 0));
-    if (letterSessions.length === 0) return 1;
+    const letterSessions = existingSessions
+      .filter(s => s.letter === letter)
+      .sort((a, b) => (a.sessionType || 0) - (b.sessionType || 0));
+    
+    if (letterSessions.length === 0) return 1; // لم يبدأ بعد -> الحرف مجرداً
+    
     const maxType = Math.max(...letterSessions.map(s => s.sessionType || 0));
-    return maxType >= 4 ? 1 : maxType + 1;
+    if (maxType >= 4) return 1; // أنهى جميع المراحل -> نعود للبداية للمراجعة
+    return maxType + 1; // الترقية للمرحلة التالية
   }
 
   const defaultLetter = needLetters.length > 0 ? needLetters[0] : ALL_LETTERS[0];
@@ -3446,28 +3488,66 @@ async function renderSpeechSessions(app) {
   addCard.innerHTML = `
     <h3>➕ إضافة جلسة تدريب جديدة</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
-      <div><label style="font-weight:bold;display:block;margin-bottom:4px;">🔤 اختر الحرف:</label>
-        <select id="sessLetter">${needLetters.length > 0 ? needLetters.map(l => `<option value="${l}" ${l === defaultLetter ? 'selected' : ''}>حرف ${l}</option>`).join('') : ALL_LETTERS.map(l => `<option value="${l}">حرف ${l}</option>`).join('')}</select>
+      <div>
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">🔤 اختر الحرف:</label>
+        <select id="sessLetter">
+          ${needLetters.length > 0 
+            ? needLetters.map(l => `<option value="${l}" ${l === defaultLetter ? 'selected' : ''}>حرف ${l} (يحتاج تدريب)</option>`).join('') 
+            : ALL_LETTERS.map(l => `<option value="${l}">حرف ${l}</option>`).join('')}
+        </select>
+        ${needLetters.length === 0 ? '<p class="muted" style="font-size:12px;margin-top:4px;">⚠️ جميع الحروف متقنة، يمكنك إضافة جلسات مراجعة.</p>' : ''}
       </div>
-      <div><label style="font-weight:bold;display:block;margin-bottom:4px;">📚 نوع الجلسة:</label>
-        <select id="sessType">${SESSION_TYPES.map(t => `<option value="${t.id}" ${t.id === defaultSessionType ? 'selected' : ''}>${t.icon}${t.name}</option>`).join('')}</select>
+      <div>
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">📚 نوع الجلسة:</label>
+        <select id="sessType">
+          ${SESSION_TYPES.map(t => `<option value="${t.id}" ${t.id === defaultSessionType ? 'selected' : ''}>${t.icon} ${t.name}</option>`).join('')}
+        </select>
       </div>
-      <div><label style="font-weight:bold;display:block;margin-bottom:4px;">📅 التاريخ:</label><input type="date" id="sessDate" value="${new Date().toISOString().split('T')[0]}"></div>
-      <div><label style="font-weight:bold;display:block;margin-bottom:4px;">⏱️ المدة:</label><input type="text" id="sessDuration" value="30 دقيقة"></div>
-      <div><label style="font-weight:bold;display:block;margin-bottom:4px;">🛠️ الأدوات:</label><select id="sessTools">${TOOLS_OPTIONS.map(t => `<option value="${t}">${t}</option>`).join('')}</select></div>
-      <div><label style="font-weight:bold;display:block;margin-bottom:4px;">📍 مخرج الحرف:</label><select id="sessPlace">${PLACE_OPTIONS.map(p => `<option value="${p}">${p}</option>`).join('')}</select></div>
-      <div style="grid-column:1/-1;"><label style="font-weight:bold;display:block;margin-bottom:4px;">🎯 الهدف:</label><input type="text" id="sessGoal" placeholder="نطق الحرف..."></div>
-      <div style="grid-column:1/-1;"><label style="font-weight:bold;display:block;margin-bottom:4px;">📋 الطريقة:</label><select id="sessMethod">${METHOD_OPTIONS.map(m => `<option value="${m}">${m}</option>`).join('')}</select></div>
+      <div>
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">📅 التاريخ:</label>
+        <input type="date" id="sessDate" value="${new Date().toISOString().split('T')[0]}">
+      </div>
+      <div>
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">⏱️ المدة:</label>
+        <input type="text" id="sessDuration" value="30 دقيقة">
+      </div>
+      <div>
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">🛠️ الأدوات:</label>
+        <select id="sessTools">${TOOLS_OPTIONS.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">📍 مخرج الحرف:</label>
+        <select id="sessPlace">${PLACE_OPTIONS.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">🎯 الهدف:</label>
+        <input type="text" id="sessGoal" placeholder="نطق الحرف...">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-weight:bold;display:block;margin-bottom:4px;">📋 الطريقة:</label>
+        <select id="sessMethod">${METHOD_OPTIONS.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
+      </div>
     </div>
     <button class="btn btn-primary" id="createSessBtn" style="border-radius:50px;padding:10px 30px;margin-top:12px;">🚀 إنشاء الجلسة</button>
   `;
   app.appendChild(addCard);
 
+  const letterSelect = addCard.querySelector('#sessLetter');
+  const typeSelect = addCard.querySelector('#sessType');
+
+  // ✅ عند تغيير الحرف، يتم تحديث نوع الجلسة تلقائياً
+  if (letterSelect && typeSelect) {
+    letterSelect.onchange = () => {
+      const selectedLetter = letterSelect.value;
+      typeSelect.value = getSuggestedSessionType(selectedLetter);
+    };
+  }
+
   const createBtn = addCard.querySelector('#createSessBtn');
   if (createBtn) createBtn.onclick = async () => {
     if (!state.currentStudent || !state.user) return;
-    const letter = addCard.querySelector('#sessLetter').value;
-    const sessionType = parseInt(addCard.querySelector('#sessType').value);
+    const letter = letterSelect.value;
+    const sessionType = parseInt(typeSelect.value);
     
     let sessionTeacherId = state.user.uid; 
     if (state.role === 'admin' || state.managedSchool) {
@@ -3475,14 +3555,12 @@ async function renderSpeechSessions(app) {
     }
 
     try {
-      // ✅ التعديل الجوهري: إضافة شرط teacherId في طلب العد ليتوافق مع قواعد الخصوصية
       let qCount;
       if (state.role === 'admin' || state.managedSchool) {
         qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id));
       } else {
         qCount = query(collection(db, "sessions"), where("studentId", "==", state.currentStudent.id), where("teacherId", "==", state.user.uid));
       }
-      
       const snapCount = await getDocs(qCount);
       const sessionNumber = snapCount.size + 1;
 
@@ -4037,10 +4115,9 @@ async function renderSingleSession(app) {
 }
 /* ─── [END SEC-42] ─── */
 
-/* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion (v2: يدعم قواعد الأمان) ─── */
+/* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion (v3: نافذة مخصصة) ─── */
 async function checkAndSuggestMastery(studentId, letter) {
   try {
-    // ✅ فلترة بـ teacherId (متوافق مع قواعد الأمان)
     const qS = query(
       collection(db, "sessions"),
       where("studentId", "==", studentId),
@@ -4055,18 +4132,27 @@ async function checkAndSuggestMastery(studentId, letter) {
     const totalNeeded = 4;
 
     if (successful.length >= totalNeeded) {
-      if (confirm(`🎉 الطالب أتم ${totalNeeded} جلسات ناجحة لحرف (${letter}). هل تريد نقل الحرف إلى المتقن؟`)) {
-        const studentDoc = await getDoc(doc(db, "users", studentId));
-        if (studentDoc.exists()) {
-          const studentData = studentDoc.data();
-          const diag = studentData.diagnostic || {};
-          diag[letter] = diag[letter] || {};
-          diag[letter].status = 'passed';
-          await updateDoc(doc(db, "users", studentId), { diagnostic: diag });
-          showToast(`✅ تم نقل حرف (${letter}) إلى المتقن!`);
-          showNotification(`تم نقل حرف (${letter}) إلى المتقن`, 'success');
+      // ✅ استخدام النافذة المخصصة بدلاً من confirm
+      window.customConfirm(
+        '🎉 اقتراح الإتقان',
+        `الطالب أتم ${totalNeeded} جلسات ناجحة لحرف (${letter}). هل تريد نقل الحرف إلى المتقن؟`,
+        async () => {
+          try {
+            const studentDoc = await getDoc(doc(db, "users", studentId));
+            if (studentDoc.exists()) {
+              const studentData = studentDoc.data();
+              const diag = studentData.diagnostic || {};
+              diag[letter] = diag[letter] || {};
+              diag[letter].status = 'passed';
+              await updateDoc(doc(db, "users", studentId), { diagnostic: diag });
+              showToast(`✅ تم نقل حرف (${letter}) إلى المتقن!`);
+              showNotification(`تم نقل حرف (${letter}) إلى المتقن`, 'success');
+            }
+          } catch (e) {
+            showToast('❌ فشل حفظ الإتقان: ' + e.message);
+          }
         }
-      }
+      );
     }
   } catch (e) {
     console.error('خطأ في التحقق من الإتقان:', e);

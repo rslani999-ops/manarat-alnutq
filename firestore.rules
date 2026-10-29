@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    
+    function isAdmin() { 
+      return isSignedIn() && request.auth.token.email == 'manarat.alnutq@gmail.com'; 
+    }
+    
+    function getUser(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    
+    function isTeacher() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUser(request.auth.uid).role == 'teacher'; 
+    }
+    
+    function isSchoolManager() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUser(request.auth.uid).managedSchool != null;
+    }
+
+    // ═══════════ المستخدمون ═══════════
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isAdmin() || 
+        isSchoolManager() || 
+        (isTeacher() && (resource.data.teacherId == request.auth.uid || resource.data.teacherId == null))
+      );
+      
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (request.auth.uid == userId && !('role' in request.resource.data.diff(resource.data).affectedKeys()) && !('managedSchool' in request.resource.data.diff(resource.data).affectedKeys())) ||
+        (isTeacher() && resource.data.teacherId == request.auth.uid && !('role' in request.resource.data.diff(resource.data).affectedKeys()) && !('email' in request.resource.data.diff(resource.data).affectedKeys())) ||
+        (resource.data.teacherId == null && request.resource.data.teacherId == request.auth.uid)
+      );
+      
+      allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.role in ['student', 'teacher'] && request.resource.data.teacherId == null;
+      allow delete: if isAdmin();
+    }
+
+    // ═══════════ الجلسات ═══════════
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        isSchoolManager() || 
+        resource.data.teacherId == request.auth.uid || 
+        resource.data.studentId == request.auth.uid
+      );
+      
+      allow create: if isSignedIn() && (
+        isAdmin() || 
+        isSchoolManager() || 
+        request.resource.data.teacherId == request.auth.uid
+      );
+      
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || 
+        isSchoolManager() || 
+        resource.data.teacherId == request.auth.uid
+      );
+    }
+
+    // ═══════════ الخطط الفردية ═══════════
+    match /iep/{studentId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        isSchoolManager() || 
+        request.auth.uid == studentId || 
+        (isTeacher() && getUser(studentId).teacherId == request.auth.uid)
+      );
+      allow write: if isSignedIn() && (
+        isAdmin() || 
+        isSchoolManager() || 
+        (isTeacher() && getUser(studentId).teacherId == request.auth.uid)
+      );
+    }
+
+    // ═══════════ ملفات المعلم ═══════════
+    match /teacher_files/{fileId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        isSchoolManager() || 
+        resource.data.teacherId == request.auth.uid
+      );
+      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.teacherId == request.auth.uid
+      );
+    }
+
+    // ═══════════ بيانات الحروف (تم تأمينها) ═══════════
+    match /letters_data/{letter} {
+      allow read: if true;
+      // ✅ فقط الإدارة أو المعلم يمكنه الكتابة (لا يمكن للطلاب)
+      allow write: if isAdmin() || (isTeacher() && request.resource.data.keys().hasOnly(['place', 'vowels', 'words', 'sentences']));
+    }
+
+    // ═══════════ كاش الصور (تم تأمينها) ═══════════
+    match /images_cache/{imageKey} {
+      allow read: if true;
+      // ✅ منع الطلاب من إغراق قاعدة البيانات
+      allow create: if isSignedIn() 
+        && request.resource.data.keys().hasOnly(['word', 'imageUrl', 'createdAt'])
+        && request.resource.data.imageUrl is string
+        && request.resource.data.imageUrl.size() < 500000;
+      allow update, delete: if isAdmin();
+    }
+  }
+}
