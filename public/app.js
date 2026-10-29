@@ -641,15 +641,29 @@ let diagnosticAudio = { letters: {}, words: {} };
 /* ─── [END SEC-17] ─── */
 
 
-
 /* ─── [SEC-18] التنبيهات — Toast + Notification ─── */
 function showToast(msg) {
+  const oldToast = document.querySelector('.toast');
+  if (oldToast) oldToast.remove();
+
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
+  
+  t.style.cssText = `
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #1E2A47; color: white; padding: 14px 28px; border-radius: 50px;
+    font-weight: 600; font-size: 15px; z-index: 99999;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease;
+    max-width: 90%; text-align: center;
+  `;
+
   document.body.appendChild(t);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.remove(), 3000);
+  toastTimer = setTimeout(() => {
+    t.style.opacity = '0'; t.style.transition = 'opacity 0.5s';
+    setTimeout(() => t.remove(), 500);
+  }, 3000);
 }
 window.showToast = showToast;
 
@@ -672,8 +686,28 @@ function showNotification(message, type = 'info') {
   }, 4000);
 }
 window.showNotification = showNotification;
-/* ─── [END SEC-18] ─── */
 
+// ✅ دالة التأكيد المخصصة (بدلاً من confirm المزعجة)
+window.customConfirm = function(title, message, onConfirm, onCancel) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:400px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:50px;margin-bottom:15px;">⚠️</div>
+      <h3 style="margin:0 0 10px 0;color:#1E2A47;font-size:18px;">${title}</h3>
+      <p style="margin:0 0 20px 0;color:#6B7A99;font-size:14px;">${message}</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button id="customConfirmBtn" style="background:#EF6F5B;color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;">تأكيد</button>
+        <button id="customCancelBtn" style="background:#F0F0F0;color:#333;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;">إلغاء</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector('#customConfirmBtn').onclick = () => { modal.remove(); if (onConfirm) onConfirm(); };
+  modal.querySelector('#customCancelBtn').onclick = () => { modal.remove(); if (onCancel) onCancel(); };
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+};
+/* ─── [END SEC-18] ─── */
 
 /* ─── [SEC-19] إمكانية الوصول — Accessibility ─── */
 function toggleHighContrast() {
@@ -4037,10 +4071,9 @@ async function renderSingleSession(app) {
 }
 /* ─── [END SEC-42] ─── */
 
-/* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion (v2: يدعم قواعد الأمان) ─── */
+/* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion (v3: نافذة مخصصة) ─── */
 async function checkAndSuggestMastery(studentId, letter) {
   try {
-    // ✅ فلترة بـ teacherId (متوافق مع قواعد الأمان)
     const qS = query(
       collection(db, "sessions"),
       where("studentId", "==", studentId),
@@ -4055,18 +4088,27 @@ async function checkAndSuggestMastery(studentId, letter) {
     const totalNeeded = 4;
 
     if (successful.length >= totalNeeded) {
-      if (confirm(`🎉 الطالب أتم ${totalNeeded} جلسات ناجحة لحرف (${letter}). هل تريد نقل الحرف إلى المتقن؟`)) {
-        const studentDoc = await getDoc(doc(db, "users", studentId));
-        if (studentDoc.exists()) {
-          const studentData = studentDoc.data();
-          const diag = studentData.diagnostic || {};
-          diag[letter] = diag[letter] || {};
-          diag[letter].status = 'passed';
-          await updateDoc(doc(db, "users", studentId), { diagnostic: diag });
-          showToast(`✅ تم نقل حرف (${letter}) إلى المتقن!`);
-          showNotification(`تم نقل حرف (${letter}) إلى المتقن`, 'success');
+      // ✅ استخدام النافذة المخصصة بدلاً من confirm
+      window.customConfirm(
+        '🎉 اقتراح الإتقان',
+        `الطالب أتم ${totalNeeded} جلسات ناجحة لحرف (${letter}). هل تريد نقل الحرف إلى المتقن؟`,
+        async () => {
+          try {
+            const studentDoc = await getDoc(doc(db, "users", studentId));
+            if (studentDoc.exists()) {
+              const studentData = studentDoc.data();
+              const diag = studentData.diagnostic || {};
+              diag[letter] = diag[letter] || {};
+              diag[letter].status = 'passed';
+              await updateDoc(doc(db, "users", studentId), { diagnostic: diag });
+              showToast(`✅ تم نقل حرف (${letter}) إلى المتقن!`);
+              showNotification(`تم نقل حرف (${letter}) إلى المتقن`, 'success');
+            }
+          } catch (e) {
+            showToast('❌ فشل حفظ الإتقان: ' + e.message);
+          }
         }
-      }
+      );
     }
   } catch (e) {
     console.error('خطأ في التحقق من الإتقان:', e);
