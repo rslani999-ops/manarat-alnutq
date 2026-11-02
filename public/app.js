@@ -927,9 +927,8 @@ function renderTopbar(appContainer, title, sub, onBack) {
 /* ─── [END SEC-23] ─── */
 
 
-/* ─── [SEC-24] سياسة الخصوصية — Privacy Policy (v2.0 — متوافقة مع PDPL) ─── */
+/* ─── [SEC-24] سياسة الخصوصية — Privacy Policy (v2.1 — متوافقة مع PDPL) ─── */
 
-// مستمع للرابط في أي مكان بالموقع
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'privacyPolicyLink') {
     e.preventDefault();
@@ -957,7 +956,7 @@ function showPrivacyPolicy() {
       <div style="padding:20px 24px;background:linear-gradient(135deg,var(--mint-deep) 0%,#0891B2 100%);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
         <div>
           <h2 style="margin:0;font-size:20px;">🔒 سياسة الخصوصية</h2>
-          <p style="margin:4px 0 0;font-size:12px;opacity:0.9;">آخر تحديث: 2026-10-27 &nbsp;|&nbsp; الإصدار 2.0</p>
+          <p style="margin:4px 0 0;font-size:12px;opacity:0.9;">آخر تحديث: 2026-10-29 &nbsp;|&nbsp; الإصدار 2.1</p>
         </div>
         <button id="closePrivacyBtnTop" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="إغلاق">×</button>
       </div>
@@ -972,7 +971,6 @@ function showPrivacyPolicy() {
         <p>المسؤول عن معالجة بياناتكم هو القائم على منصة "منارة النطق". للتواصل بشأن الخصوصية:</p>
         <ul style="padding-right:20px;">
           <li>البريد للخصوصية: <strong>privacy@alnutq.com</strong></li>
-          <li>البريد العام: <strong>support@alnutq.com</strong></li>
         </ul>
 
         <h3 style="color:var(--mint-deep);margin-top:20px;">2. البيانات التي نجمعها</h3>
