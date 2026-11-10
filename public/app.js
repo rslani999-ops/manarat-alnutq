@@ -1553,7 +1553,7 @@ async function renderTeacherDashboard(app) {
       <button class="btn btn-soft btn-sm" id="btnTeacherAchievement">📁 ملف إنجاز المعلم</button>
       <button class="btn btn-sm" id="btnWeeklyPlan" style="background:linear-gradient(135deg, #0891B2, #06B6D4); color:white;">📅 الخطة الأسبوعية الذكية</button>
       <button class="btn btn-sm" id="btnConsentManagement" style="background:linear-gradient(135deg, #10B981, #059669); color:white;">🛡️ إدارة الموافقات</button>
-      <button class="btn btn-sm" id="btnRetroactiveConsent" style="background:#EA580C; color:white;">⚠️ إضافة موافقة بأثر رجعي</button>
+      <!-- ✅ تمت إزالة زر "إضافة موافقة بأثر رجعي" -->
     </div>
   `;
   app.appendChild(actCard);
@@ -1570,18 +1570,13 @@ async function renderTeacherDashboard(app) {
   if (btnWeeklyPlan) btnWeeklyPlan.onclick = () => { state.view = 'weekly-plan'; render(); };
   const btnConsentManagement = actCard.querySelector('#btnConsentManagement');
   if (btnConsentManagement) btnConsentManagement.onclick = () => window.showConsentManagementModal();
-  const btnRetroactiveConsent = actCard.querySelector('#btnRetroactiveConsent');
-  if (btnRetroactiveConsent) btnRetroactiveConsent.onclick = () => window.addRetroactiveConsent();
-
+  
   const myCard = document.createElement('div');
   myCard.className = 'card no-print';
-
   myCard.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
       <h3 style="margin:0;">📋 قائمة طلابك المضافين (${state.myStudents.length})</h3>
-      <button class="btn btn-sm" id="smartFilterBtn" style="background:linear-gradient(135deg, #0891B2, #06B6D4); color:white; border-radius:50px; padding:8px 20px; font-weight:bold;">
-        🔍 تصفية ذكية
-      </button>
+      <button class="btn btn-sm" id="smartFilterBtn" style="background:linear-gradient(135deg, #0891B2, #06B6D4); color:white; border-radius:50px; padding:8px 20px; font-weight:bold;">🔍 تصفية ذكية</button>
     </div>
     <div id="studentsListContainer"></div>
   `;
@@ -1673,9 +1668,7 @@ async function renderTeacherDashboard(app) {
           ageSelect.onchange = async () => {
             const newAgeGroup = ageSelect.value;
             try {
-              await updateDoc(doc(db, "users", st.id), {
-                ageGroup: newAgeGroup
-              });
+              await updateDoc(doc(db, "users", st.id), { ageGroup: newAgeGroup });
               st.ageGroup = newAgeGroup;
               showToast('✅ تم حفظ الفئة العمرية');
             } catch (e) {
@@ -1747,136 +1740,6 @@ async function renderTeacherDashboard(app) {
   }
   app.appendChild(freeCard);
 }
-
-// ✅ إدارة الموافقات (Modal)
-window.showConsentManagementModal = async function() {
-  let teacherName = state.user?.email || 'المعلم';
-  try {
-    if (state.user?.uid) {
-      const tSnap = await getDoc(doc(db, "users", state.user.uid));
-      if (tSnap.exists() && tSnap.data().fullName) {
-        teacherName = tSnap.data().fullName;
-      }
-    }
-  } catch (e) { console.warn('تعذر جلب اسم المعلم:', e); }
-
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
-  
-  let rowsHtml = '';
-  const students = state.myStudents || [];
-  
-  if (students.length === 0) {
-    rowsHtml = '<tr><td colspan="4" style="text-align:center; padding:20px;">لا يوجد طلاب.</td></tr>';
-  } else {
-    students.forEach((st, idx) => {
-      const consent = st.parentConsent || {};
-      const isGranted = consent.granted === true;
-      const dateStr = consent.grantedAt ? new Date(consent.grantedAt).toLocaleDateString('ar-SA') : '';
-      
-      const statusBadge = isGranted 
-        ? `<span style="color:#16A34A; font-weight:bold;">✅ موافق (${dateStr})</span>` 
-        : '<span style="color:#DC2626; font-weight:bold;">❌ بانتظار الموافقة</span>';
-
-      const parentPhone = st.parentPhone || '';
-      
-      const waMessage = encodeURIComponent(`السلام عليكم ورحمة الله وبركاته،
-ولي أمر الطالب/ة: ${st.fullName || st.email}
-
-يطيب لي إبلاغكم بأنه تم تسجيل ابنكم/ابنتكم في منصة "منارة النطق" لمتابعة جلسات وتدريبات النطق الخاصة به.
-
-إيماناً مني بأهمية الشراكة معكم، قمت بتطوير هذه المنصة كاجتهاد شخصي مني كمعلم لتدريبات النطق، لتكون نافذة تطلعون من خلالها على تشخيصات وتقارير تقدم ابنكم أولاً بأول.
-
-ولضمان استمرار التدريب وفق معايير حماية البيانات الشخصية (PDPL)، نرجو منكم التكرم بالرد على هذه الرسالة بكلمة "أوافق"، وذلك لإقراركم بالموافقة على:
-1️⃣ تسجيل صوت وصورة (فيديو) الطفل (قبل وبعد التدريب) لأغراض التقييم وعلاج النطق.
-2️⃣ إضافة البريد الإلكتروني لولي الأمر لمتابعة التقارير.
-
-🔗 رابط المنصة: https://alnutq.com
-🔒 سياسة الخصوصية: https://alnutq.com
-
-شاكرين لكم حسن تعاونكم واهتمامكم.
-
-أ/ ${teacherName}
-معلم تدريبات النطق`);
-
-      const waLink = parentPhone 
-        ? `<a href="https://wa.me/${parentPhone.replace(/\D/g,'')}?text=${waMessage}" target="_blank" style="background:#25D366; color:white; padding:4px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;">💬 طلب موافقة</a>`
-        : `<span style="font-size:11px; color:#999;">لا يوجد رقم</span>`;
-
-      rowsHtml += `
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px; text-align:right; font-weight:bold;">${st.fullName || st.email}</td>
-          <td style="padding:10px; text-align:center;">${statusBadge}</td>
-          <td style="padding:10px; text-align:center;">${waLink}</td>
-          <td style="padding:10px; text-align:center;">
-            ${!isGranted ? `<button class="btn-manual-consent" data-id="${st.id}" style="background:#F0FDF4; color:#16A34A; border:1px solid #16A34A; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:12px; font-weight:bold;">✅ تأكيد يدوي</button>` : '<span style="color:#999; font-size:12px;">-</span>'}
-          </td>
-        </tr>
-      `;
-    });
-  }
-
-  modal.innerHTML = `
-    <div style="background:white;padding:25px;border-radius:20px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h3 style="margin:0;color:#059669;">🛡️ إدارة موافقات أولياء الأمور</h3>
-        <button id="closeConsentModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
-      </div>
-      
-      <p style="font-size:13px; color:#555; margin-bottom:15px; background:#F0FDF4; padding:10px; border-radius:8px; border-right:4px solid #10B981;">
-        وفقاً لنظام حماية البيانات الشخصية (PDPL)، يجب الحصول على موافقة ولي الأمر قبل معالجة بيانات الطفل (بما في ذلك الصوت والفيديو). يمكنك إرسال طلب عبر الواتساب، أو تأكيد الموافقة يدوياً إذا حصلت عليها شفهياً.
-      </p>
-
-      <table style="width:100%; border-collapse:collapse; font-size:14px;">
-        <thead>
-          <tr style="background:#F8FAFC; color:#334155;">
-            <th style="padding:10px; text-align:right;">اسم الطالب</th>
-            <th style="padding:10px; text-align:center;">حالة الموافقة</th>
-            <th style="padding:10px; text-align:center;">التواصل</th>
-            <th style="padding:10px; text-align:center;">إجراء</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml}
-        </tbody>
-      </table>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  modal.querySelector('#closeConsentModal').onclick = () => modal.remove();
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
-  // ربط أزرار التأكيد اليدوي
-  modal.querySelectorAll('.btn-manual-consent').forEach(btn => {
-    btn.onclick = async () => {
-      if (!confirm('هل أنت متأكد من تأكيد الموافقة يدوياً لهذا الطالب؟')) return;
-      const studentId = btn.dataset.id;
-      btn.disabled = true;
-      btn.textContent = '⏳';
-      try {
-        await updateDoc(doc(db, "users", studentId), {
-          parentConsent: {
-            granted: true,
-            grantedAt: new Date().toISOString(),
-            grantedBy: `المعلم (تأكيد يدوي) - ${teacherName}`,
-            version: "1.0"
-          }
-        });
-        showToast('✅ تم تأكيد الموافقة يدوياً.');
-        modal.remove();
-        // ✅ تحديث الحالة المحلية واستخدام render() بدلاً من renderTeacherDashboard مباشرة
-        const st = state.myStudents.find(s => s.id === studentId);
-        if (st) st.parentConsent = { granted: true };
-        render(); 
-      } catch (e) {
-        showToast('❌ فشل التأكيد: ' + e.message);
-        btn.disabled = false;
-        btn.textContent = '✅ تأكيد يدوي';
-      }
-    };
-  });
-};
 /* ─── [END SEC-28] ─── */
 
 
@@ -3443,7 +3306,7 @@ async function renderStudentMenu(app) {
 /* ─── [END SEC-40] ─── */
 
 
-/* ─── [SEC-41] إدارة جلسات التدريب (v9: الثروة اللغوية + المخرج التلقائي) ─── */
+/* ─── [SEC-41] إدارة جلسات التدريب (v11: إخفاء مخرج الحرف في الثروة اللغوية) ─── */
 async function renderSpeechSessions(app) {
   if (!state.currentStudent) {
     showToast('اختر طالباً أولاً');
@@ -3542,10 +3405,13 @@ async function renderSpeechSessions(app) {
         <label style="font-weight:bold;display:block;margin-bottom:4px;">🛠️ الأدوات:</label>
         <select id="sessTools">${TOOLS_OPTIONS.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
       </div>
-      <div>
+      
+      <!-- ✅ حقل مخرج الحرف (مخفي افتراضياً إذا كانت الثروة اللغوية) -->
+      <div id="placeSelectionDiv">
         <label style="font-weight:bold;display:block;margin-bottom:4px;">📍 مخرج الحرف:</label>
         <select id="sessPlace">${PLACE_OPTIONS.map(p => `<option value="${p}" ${p === defaultPlace ? 'selected' : ''}>${p}</option>`).join('')}</select>
       </div>
+
       <div style="grid-column:1/-1;">
         <label style="font-weight:bold;display:block;margin-bottom:4px;">🎯 الهدف:</label>
         <input type="text" id="sessGoal" placeholder="نطق الحرف أو إتقان كلمات...">
@@ -3563,9 +3429,9 @@ async function renderSpeechSessions(app) {
   const typeSelect = addCard.querySelector('#sessType');
   const letterDiv = addCard.querySelector('#letterSelectionDiv');
   const vocabDiv = addCard.querySelector('#vocabSelectionDiv');
+  const placeDiv = addCard.querySelector('#placeSelectionDiv'); // ✅ القسم الجديد
   const placeSelect = addCard.querySelector('#sessPlace');
 
-  // ✅ تحديث نوع الجلسة والمخرج تلقائياً عند تغيير الحرف
   if (letterSelect) {
     letterSelect.onchange = () => {
       const selectedLetter = letterSelect.value;
@@ -3579,11 +3445,13 @@ async function renderSpeechSessions(app) {
       if (typeSelect.value === '5') {
         letterDiv.style.display = 'none';
         vocabDiv.style.display = 'block';
-        placeSelect.value = 'غير محدد (ثروة لغوية)';
+        placeDiv.style.display = 'none'; // ✅ إخفاء مخرج الحرف
       } else {
         letterDiv.style.display = 'block';
         vocabDiv.style.display = 'none';
+        placeDiv.style.display = 'block'; // ✅ إظهار مخرج الحرف
         const selectedLetter = letterSelect.value;
+        typeSelect.value = getSuggestedSessionType(selectedLetter);
         placeSelect.value = getPlaceByLetter(selectedLetter);
       }
     };
@@ -3632,7 +3500,7 @@ async function renderSpeechSessions(app) {
         duration: addCard.querySelector('#sessDuration').value.trim(),
         goal: addCard.querySelector('#sessGoal').value.trim() || (sessionType === 5 ? `إتقان كلمات قسم ${categoryName}` : getDefaultGoal(letter, sessionType)), 
         tools: addCard.querySelector('#sessTools').value,
-        place: addCard.querySelector('#sessPlace').value,
+        place: sessionType === 5 ? null : addCard.querySelector('#sessPlace').value, // ✅ حفظ null للثروة اللغوية
         method: addCard.querySelector('#sessMethod').value,
         evaluation: 'none', successRate: 0, notes: '', recommendations: '',
         disorderType: diag[letter]?.disorderType || 'طبيعي',
@@ -3686,7 +3554,8 @@ async function renderSpeechSessions(app) {
 /* ═══════════════════════════════════════════════════════════
    الجزء 5/6 — الجلسة الفردية + الألعاب + ولي الأمر + الخطة الأسبوعية + ملفات الإنجاز
    ═══════════════════════════════════════════════════════════ */
-/* ─── [SEC-42] عرض جلسة واحدة — Single Session (v4: إضافة الثروة اللغوية) ─── */
+
+/* ─── [SEC-42] عرض جلسة واحدة — Single Session (v6: إخفاء المخرج في الثروة اللغوية) ─── */
 async function renderSingleSession(app) {
   const sess = state.currentSession;
   if (!sess) {
@@ -3750,7 +3619,10 @@ async function renderSingleSession(app) {
     </div>
     <div><strong>🎯 الهدف:</strong> ${sess.goal}</div>
     <div><strong>🛠️ الأدوات:</strong> ${sess.tools || 'غير محدد'}</div>
-    <div><strong>📍 مخرج الحرف:</strong> ${sess.sessionType === 5 ? 'ثروة لغوية' : (sess.place || letterData.place || 'غير محدد')}</div>
+    
+    <!-- ✅ إخفاء مخرج الحرف في الثروة اللغوية فقط -->
+    ${sess.sessionType !== 5 ? `<div><strong>📍 مخرج الحرف:</strong> ${sess.place || letterData.place || 'غير محدد'}</div>` : ''}
+    
     <div><strong>📋 الطريقة:</strong> ${sess.method || 'غير محددة'}</div>
 
     <div style="margin-top:12px;">
@@ -3922,7 +3794,7 @@ async function renderSingleSession(app) {
             date: new Date().toISOString().split('T')[0],
             duration: sess.duration || '30 دقيقة',
             goal: getDefaultGoal(sess.letter, nextType),
-            tools: sess.tools, place: sess.place, method: sess.method,
+            tools: sess.tools, method: sess.method,
             evaluation: 'none', successRate: 0, notes: '', recommendations: '',
             disorderType: currentDisorderType,
             createdAt: new Date().toISOString()
@@ -3953,7 +3825,6 @@ async function renderSingleSession(app) {
   let content = '';
   const st = sess.sessionType || 1;
 
-  // ✅ حالة الثروة اللغوية
   if (st === 5) {
     const category = sess.vocabCategory || 'الأسرة';
     const words = window.VOCAB_CATEGORIES_DATA ? (window.VOCAB_CATEGORIES_DATA[category] || []) : [];
@@ -4051,7 +3922,6 @@ async function renderSingleSession(app) {
   trainCard.innerHTML = content;
   app.appendChild(trainCard);
 
-  // ✅ إضافة أزرار الصور في جلسة الثروة اللغوية
   if (st === 5 && typeof window.createImageButton === 'function') {
     const category = sess.vocabCategory || 'الأسرة';
     const words = window.VOCAB_CATEGORIES_DATA ? (window.VOCAB_CATEGORIES_DATA[category] || []) : [];
@@ -4093,6 +3963,7 @@ async function renderSingleSession(app) {
   }
 }
 /* ─── [END SEC-42] ─── */
+
 
 /* ─── [SEC-43] اقتراح الإتقان — Mastery Suggestion (v3: نافذة مخصصة) ─── */
 async function checkAndSuggestMastery(studentId, letter) {
