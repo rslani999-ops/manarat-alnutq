@@ -1,7 +1,7 @@
 /* ========================================
    Manarat Al-Nutq - Vercel Function
    توليد الصور عبر Fanar
-   v2.1 — الإصدار الآمن (بدون مفاتيح مكشوفة)
+   v2.2 — الإصدار الآمن مع تتبع الأخطاء
    ======================================== */
 
 const FANAR_API_KEY = process.env.FANAR_API_KEY;
@@ -21,15 +21,8 @@ function wordToFileName(word) {
 }
 
 export default async function handler(req, res) {
-  // CORS محمي
-  const allowedOrigins = ['https://www.alnutq.com', 'https://manarat-alnutq.vercel.app', 'http://localhost:3000'];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -41,17 +34,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'استخدم POST' });
   }
 
-  // ✅ التحقق من وجود المفتاح في البيئة
+  const word = req.body?.word || 'apple';
+  
+  // سطر للتتبع في سجلات Vercel
+  console.log(`⏳ محاولة توليد صورة للكلمة: ${word}`);
+
   if (!FANAR_API_KEY) {
+    console.error("❌ خطأ: FANAR_API_KEY غير موجود في متغيرات البيئة");
     return res.status(500).json({ 
       success: false, 
       message: 'مفتاح Fanar غير مُعدّ في إعدادات Vercel (FANAR_API_KEY)' 
     });
   }
 
-  const word = req.body?.word || 'apple';
-  
-  // ✅ حماية: منع الكلمات الطويلة جداً لتجنب إغراق الخدمة
   if (word.length > 50) {
     return res.status(400).json({ success: false, message: 'الكلمة طويلة جداً' });
   }
@@ -64,10 +59,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${FANAR_API_KEY}`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'ar,en;q=0.9'
+        'Authorization': `Bearer ${FANAR_API_KEY}`
       },
       body: JSON.stringify({
         model: 'Fanar-Oryx-IG-2',
@@ -79,6 +71,7 @@ export default async function handler(req, res) {
 
     if (!fanarResponse.ok) {
       const errorText = await fanarResponse.text();
+      console.error(`❌ Fanar API Error (${fanarResponse.status}):`, errorText);
       return res.status(500).json({
         success: false,
         message: 'فشل توليد الصورة من Fanar',
@@ -94,6 +87,7 @@ export default async function handler(req, res) {
     }
 
     if (!base64Image) {
+      console.error("❌ خطأ: لم يتم استلام صورة من Fanar");
       return res.status(500).json({ success: false, message: 'لم يتم استلام صورة من Fanar' });
     }
 
@@ -109,15 +103,18 @@ export default async function handler(req, res) {
         const uploadData = await uploadResponse.json();
 
         if (uploadResponse.ok && uploadData.success) {
+          console.log(`✅ تم رفع الصورة بنجاح إلى R2: ${word}`);
           return res.status(200).json({
             success: true,
             image: publicUrl,
             word: word,
             source: 'fanar-new'
           });
+        } else {
+          console.error("❌ فشل رفع الصورة إلى R2:", uploadData);
         }
       } catch (r2Error) {
-        console.error('خطأ R2:', r2Error.message);
+        console.error('❌ خطأ في الاتصال بـ R2:', r2Error.message);
       }
 
       // احتياطي: إرجاع base64
@@ -137,6 +134,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
+    console.error("❌ خطأ عام في الخادم:", error);
     return res.status(500).json({
       success: false,
       message: 'خطأ في الخدمة',
