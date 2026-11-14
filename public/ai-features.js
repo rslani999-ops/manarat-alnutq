@@ -10,10 +10,10 @@ window.addEventListener('unhandledrejection', event => {
 
 /* ========================================
    منارة النطق - ميزات الذكاء الاصطناعي
-   v15.0 — النسخة الكاملة المستقرة
+   v16.0 — النسخة الكاملة الشاملة
    ======================================== */
 
-console.log('🚀 Starting ai-features.js v15.0...');
+console.log('🚀 Starting ai-features.js v16.0 (Full Features)...');
 
 const WORKER_BASE = 'https://manarat-api-v3.rslani999.workers.dev';
 const VERCEL_API_BASE = 'https://manarat-alnutq.vercel.app';
@@ -55,31 +55,24 @@ async function saveLetterData(letter, data) {
 }
 
 /* ========================================
-   🎨 توليد الصور (مع التشخيص)
+   🎨 توليد الصور
    ======================================== */
 async function generateWordImage(word) {
   if (!word) throw new Error('الكلمة مطلوبة');
   try {
     console.log(`⏳ جاري إرسال طلب الصورة إلى Vercel للكلمة: ${word}`);
-    
     const response = await fetch(`${VERCEL_API_BASE}/api/ai-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ word: word })
     });
-
-    console.log(`📥 تم استلام الرد من Vercel، الحالة: ${response.status}`);
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ خطأ من Vercel: ${response.status}`, errorText);
       throw new Error(`فشل الاتصال: ${response.status}`);
     }
-
     const data = await response.json();
     if (!data.success || !data.image) throw new Error(data.message || 'لم يتم توليد صورة');
-    
-    console.log(`✅ تم توليد الصورة بنجاح للكلمة: ${word}`);
     return data.image;
   } catch (error) {
     console.error(`❌ فشل توليد الصورة للكلمة ${word}:`, error);
@@ -285,6 +278,134 @@ async function generateSessionRecommendations(sessionData, studentData) {
 }
 
 /* ========================================
+   📊 تحليل التقدم (AI)
+   ======================================== */
+async function generateProgressAnalysis(studentData, sessionsData) {
+  if (!sessionsData || sessionsData.length === 0) throw new Error('لا توجد جلسات لتحليلها');
+  const prompt = `تحليل تقدم الطالب (${studentData.fullName}) بناءً على الجلسات السابقة.`;
+  return await callAI(prompt, 'progress-analysis');
+}
+
+function showProgressAnalysisModal(analysisText, studentData, stats) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:750px;width:100%;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;color:#0891B2;">📊 تحليل تقدم الطالب</h3>
+        <button id="closeProgModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+      </div>
+      <textarea id="progTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#F0F9FF;resize:vertical;margin-bottom:12px;">${analysisText}</textarea>
+      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
+        <button id="copyProgBtn" style="border-radius:50px;padding:10px 24px;background:#0891B2;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
+        <button id="closeProgModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector('#closeProgModal').onclick = () => modal.remove();
+  modal.querySelector('#closeProgModalBtn').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.querySelector('#copyProgBtn').onclick = () => {
+    const txt = modal.querySelector('#progTextarea');
+    txt.select();
+    navigator.clipboard.writeText(txt.value).then(() => safeToast('✅ تم نسخ التحليل'));
+  };
+}
+
+function createProgressAnalysisButton(studentData) {
+  const btn = document.createElement('button');
+  btn.id = 'generateProgBtn';
+  btn.style.cssText = 'background:linear-gradient(135deg, #06B6D4, #0891B2);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-size:14px;';
+  btn.innerHTML = '📊 تحليل التقدم (AI)';
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ جاري التحليل...';
+    try {
+      const fbDb = window.db;
+      const fbCollection = window.collection;
+      const fbQuery = window.query;
+      const fbWhere = window.where;
+      const fbGetDocs = window.getDocs;
+
+      let sessionsData = [];
+      if (fbDb && fbCollection && fbQuery && fbWhere && fbGetDocs) {
+        const q = fbQuery(fbCollection(fbDb, "sessions"), fbWhere("studentId", "==", studentData.id));
+        const snap = await fbGetDocs(q);
+        snap.forEach(d => sessionsData.push({ id: d.id, ...d.data() }));
+      }
+
+      const stats = { totalSessions: sessionsData.length, passedCount: 0, trainedCount: 0, avgSuccess: 85 };
+      const analysis = await generateProgressAnalysis(studentData, sessionsData);
+      showProgressAnalysisModal(analysis, studentData, stats);
+      btn.disabled = false;
+      btn.innerHTML = '📊 تحليل التقدم (AI)';
+    } catch (error) {
+      btn.disabled = false;
+      btn.innerHTML = '📊 تحليل التقدم (AI)';
+      safeToast('❌ ' + error.message);
+    }
+  };
+  return btn;
+}
+
+/* ========================================
+   🎯 الخطة المخصصة (AI)
+   ======================================== */
+async function generateCustomPlan(studentData, sessionsData) {
+  return await callAI(`خطة تدريب فردية مخصصة للطالب ${studentData.fullName}`, 'custom-plan');
+}
+
+function showCustomPlanModal(planText, studentData) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:white;padding:25px;border-radius:20px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;color:#7C3AED;">🎯 خطة التدريب المخصصة</h3>
+        <button id="closePlanModal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+      </div>
+      <textarea id="planTextarea" rows="12" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid #DDD;font-family:'Tajawal';font-size:14px;line-height:1.6;background:#FAF5FF;resize:vertical;margin-bottom:12px;">${planText}</textarea>
+      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
+        <button id="copyPlanBtn" style="border-radius:50px;padding:10px 24px;background:#7C3AED;color:white;border:none;cursor:pointer;font-weight:bold;">📋 نسخ</button>
+        <button id="closePlanModalBtn" style="border-radius:50px;padding:10px 24px;background:#F0F0F0;color:#333;border:none;cursor:pointer;font-weight:bold;">إغلاق</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector('#closePlanModal').onclick = () => modal.remove();
+  modal.querySelector('#closePlanModalBtn').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.querySelector('#copyPlanBtn').onclick = () => {
+    const txt = modal.querySelector('#planTextarea');
+    txt.select();
+    navigator.clipboard.writeText(txt.value).then(() => safeToast('✅ تم نسخ الخطة'));
+  };
+}
+
+function createCustomPlanButton(studentData) {
+  const btn = document.createElement('button');
+  btn.id = 'generatePlanBtn';
+  btn.style.cssText = 'background:linear-gradient(135deg, #A855F7, #7C3AED);color:white;border:none;border-radius:50px;padding:10px 24px;font-weight:bold;cursor:pointer;font-size:14px;';
+  btn.innerHTML = '🎯 خطة مخصصة (AI)';
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ جاري التوليد...';
+    try {
+      const plan = await generateCustomPlan(studentData, []);
+      showCustomPlanModal(plan, studentData);
+      btn.disabled = false;
+      btn.innerHTML = '🎯 خطة مخصصة (AI)';
+    } catch (error) {
+      btn.disabled = false;
+      btn.innerHTML = '🎯 خطة مخصصة (AI)';
+      safeToast('❌ ' + error.message);
+    }
+  };
+  return btn;
+}
+
+/* ========================================
    🌐 تصدير الدوال للنطاق العام
    ======================================== */
 window.callAI = callAI;
@@ -296,8 +417,12 @@ window.createImageButton = createImageButton;
 window.generateLetterContent = generateLetterContent;
 window.createGenerateLetterButton = createGenerateLetterButton;
 window.generateSessionRecommendations = generateSessionRecommendations;
+window.createProgressAnalysisButton = createProgressAnalysisButton;
+window.createCustomPlanButton = createCustomPlanButton;
+window.generateProgressAnalysis = generateProgressAnalysis;
+window.generateCustomPlan = generateCustomPlan;
 window.safeToast = safeToast;
 window.safeRender = safeRender;
 window.safeNotify = safeNotify;
 
-console.log('✅ AI Features loaded — v15.0 (final)');
+console.log('✅ AI Features loaded — v16.0 (Full Features)');
